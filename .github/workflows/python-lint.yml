@@ -8,3 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "."
+          version: "21.12b0"

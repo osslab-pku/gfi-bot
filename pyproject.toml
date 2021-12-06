@@ -1,0 +1,13 @@
+[tool.poetry]
+name = "gfi-bot"
+version = "0.1.0"
+description = "ML-powered 🤖 for finding and labeling good first issues in your GitHub project!"
+authors = ["Wenxin Xiao <wenxin.xiao@stu.pku.edu.cn>", "Hao He <heh@pku.edu.cn>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+black = "*"
+pre-commit = "*"
