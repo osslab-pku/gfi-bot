@@ -1,0 +1,166 @@
+{
+    "bsonType": "object",
+    "description": "User statsitics for RecGFI training",
+    "required": [
+        "created_at",
+        "updated_at",
+        "user",
+        "repos",
+        "followers",
+        "commits",
+        "issues",
+        "pulls"
+    ],
+    "properties": {
+        "created_at": {
+            "bsonType": "date",
+            "description": "The time when this document is added to this collection"
+        },
+        "updated_at": {
+            "bsonType": "date",
+            "description": "The last time when this document is updated (to reflect latest statistics)"
+        },
+        "user": {
+            "bsonType": "string",
+            "description": "User name on GitHub"
+        },
+        "repos": {
+            "bsonType": "object",
+            "description": "Statistics for repositories owned by this user",
+            "items": {
+                "bsonType": "object",
+                "description": "Statistics for a single repository",
+                "required": [
+                    "name",
+                    "created_at",
+                    "stars"
+                ],
+                "properties": {
+                    "name": {
+                        "bsonType": "string",
+                        "description": "Repository name"
+                    },
+                    "created_at": {
+                        "bsonType": "date",
+                        "description": "Date of repository creation"
+                    },
+                    "stars": {
+                        "bsonType": "array",
+                        "description": "A time series describing star changes since repository creation",
+                        "items": {
+                            "bsonType": "object",
+                            "required": [
+                                "month",
+                                "count"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                                "month": {
+                                    "bsonType": "date",
+                                    "description": "The month"
+                                },
+                                "count": {
+                                    "bsonType": "int",
+                                    "minimum": 0,
+                                    "description": "Number of stars received in this month, can be an approximate value"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "followers": {
+            "bsonType": "array",
+            "description": "A time series describing follower changes since user creation",
+            "items": {
+                "bsonType": "object",
+                "required": [
+                    "month",
+                    "count"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "month": {
+                        "bsonType": "date",
+                        "description": "The month"
+                    },
+                    "count": {
+                        "bsonType": "int",
+                        "minimum": 0,
+                        "description": "Number of followers the user received in this month, can be an approximate value"
+                    }
+                }
+            }
+        },
+        "commits": {
+            "bsonType": "array",
+            "description": "A time series describing commit changes since user creation",
+            "items": {
+                "bsonType": "object",
+                "required": [
+                    "month",
+                    "count"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "month": {
+                        "bsonType": "date",
+                        "description": "The month"
+                    },
+                    "count": {
+                        "bsonType": "int",
+                        "minimum": 0,
+                        "description": "Number of commits the user made in this month, can be an approximate value"
+                    }
+                }
+            }
+        },
+        "issues": {
+            "bsonType": "array",
+            "description": "A time series describing issue changes since user creation",
+            "items": {
+                "bsonType": "object",
+                "required": [
+                    "month",
+                    "count"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "month": {
+                        "bsonType": "date",
+                        "description": "The month"
+                    },
+                    "count": {
+                        "bsonType": "int",
+                        "minimum": 0,
+                        "description": "Number of issues the user opened in this month, can be an approximate value"
+                    }
+                }
+            }
+        },
+        "pulls": {
+            "bsonType": "array",
+            "description": "A time series describing pull request changes since user creation",
+            "items": {
+                "bsonType": "object",
+                "required": [
+                    "month",
+                    "count"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "month": {
+                        "bsonType": "date",
+                        "description": "The month"
+                    },
+                    "count": {
+                        "bsonType": "int",
+                        "minimum": 0,
+                        "description": "Number of pull requests the user opened in this month, can be an approximate value"
+                    }
+                }
+            }
+        }
+    }
+}

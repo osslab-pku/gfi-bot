@@ -1,3 +1,7 @@
+# Ignore tokens.txt as it is very sensitive
+tokens.txt
+
+# ---------- The following are Python specific ignore patterns ----------
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
