@@ -1,14 +1,14 @@
-import os
 import json
 import pymongo
 import logging
-import gfibot
+
+from . import BASE_DIR, CONFIG
 
 
 if __name__ == "__main__":
-    mongo_url = gfibot.CONFIG["mongodb"]["url"]
-    db_name = gfibot.CONFIG["mongodb"]["db"]
-    collections = gfibot.CONFIG["mongodb"]["collections"].values()
+    mongo_url = CONFIG["mongodb"]["url"]
+    db_name = CONFIG["mongodb"]["db"]
+    collections = CONFIG["mongodb"]["collections"].values()
     logging.info("MongoDB URL: %s, DB Name: %s", mongo_url, db_name)
 
     with pymongo.MongoClient(mongo_url) as client:
@@ -26,11 +26,11 @@ if __name__ == "__main__":
                 continue
 
             logging.info("Initializing Collection: %s", c)
-            with open(gfibot.BASE_DIR / "schemas" / (c["name"] + ".json"), "r") as f:
+            with open(BASE_DIR / "schemas" / (c["name"] + ".json"), "r") as f:
                 schema = json.load(f)
             db.create_collection(c["name"], validator={"$jsonSchema": schema})
             db[c["name"]].create_index(
                 [(i, pymongo.ASCENDING) for i in c["index"]], unique=True
             )
 
-    logging.info("Finish!")
+    logging.info("Done!")

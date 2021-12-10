@@ -1,5 +1,10 @@
 [gfibot]
-projects = []
+projects = [
+    "osmlab/name-suggestion-index",
+    "scikit-learn/scikit-learn",
+    "pandas-dev/pandas",
+    "mui-org/material-ui",
+]
 
 [mongodb]
 url = "mongodb://localhost:27017"
@@ -39,6 +44,7 @@ authors = [
 python = "^3.9"
 pymongo = "^4.0.1"
 toml = "^0.10.2"
+requests = "^2.26.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

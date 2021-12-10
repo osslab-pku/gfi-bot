@@ -52,7 +52,7 @@ As mentioned before, the MongoDB instance serves as a "single source of truth" a
 First, determine some GitHub projects of interest and specify them in [`pyproject.toml`](pyproject.toml). Configure a list of GitHub access tokens (line separated) in `tokens.txt`. Make sure to use more tokens in order to quickly bootstrap GFI-Bot. Run the following script to check if the tokens are configured correctly.
 
 ```shell script
-python -m gfibot.check_github_tokens
+python -m gfibot.check_tokens
 ```
 
 Next, run the following script to collect historical data for the interested projects. This can take some time (up to days) to finish for the first run, so better run as a background task.
