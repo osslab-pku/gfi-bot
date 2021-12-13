@@ -3,7 +3,7 @@
 ML-powered 🤖 for finding and labeling good first issues in your GitHub project!
 
 The tool is based on the following paper:
-W. Xiao, H. He, W. Xu, X. Tan, J. Dong, M. Zhou. Recommending Good First Issues in GitHub OSS Projects. ICSE'2022 (https://icse2022.hotcrp.com/)
+W. Xiao, H. He, W. Xu, X. Tan, J. Dong, M. Zhou. Recommending Good First Issues in GitHub OSS Projects. Accepted at [ICSE'2022](https://conf.researchr.org/home/icse-2022).
 
 ## Get Started
 
@@ -46,7 +46,7 @@ python -m gfibot.init_db # use --drop to drop all existing collections before in
 As mentioned before, the MongoDB instance serves as a "single source of truth" and decouples different modules. Therefore, before you start working with any part of GFI-Bot, it is important to know how the data look like in the MongoDB. For this purpose, we adopt [JSON Schema](https://json-schema.org) to formally describe and enforce schemas for each MongoDB collection. We provide the following MongoDB collections and all collection schemas are available in the [`schemas/`](schemas) folder:
 
 * [`gfibot.repos`](schemas/repos.json): Stores repository statistics. Has a compound unique index on (`name`, `owner`).
-* [`gfibot.repos.issues](schemas/repos.issues.json): Stores basic data for all repository issues. Has a compound unique index on (`name`, `owner`, `number`).
+* [`gfibot.repos.issues`](schemas/repos.issues.json): Stores basic data for all repository issues. Has a compound unique index on (`name`, `owner`, `number`).
 * [`gfibot.repos.users`](schemas/repos.users.json): Stores user statistics *per repository*. Has a compound unique index on (`name`, `owner`, `user`).
 * [`gfibot.issues`](schemas/issues.json): Stores full data for issues that will be used for RecGFI training (i.e., resolved by a commit/PR). Has a compound unique index on (`name`, `owner`, `number`).
 * [`gfibot.users`](schemas/users.json): Stores user statistics. Has a unique index on `name`.
