@@ -1,9 +1,10 @@
 import toml
+import argparse
 import logging
 from pathlib import Path
 
 logging.basicConfig(
-    format="%(asctime)s (Process %(process)d) [%(levelname)s] %(filename)s:%(lineno)d %(message)s",
+    format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d %(message)s",
     level=logging.INFO,
 )
 

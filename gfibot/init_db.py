@@ -1,4 +1,5 @@
 import json
+import argparse
 import pymongo
 import logging
 
@@ -6,6 +7,10 @@ from . import BASE_DIR, CONFIG
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--drop", action="store_true")
+    args = parser.parse_args()
+
     mongo_url = CONFIG["mongodb"]["url"]
     db_name = CONFIG["mongodb"]["db"]
     collections = CONFIG["mongodb"]["collections"].values()
@@ -13,8 +18,13 @@ if __name__ == "__main__":
 
     with pymongo.MongoClient(mongo_url) as client:
         db = client[db_name]
-        existing_collections = db.list_collection_names()
 
+        if args.drop:
+            for collection in db.list_collection_names():
+                logging.info("Dropping collection: %s", collection)
+                db.drop_collection(collection)
+
+        existing_collections = db.list_collection_names()
         for c in collections:
             if c["name"] in existing_collections:
                 logging.warning(
@@ -22,7 +32,9 @@ if __name__ == "__main__":
                     c["name"],
                     db[c["name"]].count_documents(filter={}),
                 )
-                logging.info("Please drop all collections before re-initializing")
+                logging.info(
+                    "Use --drop to drop all collections before re-initializing"
+                )
                 continue
 
             logging.info("Initializing Collection: %s", c)

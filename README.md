@@ -35,17 +35,18 @@ pytest             # run all tests to confirm this environment is working
 Then, configure a MongoDB instance (4.2 or later) and specify its connection URL in [`pyproject.toml`](pyproject.toml). Run the following script to properly initialize a database for GFI-Bot. It will create a new database named `gfibot`, create necessary collections, create indexes, and enforce schemas for each collection.
 
 ```shell script
-python -m gfibot.init_db
+python -m gfibot.init_db # use --drop to drop all existing collections before initializing
 ```
 
 ### Database Schemas
 
 As mentioned before, the MongoDB instance serves as a "single source of truth" and decouples different modules. Therefore, before you start working with any part of GFI-Bot, it is important to know how the data look like in the MongoDB. For this purpose, we adopt [JSON Schema](https://json-schema.org) to formally describe and enforce schemas for each MongoDB collection. We provide the following MongoDB collections and all collection schemas are available in the [`schemas/`](schemas) folder:
 
-* [`gfibot.repositories`](schemas/repositories.json): Stores repository statistics for RecGFI training. Has a compound unique index on (`name`, `owner`).
-* [`gfibot.issues`](schemas/issues.json): Stores issue statistics for RecGFI training. Has a compound unique index on (`repo_name`, `repo_owner`, `number`).
-* [`gfibot.users`](schemas/users.json): Stores user statistics for RecGFI training. Has a unique index on `name`.
-* [`gfibot.users.repo`](schemas/users.repo.json): Stores user statistics *per repository* for RecGFI training. Has a compound unique index on (`repo_name`, `repo_owner`, `name`).
+* [`gfibot.repos`](schemas/repos.json): Stores repository statistics. Has a compound unique index on (`name`, `owner`).
+* [`gfibot.repos.issues](schemas/repos.issues.json): Stores basic data for all repository issues. Has a compound unique index on (`name`, `owner`, `number`).
+* [`gfibot.repos.users`](schemas/repos.users.json): Stores user statistics *per repository*. Has a compound unique index on (`name`, `owner`, `user`).
+* [`gfibot.issues`](schemas/issues.json): Stores full data for issues that will be used for RecGFI training (i.e., resolved by a commit/PR). Has a compound unique index on (`name`, `owner`, `number`).
+* [`gfibot.users`](schemas/users.json): Stores user statistics. Has a unique index on `name`.
 
 ## Deployment
 
@@ -55,7 +56,7 @@ First, determine some GitHub projects of interest and specify them in [`pyprojec
 python -m gfibot.check_tokens
 ```
 
-Next, run the following script to collect historical data for the interested projects. This can take some time (up to days) to finish for the first run, so better run as a background task.
+Next, run the following script to collect historical data for the interested projects. This can take some time (up to days) to finish for the first run, but can perform quick incremental update on an existing database.
 
 ```shell script
 python -m gfibot.data.update

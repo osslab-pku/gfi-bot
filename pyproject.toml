@@ -10,24 +10,29 @@ projects = [
 url = "mongodb://localhost:27017"
 db = "gfibot"
 
-[mongodb.collections.repositories]
-name = "repositories"
+[mongodb.collections.repos]
+name = "repos"
 index = ["name", "owner"]
+unique = true
+
+[mongodb.collections.repos_users]
+name = "repos.users"
+index = ["name", "owner", "name"]
+unique = true
+
+[mongodb.collections.repos_issues]
+name = "repos.issues"
+index = ["name", "owner", "number"]
 unique = true
 
 [mongodb.collections.issues]
 name = "issues"
-index = ["repo_name", "repo_owner", "number"]
+index = ["name", "owner", "number"]
 unique = true
 
 [mongodb.collections.users]
 name = "users"
 index = ["name"]
-unique = true
-
-[mongodb.collections.users_repo]
-name = "users.repo"
-index = ["repo_name", "repo_owner", "name"]
 unique = true
 
 [tool.poetry]
@@ -42,9 +47,11 @@ authors = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pymongo = "^4.0.1"
+pymongo = { extras = ["srv"], version = "^4.0.1" }
 toml = "^0.10.2"
 requests = "^2.26.0"
+PyGithub = "^1.55"
+python-dateutil = "^2.8.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

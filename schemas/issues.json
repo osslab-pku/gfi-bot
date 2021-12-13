@@ -4,17 +4,16 @@
     "required": [
         "created_at",
         "updated_at",
-        "repo_owner",
-        "repo_name",
+        "owner",
+        "name",
         "number",
-        "reporter",
+        "user",
         "title",
         "body",
         "labels",
         "events",
         "comments"
     ],
-    "additionalProperties": false,
     "properties": {
         "created_at": {
             "bsonType": "date",
@@ -24,11 +23,11 @@
             "bsonType": "date",
             "description": "The last time when this document is updated (to reflect latest statistics)"
         },
-        "repo_owner": {
+        "owner": {
             "bsonType": "string",
             "description": "Issue's repository owner name"
         },
-        "repo_name": {
+        "name": {
             "bsonType": "string",
             "description": "Issue's repository name"
         },
@@ -36,9 +35,9 @@
             "bsonType": "int",
             "description": "Issue number in GitHub"
         },
-        "reporter": {
+        "user": {
             "bsonType": "string",
-            "description": "Issue reporter (GitHub user name)"
+            "description": "Issue reporter (GitHub username)"
         },
         "title": {
             "bsonType": "string",

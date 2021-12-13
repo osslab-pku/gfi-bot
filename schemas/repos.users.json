@@ -4,8 +4,8 @@
     "required": [
         "created_at",
         "updated_at",
-        "repo_owner",
-        "repo_name",
+        "owner",
+        "name",
         "user",
         "commits"
     ],
@@ -18,11 +18,11 @@
             "bsonType": "date",
             "description": "The last time when this document is updated (to reflect latest statistics)"
         },
-        "repo_owner": {
+        "owner": {
             "bsonType": "string",
             "description": "The repository owner"
         },
-        "repo_name": {
+        "name": {
             "bsonType": "string",
             "description": "The repository name"
         },

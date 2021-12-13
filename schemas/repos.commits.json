@@ -1,0 +1,39 @@
+{
+    "bsonType": "object",
+    "required": [
+        "owner",
+        "name",
+        "sha",
+        "author",
+        "committer",
+        "commit_message"
+    ],
+    "properties": {
+        "owner": {
+            "bsonType": "string",
+            "description": "Repository owner name"
+        },
+        "name": {
+            "bsonType": "string",
+            "description": "Repository name"
+        },
+        "sha": {
+            "bsonType": "string",
+            "minimum": 40,
+            "maximum": 40,
+            "description": "Commit SHA1"
+        },
+        "author": {
+            "bsonType": "string",
+            "description": "GitHub username of the commit author"
+        },
+        "committer": {
+            "bsonType": "string",
+            "description": "GitHub username of the committer"
+        },
+        "commit_message": {
+            "bsonType": "string",
+            "description": "Commit message"
+        }
+    }
+}
