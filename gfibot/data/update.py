@@ -1,11 +1,12 @@
 import logging
 import pymongo
+import argparse
 
 from typing import Dict, Any
 from datetime import datetime, timezone
 from dateutil import rrule
 from .. import CONFIG, TOKENS
-from .rest import RepoFetcher
+from .rest import RepoFetcher, logger as rest_logger
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ def update_repo(fetcher: RepoFetcher) -> Dict[str, Any]:
         logger.info("Repo not found in database, creating...")
         repo = {
             "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "updated_at": None,
             "owner": owner,
             "name": name,
             "language": None,
@@ -63,31 +64,40 @@ def update_repo(fetcher: RepoFetcher) -> Dict[str, Any]:
         fetcher.gh.rate_limiting,
     )
 
-    repo["updated_at"] = datetime.now(timezone.utc)
-    with pymongo.MongoClient(CONFIG["mongodb"]["url"]) as client:
-        client.gfibot.repos.replace_one(
-            {"owner": owner, "name": name}, repo, upsert=True
-        )
     return repo
 
 
-def update_issues(fetcher: RepoFetcher, repo: Dict[str, Any]) -> None:
-    with pymongo.MongoClient(CONFIG["mongodb"]["url"]) as client:
-        existing = client.gfibot.repos.issues.count_documents(
-            {"name": fetcher.name, "owner": fetcher.owner}
-        )
-
-    since = repo["repo_created_at"] if existing == 0 else repo["updated_at"]
-    updated_issues = fetcher.get_issues(since)
+def update_commits(fetcher: RepoFetcher, since: datetime) -> None:
+    commits = fetcher.get_commits(since)
     logger.info(
-        "%d issues (%d updated), rate remaining %s",
-        existing + len(updated_issues),
-        len(updated_issues),
+        "%d commits updated, rate remaining %s",
+        len(commits),
         fetcher.gh.rate_limiting,
     )
 
     with pymongo.MongoClient(CONFIG["mongodb"]["url"]) as client:
-        for issue in updated_issues:
+        for commit in commits:
+            client.gfibot.repos.commits.replace_one(
+                {
+                    "owner": fetcher.owner,
+                    "name": fetcher.name,
+                    "sha": commit["sha"],
+                },
+                commit,
+                upsert=True,
+            )
+
+
+def update_issues(fetcher: RepoFetcher, since: datetime) -> None:
+    issues = fetcher.get_issues(since)
+    logger.info(
+        "%d issues updated, rate remaining %s",
+        len(issues),
+        fetcher.gh.rate_limiting,
+    )
+
+    with pymongo.MongoClient(CONFIG["mongodb"]["url"]) as client:
+        for issue in issues:
             client.gfibot.repos.issues.replace_one(
                 {
                     "owner": fetcher.owner,
@@ -102,11 +112,34 @@ def update_issues(fetcher: RepoFetcher, repo: Dict[str, Any]) -> None:
 def update(token: str, owner: str, name: str) -> None:
     repo_fetcher = RepoFetcher(token, owner, name)
     repo = update_repo(repo_fetcher)
-    update_issues(repo_fetcher, repo)
+
+    if repo["updated_at"] is None:
+        since = repo["repo_created_at"]
+    else:
+        since = repo["updated_at"]
+    repo["updated_at"] = datetime.now(timezone.utc)
+
+    logging.info("Update commits and issues since %s", since)
+    update_commits(repo_fetcher, since)
+    update_issues(repo_fetcher, since)
+
+    with pymongo.MongoClient(CONFIG["mongodb"]["url"]) as client:
+        client.gfibot.repos.replace_one(
+            {"owner": owner, "name": name}, repo, upsert=True
+        )
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+        rest_logger.setLevel(logging.DEBUG)
+
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         owner, name = project.split("/")
         update(TOKENS[i % len(TOKENS)], owner, name)
+        break
+
     logger.info("Done!")

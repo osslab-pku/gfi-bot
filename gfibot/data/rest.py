@@ -4,6 +4,7 @@ import logging
 from typing import *
 from datetime import datetime, timezone
 from calendar import monthrange
+from dateutil.parser import parse as parse_date
 from github import Github
 from github import RateLimitExceededException, UnknownObjectException
 from github.GithubObject import NotSet
@@ -89,10 +90,49 @@ class RepoFetcher(object):
             default=0,
         )
 
+    def get_commits(self, since: datetime) -> List[dict[str, Any]]:
+        results = []
+        commits = request_github(
+            self.gh, lambda: self.repo.get_commits(since=since), default=[]
+        )
+        page_num = get_page_num(self.gh.per_page, commits.totalCount)
+        for p in range(0, page_num):
+            logger.debug(
+                "commit page %d/%d, rate %s", p, page_num, self.gh.rate_limiting
+            )
+            for commit in request_github(self.gh, commits.get_page, (p,), []):
+                try:
+                    author = commit.author.login
+                except:
+                    author = None
+                try:
+                    committer = commit.committer.login
+                except:
+                    committer = None
+                results.append(
+                    {
+                        "owner": self.owner,
+                        "name": self.name,
+                        "sha": commit.sha,
+                        "author": author,
+                        "authored_at": commit.commit.author.date.astimezone(
+                            timezone.utc
+                        ),
+                        "committer": committer,
+                        "committed_at": commit.commit.committer.date.astimezone(
+                            timezone.utc
+                        ),
+                        "message": commit.commit.message,
+                    }
+                )
+        return results
+
     def get_issues(self, since: datetime) -> List[dict[str, Any]]:
-        issue_stats = []
+        results = []
         issues = request_github(
-            self.gh, self.repo.get_issues(since=since, direction="asc", state="all"), []
+            self.gh,
+            lambda: self.repo.get_issues(since=since, direction="asc", state="all"),
+            default=[],
         )
         page_num = get_page_num(self.gh.per_page, issues.totalCount)
         for p in range(0, page_num):
@@ -105,11 +145,13 @@ class RepoFetcher(object):
                 else:
                     closed_at = None
                 is_pull = issue._pull_request != NotSet  # avoid rate limit
-                if is_pull and issue.pull_request.state == "merged":
-                    merged_at = issue.pull_request.merged_at.astimezone(timezone.utc)
+                if is_pull:
+                    merged_at = issue.pull_request.raw_data["merged_at"]
+                    if merged_at is not None:
+                        merged_at = parse_date(merged_at).astimezone(timezone.utc)
                 else:
                     merged_at = None
-                issue_stats.append(
+                results.append(
                     {
                         "owner": self.owner,
                         "name": self.name,
@@ -122,4 +164,4 @@ class RepoFetcher(object):
                         "merged_at": merged_at,
                     }
                 )
-        return issue_stats
+        return results

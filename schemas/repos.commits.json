@@ -5,8 +5,10 @@
         "name",
         "sha",
         "author",
+        "authored_at",
         "committer",
-        "commit_message"
+        "committed_at",
+        "message"
     ],
     "properties": {
         "owner": {
@@ -19,19 +21,25 @@
         },
         "sha": {
             "bsonType": "string",
-            "minimum": 40,
-            "maximum": 40,
             "description": "Commit SHA1"
         },
         "author": {
-            "bsonType": "string",
-            "description": "GitHub username of the commit author"
+            "bsonType": ["string", "null"],
+            "description": "GitHub username of the commit author, can be null"
+        },
+        "authored_at": {
+            "bsonType": "date",
+            "description": "Date when this commit is authored"
         },
         "committer": {
-            "bsonType": "string",
-            "description": "GitHub username of the committer"
+            "bsonType": ["string", "null"],
+            "description": "GitHub username of the committer, can be null"
         },
-        "commit_message": {
+        "committed_at": {
+            "bsonType": "date",
+            "description": "Date when this commit is committed"
+        },
+        "message": {
             "bsonType": "string",
             "description": "Commit message"
         }

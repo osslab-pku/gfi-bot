@@ -1,5 +1,4 @@
 import toml
-import argparse
 import logging
 from pathlib import Path
 

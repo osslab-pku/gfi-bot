@@ -12,22 +12,27 @@ db = "gfibot"
 
 [mongodb.collections.repos]
 name = "repos"
-index = ["name", "owner"]
+index = ["owner", "name"]
 unique = true
 
-[mongodb.collections.repos_users]
-name = "repos.users"
-index = ["name", "owner", "name"]
+[mongodb.collections.repos_commits]
+name = "repos.commits"
+index = ["owner", "name", "sha"]
 unique = true
 
 [mongodb.collections.repos_issues]
 name = "repos.issues"
-index = ["name", "owner", "number"]
+index = ["owner", "name", "number"]
+unique = true
+
+[mongodb.collections.repos_users]
+name = "repos.users"
+index = ["owner", "name", "user"]
 unique = true
 
 [mongodb.collections.issues]
 name = "issues"
-index = ["name", "owner", "number"]
+index = ["owner", "name", "number"]
 unique = true
 
 [mongodb.collections.users]
