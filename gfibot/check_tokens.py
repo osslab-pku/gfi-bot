@@ -27,7 +27,7 @@ if __name__ == "__main__":
             int(r.headers["X-RateLimit-Remaining"]),
             datetime.fromtimestamp(int(r.headers["X-RateLimit-Reset"])),
         )
-        token2reset[token] = reset_at
+
         logging.info(
             "  Rate limit: %d, remaining: %d, reset at: %s",
             rate_limit,
@@ -38,6 +38,8 @@ if __name__ == "__main__":
             logging.error("  The token is likely not valid!")
         if any(reset_at == t for t in token2reset.values()):
             logging.error("  The token is likely a duplicate of existing token!")
+
+        token2reset[token] = reset_at
         time.sleep(3)
 
     logging.info("Failed tokens: %s", pformat(failed_tokens))
