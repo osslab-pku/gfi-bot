@@ -10,6 +10,10 @@ if __name__ == "__main__":
     token2reset = {}
     failed_tokens = []
 
+    if len(TOKENS) == 0:
+        logging.error("No tokens found")
+        exit(1)
+
     for token in TOKENS:
         url = "https://api.github.com/"
         r = requests.get(url, headers={"Authorization": "token " + token})
