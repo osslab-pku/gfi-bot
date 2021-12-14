@@ -29,8 +29,8 @@
             "description": "Repository name"
         },
         "language": {
-            "bsonType": "string",
-            "description": "Main programming language (as returned by GitHub)"
+            "bsonType": ["string", "null"],
+            "description": "Main programming language (as returned by GitHub), can be null"
         },
         "repo_created_at": {
             "bsonType": "date",

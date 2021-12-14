@@ -43,9 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("--drop", action="store_true")
     args = parser.parse_args()
 
-    mongo_url = CONFIG["mongodb"]["url"]
-    db_name = CONFIG["mongodb"]["db"]
     collections = CONFIG["mongodb"]["collections"].values()
-    init_db(mongo_url, db_name, collections, args.drop)
+    init_db(CONFIG["mongodb"]["url"], CONFIG["mongodb"]["db"], collections, args.drop)
 
     logging.info("Done!")

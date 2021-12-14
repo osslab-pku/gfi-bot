@@ -1,9 +1,9 @@
 import pymongo
-import tests
 import gfibot.data.rest as rest
 
 from pprint import pprint
 from datetime import datetime, timedelta, timezone
+from gfibot import TOKENS, Database
 
 
 def test_page_num():
@@ -21,7 +21,8 @@ def test_get_month_interval():
 def test_repo_fetcher():
     now = datetime.now(timezone.utc)
     owner, name = "octocat", "hello-world"
-    fetcher = rest.RepoFetcher(None, owner, name)
+    token = TOKENS[0] if len(TOKENS) > 0 else None
+    fetcher = rest.RepoFetcher(token, owner, name)
 
     stats = fetcher.get_stats()
     pprint(stats)
@@ -37,12 +38,12 @@ def test_repo_fetcher():
     pprint(commits)
     assert len(commits) > 0
     for commit in commits:
-        with pymongo.MongoClient(tests.MONGO_URL) as client:
-            client[tests.DB_NAME].repo.commits.insert_one(commit)
+        with Database() as db:
+            db.repo.commits.insert_one(commit)
 
     issues = fetcher.get_issues(since=now - timedelta(days=3))
     pprint(issues)
     assert len(issues) >= 0
     for issue in issues:
-        with pymongo.MongoClient(tests.MONGO_URL) as client:
-            client[tests.DB_NAME].repo.issues.insert_one(issue)
+        with Database() as db:
+            db.repo.issues.insert_one(issue)

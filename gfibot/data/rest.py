@@ -67,9 +67,9 @@ class RepoFetcher(object):
     def __init__(self, token: str, owner: str, name: str):
         self.gh = Github(token)
         self.gh.per_page = 100  # minimize rate limit consumption
-        self.owner = owner
-        self.name = name
         self.repo = request_github(self.gh, lambda: self.gh.get_repo(f"{owner}/{name}"))
+        self.owner = self.repo.owner.login
+        self.name = self.repo.name
 
     def get_stats(self) -> dict[str, Any]:
         return request_github(
