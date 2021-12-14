@@ -82,6 +82,28 @@ class RepoFetcher(object):
             },
         )
 
+    def get_stars(self, since: datetime) -> List[dict[str, Any]]:
+        results = []
+        stars = request_github(
+            self.gh, lambda: self.repo.get_stargazers_with_dates(), default=[]
+        ).reversed
+        page_num = get_page_num(self.gh.per_page, stars.totalCount)
+        for p in range(0, page_num):
+            logger.debug("star page %d/%d, rate %s", p, page_num, self.gh.rate_limiting)
+            for star in request_github(self.gh, stars.get_page, (p,), []):
+                starred_at = star.starred_at.astimezone(timezone.utc)
+                results.append(
+                    {
+                        "owner": self.owner,
+                        "name": self.name,
+                        "user": star.user.login,
+                        "starred_at": starred_at,
+                    }
+                )
+                if starred_at < since:
+                    return results
+        return results
+
     def get_commits_in_month(self, date: datetime) -> dict[str, Any]:
         since, until = get_month_interval(date)
         return request_github(

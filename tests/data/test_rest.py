@@ -34,6 +34,12 @@ def test_repo_fetcher():
 
     assert fetcher.get_commits_in_month(now) == 0
 
+    stars = fetcher.get_stars(since=now - timedelta(days=7))
+    pprint(stars)
+    for star in stars:
+        with Database() as db:
+            db.repo.stars.insert_one(star)
+
     commits = fetcher.get_commits(since=datetime(2000, 1, 1, tzinfo=timezone.utc))
     pprint(commits)
     assert len(commits) > 0

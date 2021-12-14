@@ -15,6 +15,11 @@ name = "repos"
 index = ["owner", "name"]
 unique = true
 
+[mongodb.collections.repos_stars]
+name = "repos.stars"
+index = ["owner", "name", "user"]
+unique = true
+
 [mongodb.collections.repos_commits]
 name = "repos.commits"
 index = ["owner", "name", "sha"]

@@ -1,0 +1,22 @@
+{
+  "bsonType": "object",
+  "required": ["owner", "name", "user", "starred_at"],
+  "properties": {
+    "owner": {
+      "bsonType": "string",
+      "description": "Repository owner name"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "Repository name"
+    },
+    "user": {
+      "bsonType": "string",
+      "description": "GitHub username who starred this repository"
+    },
+    "starred_at": {
+      "bsonType": "date",
+      "description": "Date when the user starred the repository"
+    }
+  }
+}

@@ -39,7 +39,7 @@ class Database(object):
 
     def __enter__(self) -> pymongo.database.Database:
         global CONFIG
-        self.client = pymongo.MongoClient(CONFIG["mongodb"]["url"])
+        self.client = pymongo.MongoClient(CONFIG["mongodb"]["url"], tz_aware=True)
         return self.client[CONFIG["mongodb"]["db"]]
 
     def __exit__(self, *args, **kwargs):

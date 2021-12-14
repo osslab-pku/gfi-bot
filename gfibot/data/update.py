@@ -42,9 +42,6 @@ def update_repo(fetcher: RepoFetcher) -> Dict[str, Any]:
         )
     )
 
-    existing_months = {(m["month"].year, m["month"].month) for m in repo["stars"]}
-    # TODO: Implement count stars
-
     existing_months = {(m["month"].year, m["month"].month) for m in repo["commits"]}
     for month in months:
         if (month.year, month.month) not in existing_months:
@@ -66,6 +63,22 @@ def update_repo(fetcher: RepoFetcher) -> Dict[str, Any]:
     )
 
     return repo
+
+
+def update_stars(fetcher: RepoFetcher, since: datetime) -> None:
+    stars = fetcher.get_stars(since)
+    logger.info(
+        "%d stars updated, rate remaining %s",
+        len(stars),
+        fetcher.gh.rate_limiting,
+    )
+    with Database() as db:
+        for star in stars:
+            db.repos.stars.replace_one(
+                {"owner": fetcher.owner, "name": fetcher.name, "user": star["user"]},
+                star,
+                upsert=True,
+            )
 
 
 def update_commits(fetcher: RepoFetcher, since: datetime) -> None:
@@ -120,7 +133,8 @@ def update(token: str, owner: str, name: str) -> None:
         since = repo["updated_at"]
     repo["updated_at"] = datetime.now(timezone.utc)
 
-    logging.info("Update commits and issues since %s", since)
+    logging.info("Update stars, commits, and issues since %s", since)
+    update_stars(fetcher, since)
     update_commits(fetcher, since)
     update_issues(fetcher, since)
 
