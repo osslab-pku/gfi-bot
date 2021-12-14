@@ -24,6 +24,15 @@ with open(BASE_DIR / "pyproject.toml", "r") as f:
 
 
 class Database(object):
+    """Simple wrapper for accessing the MongoDB database
+
+    Should be used like:
+    ```
+    with gfibot.Database() as db:
+        db.repo.insert_one(...)
+    ```
+    """
+
     def __init__(self):
         pass
 
