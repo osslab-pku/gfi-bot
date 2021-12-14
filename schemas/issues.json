@@ -1,135 +1,117 @@
 {
-    "bsonType": "object",
-    "description": "Issue statistics for RecGFI training",
-    "required": [
-        "created_at",
-        "updated_at",
-        "owner",
-        "name",
-        "number",
-        "user",
-        "title",
-        "body",
-        "labels",
-        "events",
-        "comments"
-    ],
-    "properties": {
-        "created_at": {
+  "bsonType": "object",
+  "description": "Issue statistics for RecGFI training",
+  "required": [
+    "created_at",
+    "updated_at",
+    "owner",
+    "name",
+    "number",
+    "user",
+    "title",
+    "body",
+    "labels",
+    "events",
+    "comments"
+  ],
+  "properties": {
+    "created_at": {
+      "bsonType": "date",
+      "description": "The time when this document is added to this collection"
+    },
+    "updated_at": {
+      "bsonType": "date",
+      "description": "The last time when this document is updated (to reflect latest statistics)"
+    },
+    "owner": {
+      "bsonType": "string",
+      "description": "Issue's repository owner name"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "Issue's repository name"
+    },
+    "number": {
+      "bsonType": "int",
+      "description": "Issue number in GitHub"
+    },
+    "user": {
+      "bsonType": "string",
+      "description": "Issue reporter (GitHub username)"
+    },
+    "title": {
+      "bsonType": "string",
+      "description": "Issue title"
+    },
+    "body": {
+      "bsonType": "string",
+      "description": "Issue body"
+    },
+    "labels": {
+      "bsonType": "array",
+      "items": {
+        "bsonType": "object",
+        "required": ["added", "removed", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "added": {
             "bsonType": "date",
-            "description": "The time when this document is added to this collection"
-        },
-        "updated_at": {
-            "bsonType": "date",
-            "description": "The last time when this document is updated (to reflect latest statistics)"
-        },
-        "owner": {
+            "description": "The time when this label is added"
+          },
+          "removed": {
+            "bsonType": ["date", "null"],
+            "description": "The time when this label is removed, null if never removed"
+          },
+          "name": {
             "bsonType": "string",
-            "description": "Issue's repository owner name"
-        },
-        "name": {
-            "bsonType": "string",
-            "description": "Issue's repository name"
-        },
-        "number": {
-            "bsonType": "int",
-            "description": "Issue number in GitHub"
-        },
-        "user": {
-            "bsonType": "string",
-            "description": "Issue reporter (GitHub username)"
-        },
-        "title": {
-            "bsonType": "string",
-            "description": "Issue title"
-        },
-        "body": {
-            "bsonType": "string",
-            "description": "Issue body"
-        },
-        "labels": {
-            "bsonType": "array",
-            "items": {
-                "bsonType": "object",
-                "required": [
-                    "added",
-                    "removed",
-                    "name"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                    "added": {
-                        "bsonType": "date",
-                        "description": "The time when this label is added"
-                    },
-                    "removed": {
-                        "bsonType": [
-                            "date",
-                            "null"
-                        ],
-                        "description": "The time when this label is removed, null if never removed"
-                    },
-                    "name": {
-                        "bsonType": "string",
-                        "description": "Name of the label"
-                    }
-                }
-            }
-        },
-        "events": {
-            "bsonType": "array",
-            "items": {
-                "bsonType": "object",
-                "required": [
-                    "time",
-                    "type",
-                    "user"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                    "time": {
-                        "bsonType": "date",
-                        "description": "The time when this event happened"
-                    },
-                    "type": {
-                        "bsonType": "string",
-                        "description": "Type of the event"
-                    },
-                    "user": {
-                        "bsonType": [
-                            "string",
-                            "null"
-                        ],
-                        "description": "The GitHub user (login name) associated with the event, can be null"
-                    }
-                }
-            }
-        },
-        "comments": {
-            "bsonType": "array",
-            "items": {
-                "bsonType": "object",
-                "required": [
-                    "time",
-                    "user",
-                    "body"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                    "time": {
-                        "bsonType": "date",
-                        "description": "The time when this comment is added"
-                    },
-                    "user": {
-                        "bsonType": "string",
-                        "description": "The GitHub user (login name) who added this comment"
-                    },
-                    "body": {
-                        "bsonType": "string",
-                        "description": "The comment body"
-                    }
-                }
-            }
+            "description": "Name of the label"
+          }
         }
+      }
+    },
+    "events": {
+      "bsonType": "array",
+      "items": {
+        "bsonType": "object",
+        "required": ["time", "type", "user"],
+        "additionalProperties": false,
+        "properties": {
+          "time": {
+            "bsonType": "date",
+            "description": "The time when this event happened"
+          },
+          "type": {
+            "bsonType": "string",
+            "description": "Type of the event"
+          },
+          "user": {
+            "bsonType": ["string", "null"],
+            "description": "The GitHub user (login name) associated with the event, can be null"
+          }
+        }
+      }
+    },
+    "comments": {
+      "bsonType": "array",
+      "items": {
+        "bsonType": "object",
+        "required": ["time", "user", "body"],
+        "additionalProperties": false,
+        "properties": {
+          "time": {
+            "bsonType": "date",
+            "description": "The time when this comment is added"
+          },
+          "user": {
+            "bsonType": "string",
+            "description": "The GitHub user (login name) who added this comment"
+          },
+          "body": {
+            "bsonType": "string",
+            "description": "The comment body"
+          }
+        }
+      }
     }
+  }
 }

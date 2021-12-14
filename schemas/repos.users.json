@@ -1,57 +1,47 @@
 {
-    "bsonType": "object",
-    "description": "User statsitics per repository for RecGFI training",
-    "required": [
-        "created_at",
-        "updated_at",
-        "owner",
-        "name",
-        "user",
-        "commits"
-    ],
-    "properties": {
-        "created_at": {
+  "bsonType": "object",
+  "description": "User statsitics per repository for RecGFI training",
+  "required": ["created_at", "updated_at", "owner", "name", "user", "commits"],
+  "properties": {
+    "created_at": {
+      "bsonType": "date",
+      "description": "The time when this document is added to this collection"
+    },
+    "updated_at": {
+      "bsonType": "date",
+      "description": "The last time when this document is updated (to reflect latest statistics)"
+    },
+    "owner": {
+      "bsonType": "string",
+      "description": "The repository owner"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "The repository name"
+    },
+    "user": {
+      "bsonType": "string",
+      "description": "User name on GitHub"
+    },
+    "commits": {
+      "bsonType": "array",
+      "description": "A time series describing commits made by this user since repository creation",
+      "items": {
+        "bsonType": "object",
+        "required": ["month", "count"],
+        "additionalProperties": false,
+        "properties": {
+          "month": {
             "bsonType": "date",
-            "description": "The time when this document is added to this collection"
-        },
-        "updated_at": {
-            "bsonType": "date",
-            "description": "The last time when this document is updated (to reflect latest statistics)"
-        },
-        "owner": {
-            "bsonType": "string",
-            "description": "The repository owner"
-        },
-        "name": {
-            "bsonType": "string",
-            "description": "The repository name"
-        },
-        "user": {
-            "bsonType": "string",
-            "description": "User name on GitHub"
-        },
-        "commits": {
-            "bsonType": "array",
-            "description": "A time series describing commits made by this user since repository creation",
-            "items": {
-                "bsonType": "object",
-                "required": [
-                    "month",
-                    "count"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                    "month": {
-                        "bsonType": "date",
-                        "description": "The month"
-                    },
-                    "count": {
-                        "bsonType": "int",
-                        "minimum": 0,
-                        "description": "Number of new commits in this month, can be an approximate value"
-                    }
-                }
-            }
+            "description": "The month"
+          },
+          "count": {
+            "bsonType": "int",
+            "minimum": 0,
+            "description": "Number of new commits in this month, can be an approximate value"
+          }
         }
+      }
     }
+  }
 }

@@ -1,59 +1,53 @@
 {
-    "bsonType": "object",
-    "required": [
-        "owner",
-        "name",
-        "number",
-        "user",
-        "state",
-        "created_at",
-        "closed_at",
-        "is_pull",
-        "merged_at"
-    ],
-    "properties": {
-        "owner": {
-            "bsonType": "string",
-            "description": "Repository owner name"
-        },
-        "name": {
-            "bsonType": "string",
-            "description": "Repository name"
-        },
-        "number": {
-            "bsonType": "int",
-            "minimum": 0,
-            "description": "The issue number in GitHub"
-        },
-        "user": {
-            "bsonType": "string",
-            "description": "The GitHub username of the issue reporter or PR submitter"
-        },
-        "state": {
-            "bsonType": "string",
-            "description": "State of the issue"
-        },
-        "created_at": {
-            "bsonType": "date",
-            "description": "The time when this issue/PR is created"
-        },
-        "closed_at": {
-            "bsonType": [
-                "date",
-                "null"
-            ],
-            "description": "The time when this issue/PR is closed"
-        },
-        "is_pull": {
-            "bsonType": "bool",
-            "description": "Whether the issue is a pull request"
-        },
-        "merged_at": {
-            "bsonType": [
-                "date",
-                "null"
-            ],
-            "description": "if the issue is a PR, the time when this PR is merged"
-        }
+  "bsonType": "object",
+  "required": [
+    "owner",
+    "name",
+    "number",
+    "user",
+    "state",
+    "created_at",
+    "closed_at",
+    "is_pull",
+    "merged_at"
+  ],
+  "properties": {
+    "owner": {
+      "bsonType": "string",
+      "description": "Repository owner name"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "Repository name"
+    },
+    "number": {
+      "bsonType": "int",
+      "minimum": 0,
+      "description": "The issue number in GitHub"
+    },
+    "user": {
+      "bsonType": "string",
+      "description": "The GitHub username of the issue reporter or PR submitter"
+    },
+    "state": {
+      "bsonType": "string",
+      "description": "State of the issue"
+    },
+    "created_at": {
+      "bsonType": "date",
+      "description": "The time when this issue/PR is created"
+    },
+    "closed_at": {
+      "bsonType": ["date", "null"],
+      "description": "The time when this issue/PR is closed"
+    },
+    "is_pull": {
+      "bsonType": "bool",
+      "description": "Whether the issue is a pull request"
+    },
+    "merged_at": {
+      "bsonType": ["date", "null"],
+      "description": "if the issue is a PR, the time when this PR is merged"
     }
+  }
 }

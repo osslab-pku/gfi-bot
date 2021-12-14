@@ -1,47 +1,47 @@
 {
-    "bsonType": "object",
-    "required": [
-        "owner",
-        "name",
-        "sha",
-        "author",
-        "authored_at",
-        "committer",
-        "committed_at",
-        "message"
-    ],
-    "properties": {
-        "owner": {
-            "bsonType": "string",
-            "description": "Repository owner name"
-        },
-        "name": {
-            "bsonType": "string",
-            "description": "Repository name"
-        },
-        "sha": {
-            "bsonType": "string",
-            "description": "Commit SHA1"
-        },
-        "author": {
-            "bsonType": ["string", "null"],
-            "description": "GitHub username of the commit author, can be null"
-        },
-        "authored_at": {
-            "bsonType": "date",
-            "description": "Date when this commit is authored"
-        },
-        "committer": {
-            "bsonType": ["string", "null"],
-            "description": "GitHub username of the committer, can be null"
-        },
-        "committed_at": {
-            "bsonType": "date",
-            "description": "Date when this commit is committed"
-        },
-        "message": {
-            "bsonType": "string",
-            "description": "Commit message"
-        }
+  "bsonType": "object",
+  "required": [
+    "owner",
+    "name",
+    "sha",
+    "author",
+    "authored_at",
+    "committer",
+    "committed_at",
+    "message"
+  ],
+  "properties": {
+    "owner": {
+      "bsonType": "string",
+      "description": "Repository owner name"
+    },
+    "name": {
+      "bsonType": "string",
+      "description": "Repository name"
+    },
+    "sha": {
+      "bsonType": "string",
+      "description": "Commit SHA1"
+    },
+    "author": {
+      "bsonType": ["string", "null"],
+      "description": "GitHub username of the commit author, can be null"
+    },
+    "authored_at": {
+      "bsonType": "date",
+      "description": "Date when this commit is authored"
+    },
+    "committer": {
+      "bsonType": ["string", "null"],
+      "description": "GitHub username of the committer, can be null"
+    },
+    "committed_at": {
+      "bsonType": "date",
+      "description": "Date when this commit is committed"
+    },
+    "message": {
+      "bsonType": "string",
+      "description": "Commit message"
     }
+  }
 }
