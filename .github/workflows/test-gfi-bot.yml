@@ -1,5 +1,7 @@
 name: Test GFI-Bot
 
+
+
 on:
   push:
     branches: [ main ]
@@ -7,9 +9,15 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  test:
 
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+      image: mongo:4.4.1
+      ports:
+        - 27017:27017
 
     steps:
     - uses: actions/checkout@v2

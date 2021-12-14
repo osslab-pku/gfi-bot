@@ -6,20 +6,12 @@ import logging
 from . import BASE_DIR, CONFIG
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--drop", action="store_true")
-    args = parser.parse_args()
-
-    mongo_url = CONFIG["mongodb"]["url"]
-    db_name = CONFIG["mongodb"]["db"]
-    collections = CONFIG["mongodb"]["collections"].values()
+def init_db(mongo_url: str, db_name: str, collections: list, drop: bool) -> None:
     logging.info("MongoDB URL: %s, DB Name: %s", mongo_url, db_name)
-
     with pymongo.MongoClient(mongo_url) as client:
         db = client[db_name]
 
-        if args.drop:
+        if drop:
             for collection in db.list_collection_names():
                 logging.info("Dropping collection: %s", collection)
                 db.drop_collection(collection)
@@ -44,5 +36,16 @@ if __name__ == "__main__":
             db[c["name"]].create_index(
                 [(i, pymongo.ASCENDING) for i in c["index"]], unique=True
             )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--drop", action="store_true")
+    args = parser.parse_args()
+
+    mongo_url = CONFIG["mongodb"]["url"]
+    db_name = CONFIG["mongodb"]["db"]
+    collections = CONFIG["mongodb"]["collections"].values()
+    init_db(mongo_url, db_name, collections, args.drop)
 
     logging.info("Done!")
