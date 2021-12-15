@@ -15,5 +15,5 @@ def execute_before_any_test():
         init_db(CONFIG["mongodb"]["url"], CONFIG["mongodb"]["db"], collections, True)
     except:
         logging.error("Failed with default, try a local configuration")
-        CONFIG["mongodb"]["db"] = "mongodb//localhost:27017"
+        CONFIG["mongodb"]["url"] = "mongodb://localhost:27017"
         init_db(CONFIG["mongodb"]["url"], CONFIG["mongodb"]["db"], collections, True)

@@ -12,38 +12,34 @@ db = "gfibot"
 
 [mongodb.collections.repos]
 name = "repos"
-index = ["owner", "name"]
-unique = true
+indexes = [{ fields = ["owner", "name"], unique = true }]
 
 [mongodb.collections.repos_stars]
 name = "repos.stars"
-index = ["owner", "name", "user"]
-unique = true
+indexes = [{ fields = ["owner", "name", "user"], unique = true }]
 
 [mongodb.collections.repos_commits]
 name = "repos.commits"
-index = ["owner", "name", "sha"]
-unique = true
+indexes = [{ fields = ["owner", "name", "sha"], unique = true }]
 
 [mongodb.collections.repos_issues]
 name = "repos.issues"
-index = ["owner", "name", "number"]
-unique = true
+indexes = [
+    { fields = ["owner", "name", "number"], unique = true },
+    { fields = ["merged_at"], unique = false },
+]
 
 [mongodb.collections.repos_users]
 name = "repos.users"
-index = ["owner", "name", "user"]
-unique = true
+indexes = [{ fields = ["owner", "name", "user"], unique = true }]
 
 [mongodb.collections.issues]
 name = "issues"
-index = ["owner", "name", "number"]
-unique = true
+indexes = [{ fields = ["owner", "name", "number"], unique = true }]
 
 [mongodb.collections.users]
 name = "users"
-index = ["name"]
-unique = true
+indexes = [{ fields = ["name"], unique = true }]
 
 [tool.poetry]
 name = "gfi-bot"
