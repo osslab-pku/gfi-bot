@@ -190,3 +190,22 @@ class RepoFetcher(object):
                     }
                 )
         return results
+
+    def get_issue_detail(self, number: int) -> Dict[str, Any]:
+        raise NotImplementedError()
+
+    def get_pull_detail(self, number: int) -> Dict[str, Any]:
+        pull = request_github(self.gh, self.repo.get_pull, (number,))
+        if pull is None:
+            raise ValueError(f"pull request #{number} not found")
+        return {
+            "owner": self.owner,
+            "name": self.name,
+            "number": pull.number,
+            "commits": request_github(
+                self.gh, lambda: [c.sha for c in pull.get_commits()], []
+            ),
+            "comments": request_github(
+                self.gh, lambda: [c.body for c in pull.get_issue_comments()], []
+            ),
+        }

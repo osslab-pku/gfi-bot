@@ -30,7 +30,7 @@ class Database(object):
     Should be used like:
     ```
     with gfibot.Database() as db:
-        db.repo.insert_one(...)
+        db.repos.insert_one(...)
     ```
     """
 

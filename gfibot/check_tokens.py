@@ -6,8 +6,8 @@ from . import TOKENS
 from pprint import pformat
 from datetime import datetime
 
-if __name__ == "__main__":
-    token2reset = {}
+
+def check_tokens():
     failed_tokens = []
 
     if len(TOKENS) == 0:
@@ -40,11 +40,10 @@ if __name__ == "__main__":
         )
         if rate_limit != 5000:
             logging.error("  The token is likely not valid!")
-        if any(reset_at == t for t in token2reset.values()):
-            logging.error("  The token is likely a duplicate of existing token!")
-
-        token2reset[token] = reset_at
-        time.sleep(3)
 
     logging.info("Failed tokens: %s", pformat(failed_tokens))
     logging.info("Done!")
+
+
+if __name__ == "__main__":
+    check_tokens()

@@ -1,9 +1,10 @@
+import re
 import logging
 import argparse
 
 from typing import List, Dict, Any
-from collections import Counter
-from datetime import datetime, timezone
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
 
 from .. import CONFIG, TOKENS, Database
 from .rest import RepoFetcher, logger as rest_logger
@@ -21,6 +22,18 @@ def count_by_month(dates: List[datetime]) -> List[Dict[str, Any]]:
         ],
         key=lambda k: k["month"],
     )
+
+
+def match_issue_numbers(text: str) -> List[int]:
+    """
+    Match close issue text in a pull request, as documented in:
+    https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue
+    """
+    numbers = []
+    regex = r"(close[sd]?|fix(es|ed)?|resolve[sd]?) \#(\d+)"
+    for _, _, number in re.findall(regex, text.lower()):
+        numbers.append(int(number))
+    return numbers
 
 
 def update_repo(fetcher: RepoFetcher) -> Dict[str, Any]:
@@ -104,6 +117,105 @@ def update_issues(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]
                 upsert=True,
             )
     return issues
+
+
+def locate_resolved_issues(
+    fetcher: RepoFetcher, since: datetime
+) -> List[Dict[str, Any]]:
+    with Database() as db:
+        all_issues = list(
+            db.repos.issues.find(
+                {
+                    "owner": fetcher.owner,
+                    "name": fetcher.name,
+                    "closed_at": {"$gte": since},
+                }
+            )
+        )
+        all_commits = sorted(
+            db.repos.commits.find({"owner": fetcher.owner, "name": fetcher.name}),
+            key=lambda c: c["authored_at"],
+        )
+    closed_nums = set(map(lambda i: i["number"], all_issues))
+    logger.info("%d newly closed issues since %s", len(all_issues), since)
+
+    resolved = defaultdict(
+        lambda: {"number": None, "resolver": None, "resolver_commit_num": None}
+    )
+
+    # Note that, we first get possible issue resolver *using commits*,
+    #   then we get possible resolver using PRs.
+    # In this way, resolver obtained through PRs has higher priority.
+    # Also, all commits and issues are sorted by date, so resolver from later commits
+    #   and later PRs have higher priority.
+    author2commits = defaultdict(list)
+    for c in all_commits:
+        author2commits[c["author"]].append(c)
+    for c in all_commits:
+        commits_before = set()
+        for c2 in author2commits[c["author"]]:
+            if c2["authored_at"] < c["authored_at"]:
+                commits_before.add(c2)
+        for num in match_issue_numbers(c["message"]):
+            if num not in closed_nums:
+                continue
+            logger.debug(
+                "Issue #%d resolved in %s by %s (%d prior commits)",
+                num,
+                c["sha"],
+                c["author"],
+                commits_before,
+            )
+            resolved[num]["number"] = num
+            resolved[num]["resolver"] = c["author"]
+            resolved[num]["resolver_commit_num"] = len(commits_before)
+    logger.info("%d issues found to be resolved by commits", len(resolved))
+
+    for issue in all_issues:
+        t1 = issue["closed_at"] - timedelta(minutes=1)
+        t2 = issue["closed_at"] + timedelta(minutes=1)
+        with Database() as db:
+            prs = list(
+                db.repos.issues.find(
+                    {
+                        "owner": fetcher.owner,
+                        "name": fetcher.name,
+                        "merged_at": {"$gt": t1, "$lt": t2},
+                    }
+                )
+            )
+        logger.debug(
+            "Candidate PRs: %s, rate remaining = %s",
+            [pr["number"] for pr in prs],
+            fetcher.gh.rate_limiting,
+        )
+        for pr in prs:
+            pr_details = fetcher.get_pull_detail(pr["number"])
+            text = "\n".join([pr["title"], pr["body"], *pr_details["comments"]])
+            commits_before = set()
+            for c in author2commits[pr["user"]]:
+                if (
+                    c["authored_at"] < pr["merged_at"]
+                    and c["sha"] not in pr_details["commits"]
+                ):
+                    commits_before.add(c["sha"])
+            if issue["number"] in match_issue_numbers(text):
+                logger.debug(
+                    "Issue #%d resolved in #%s by %s (%d prior commits)",
+                    issue["number"],
+                    pr["number"],
+                    pr["user"],
+                    commits_before,
+                )
+                resolved[issue["number"]]["number"] = issue["number"]
+                resolved[issue["number"]]["resolver"] = c["author"]
+                resolved[issue["number"]]["resolver_commit_num"] = len(commits_before)
+    logger.info("%d issues found to be resolved by commits/PRs", len(resolved))
+    return list(resolved.values())
+
+
+def update_issue_details(fetcher: RepoFetcher, number: int) -> Dict[str, Any]:
+    raise NotImplementedError()
 
 
 def update(token: str, owner: str, name: str) -> None:

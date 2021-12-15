@@ -47,9 +47,15 @@ def test_repo_fetcher():
         with Database() as db:
             db.repos.commits.insert_one(commit)
 
-    issues = fetcher.get_issues(since=now - timedelta(days=3))
+    issues = fetcher.get_issues(since=now - timedelta(days=7))
     pprint(issues)
     assert len(issues) >= 0
     for issue in issues:
         with Database() as db:
             db.repos.issues.insert_one(issue)
+
+    # pull_num = fetcher.repo.get_pulls().reversed[0].number
+    pull = fetcher.get_pull_detail(32)
+    pprint(pull)
+    assert isinstance(pull["comments"], list)
+    assert isinstance(pull["commits"], list)
