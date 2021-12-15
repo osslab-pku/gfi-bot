@@ -1,4 +1,4 @@
-name: Test GFI-Bot
+name: GFI-Bot Tests
 
 on:
   push:
@@ -32,4 +32,8 @@ jobs:
         echo ${{ secrets.GITHUB_TOKEN }} >> tokens.txt
     - name: Test with pytest
       run: |
-        poetry run pytest
+        poetry run pytest --cov=./gfibot --cov-report=xml
+    - name: "Upload coverage to Codecov"
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true

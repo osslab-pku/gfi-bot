@@ -1,5 +1,10 @@
 # GFI-Bot
 
+![Python Lint](https://github.com/osslab-pku/gfi-bot/actions/workflows/python-lint.yml/badge.svg)
+![GFI-Bot Tests](https://github.com/osslab-pku/gfi-bot/actions/workflows/test-gfi-bot.yml/badge.svg)
+![Test Coverage](https://img.shields.io/codecov/c/github/osslab-pku/gfi-bot)
+![License](https://img.shields.io/github/license/osslab-pku/gfi-bot)
+
 ML-powered 🤖 for finding and labeling good first issues in your GitHub project!
 
 The tool is based on the following paper:
