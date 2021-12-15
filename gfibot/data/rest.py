@@ -22,6 +22,22 @@ def get_page_num(per_page: int, total_count: int) -> int:
     return total_count // per_page + 1
 
 
+def get_month_interval(date: datetime) -> Tuple[datetime, datetime]:
+    if date.tzinfo is None:
+        logger.warning("date is not timezone aware: {}".format(date))
+        date = date.replace(tzinfo=timezone.utc)
+    date = date.astimezone(timezone.utc)
+    since = date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    until = date.replace(
+        day=monthrange(date.year, date.month)[1],
+        hour=23,
+        minute=59,
+        second=59,
+        microsecond=999999,
+    )
+    return since, until
+
+
 def request_github(
     gh: Github, gh_func: Callable[..., T], params: Tuple = (), default: Any = None
 ) -> Optional[T]:
@@ -45,22 +61,6 @@ def request_github(
             logger.error("{}: {}".format(type(ex), ex))
             time.sleep(5)
     return default
-
-
-def get_month_interval(date: datetime) -> Tuple[datetime, datetime]:
-    if date.tzinfo is None:
-        logger.warning("date is not timezone aware: {}".format(date))
-        date = date.replace(tzinfo=timezone.utc)
-    date = date.astimezone(timezone.utc)
-    since = date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    until = date.replace(
-        day=monthrange(date.year, date.month)[1],
-        hour=23,
-        minute=59,
-        second=59,
-        microsecond=999999,
-    )
-    return since, until
 
 
 class RepoFetcher(object):

@@ -8,8 +8,10 @@
     "name",
     "language",
     "repo_created_at",
-    "stars",
-    "commits"
+    "monthly_stars",
+    "monthly_commits",
+    "monthly_issues",
+    "monthly_pulls"
   ],
   "properties": {
     "created_at": {
@@ -29,24 +31,30 @@
       "description": "Repository name"
     },
     "language": {
-      "bsonType": ["string", "null"],
+      "bsonType": [
+        "string",
+        "null"
+      ],
       "description": "Main programming language (as returned by GitHub), can be null"
     },
     "repo_created_at": {
       "bsonType": "date",
       "description": "The time when this repository is created in GitHub"
     },
-    "stars": {
+    "monthly_stars": {
       "bsonType": "array",
-      "description": "A time series describing star changes since repository creation",
+      "description": "A time series describing number of newly received stars in each month since repository creation",
       "items": {
         "bsonType": "object",
-        "required": ["month", "count"],
+        "required": [
+          "month",
+          "count"
+        ],
         "additionalProperties": false,
         "properties": {
           "month": {
             "bsonType": "date",
-            "description": "The month"
+            "description": "The month, should be the starting date (e.g., 2020-01-01 00:00:00+00)"
           },
           "count": {
             "bsonType": "int",
@@ -56,22 +64,71 @@
         }
       }
     },
-    "commits": {
+    "monthly_commits": {
       "bsonType": "array",
-      "description": "A time series describing commits since repository creation",
+      "description": "A time series describing number of new commits each month since repository creation",
       "items": {
         "bsonType": "object",
-        "required": ["month", "count"],
+        "required": [
+          "month",
+          "count"
+        ],
         "additionalProperties": false,
         "properties": {
           "month": {
             "bsonType": "date",
-            "description": "The month"
+            "description": "The month, should be the starting date (e.g., 2020-01-01 00:00:00+00)"
           },
           "count": {
             "bsonType": "int",
             "minimum": 0,
             "description": "Number of new commits in this month, can be an approximate value"
+          }
+        }
+      }
+    },
+    "monthly_issues": {
+      "bsonType": "array",
+      "description": "A time series describing number of new issues each month since repository creation",
+      "items": {
+        "bsonType": "object",
+        "required": [
+          "month",
+          "count"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "month": {
+            "bsonType": "date",
+            "description": "The month, should be the starting date (e.g., 2020-01-01 00:00:00+00)"
+          },
+          "count": {
+            "bsonType": "int",
+            "minimum": 0,
+            "description": "Number of new issues in this month, can be an approximate value"
+          }
+        }
+      }
+    },
+    "monthly_pulls": {
+      "bsonType": "array",
+      "description": "A time series describing number of new pull requests each month since repository creation",
+      "items": {
+        "bsonType": "object",
+        "required": [
+          "month",
+          "count"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "month": {
+            "bsonType": "date",
+            "description": "The month, should be the starting date (e.g., 2020-01-01 00:00:00+00)"
+          },
+          "count": {
+            "bsonType": "int",
+            "minimum": 0,
+            "description": "Number of new pull requests in this month, can be an approximate value"
           }
         }
       }
