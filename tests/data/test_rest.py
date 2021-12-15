@@ -38,18 +38,18 @@ def test_repo_fetcher():
     pprint(stars)
     for star in stars:
         with Database() as db:
-            db.repo.stars.insert_one(star)
+            db.repos.stars.insert_one(star)
 
     commits = fetcher.get_commits(since=datetime(2000, 1, 1, tzinfo=timezone.utc))
     pprint(commits)
     assert len(commits) > 0
     for commit in commits:
         with Database() as db:
-            db.repo.commits.insert_one(commit)
+            db.repos.commits.insert_one(commit)
 
     issues = fetcher.get_issues(since=now - timedelta(days=3))
     pprint(issues)
     assert len(issues) >= 0
     for issue in issues:
         with Database() as db:
-            db.repo.issues.insert_one(issue)
+            db.repos.issues.insert_one(issue)

@@ -13,7 +13,10 @@ def init_db(mongo_url: str, db_name: str, collections: list, drop: bool) -> None
 
         if drop:
             for collection in db.list_collection_names():
-                logging.info("Dropping collection: %s", collection)
+                count = db[collection].count_documents({})
+                logging.info(
+                    "Dropping collection: %s (%d documents)", collection, count
+                )
                 db.drop_collection(collection)
 
         existing_collections = db.list_collection_names()

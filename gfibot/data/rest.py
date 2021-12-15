@@ -182,6 +182,9 @@ class RepoFetcher(object):
                         "state": issue.state,
                         "created_at": issue.created_at.astimezone(timezone.utc),
                         "closed_at": closed_at,
+                        "title": issue.title,
+                        "body": issue.body,
+                        "labels": [i.name for i in issue.labels],
                         "is_pull": is_pull,
                         "merged_at": merged_at,
                     }
