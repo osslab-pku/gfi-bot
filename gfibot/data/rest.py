@@ -71,6 +71,9 @@ class RepoFetcher(object):
         self.owner = self.repo.owner.login
         self.name = self.repo.name
 
+    def get_rate_limit(self) -> Tuple[int, int]:
+        return request_github(self.gh, lambda: self.gh.rate_limiting)
+
     def get_stats(self) -> dict[str, Any]:
         return request_github(
             self.gh,

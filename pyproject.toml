@@ -35,10 +35,6 @@ indexes = [
     { fields = ["merged_at"], unique = false },
 ]
 
-[mongodb.collections.repos_users]
-name = "repos.users"
-indexes = [{ fields = ["owner", "name", "user"], unique = true }]
-
 [mongodb.collections.issues]
 name = "issues"
 indexes = [{ fields = ["owner", "name", "number"], unique = true }]

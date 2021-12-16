@@ -109,16 +109,16 @@ def test_locate_resolve_issues():
     )
 
 
-def test_update():
+def test_update_repo():
     upd.logger.setLevel(logging.DEBUG)
     rest.logger.setLevel(logging.DEBUG)
 
     token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
 
     # Update twice to test incremental update
-    upd.update(token, "octocat", "Hello-World")
-    upd.update(token, "octocat", "Hello-World")
+    upd.update_repo(token, "octocat", "Hello-World")
+    upd.update_repo(token, "octocat", "Hello-World")
 
     # A big test to see whether everything is working
-    upd.update(token, "Mihara", "RasterPropMonitor")
-    upd.update(token, "Mihara", "RasterPropMonitor")
+    upd.update_repo(token, "Mihara", "RasterPropMonitor")
+    upd.update_repo(token, "Mihara", "RasterPropMonitor")

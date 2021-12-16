@@ -6,6 +6,7 @@
     "name",
     "number",
     "resolver",
+    "resolved_in",
     "resolver_commit_num",
     "events"
   ],
@@ -25,6 +26,10 @@
     "resolver": {
       "bsonType": "string",
       "description": "Issue resolver's GitHub user name"
+    },
+    "resolved_in": {
+      "bsonType": ["int", "string"],
+      "description": "If int, the PR number that resolved this issue. If string, the commit hash that resolved this issue."
     },
     "resolver_commit_num": {
       "bsonType": "int",
