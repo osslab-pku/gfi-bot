@@ -1,4 +1,3 @@
-import pymongo
 import gfibot.data.rest as rest
 
 from pprint import pprint
@@ -54,8 +53,11 @@ def test_repo_fetcher():
         with Database() as db:
             db.repos.issues.insert_one(issue)
 
-    # pull_num = fetcher.repo.get_pulls().reversed[0].number
     pull = fetcher.get_pull_detail(32)
     pprint(pull)
     assert isinstance(pull["comments"], list)
     assert isinstance(pull["commits"], list)
+
+    issue = fetcher.get_issue_detail(32)
+    pprint(issue)
+    assert isinstance(issue["events"], list)

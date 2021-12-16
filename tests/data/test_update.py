@@ -1,11 +1,14 @@
-from gfibot import TOKENS
+import logging
+import gfibot
+import gfibot.data.update as upd
+import gfibot.data.rest as rest
+
 from pprint import pprint
-from datetime import datetime
-from gfibot.data.update import *
+from datetime import datetime, timezone
 
 
 def test_count_by_month():
-    c = count_by_month(
+    c = upd.count_by_month(
         [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2021, 3, 4)]
     )
     print(c)
@@ -13,11 +16,11 @@ def test_count_by_month():
 
 
 def test_match_issue_numbers():
-    assert match_issue_numbers("abc") == []
-    assert match_issue_numbers("close #db") == []
-    assert match_issue_numbers("close #1 closes #2 closed #3") == [1, 2, 3]
-    assert match_issue_numbers("fix #3 fiXes #2 fixed #1") == [3, 2, 1]
-    assert match_issue_numbers("Resolve #2 resolves #1 resolved #3") == [2, 1, 3]
+    assert upd.match_issue_numbers("abc") == []
+    assert upd.match_issue_numbers("close #db") == []
+    assert upd.match_issue_numbers("close #1 closes #2 closed #3") == [1, 2, 3]
+    assert upd.match_issue_numbers("fix #3 fiXes #2 fixed #1") == [3, 2, 1]
+    assert upd.match_issue_numbers("Resolve #2 resolves #1 resolved #3") == [2, 1, 3]
 
 
 def test_locate_resolve_issues():
@@ -78,7 +81,7 @@ def test_locate_resolve_issues():
             "message": "fixes #1",
         }
     ]
-    with Database() as db:
+    with gfibot.Database() as db:
         for i in issues:
             db.repos.issues.replace_one(
                 {"owner": owner, "name": name, "number": i["number"]},
@@ -92,9 +95,9 @@ def test_locate_resolve_issues():
                 upsert=True,
             )
 
-    token = TOKENS[0] if len(TOKENS) > 0 else None
-    fetcher = RepoFetcher(token, owner, name)
-    resolved = locate_resolved_issues(
+    token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
+    fetcher = rest.RepoFetcher(token, owner, name)
+    resolved = upd.locate_resolved_issues(
         fetcher, datetime(1970, 1, 1, tzinfo=timezone.utc)
     )
     pprint(resolved)
@@ -107,6 +110,15 @@ def test_locate_resolve_issues():
 
 
 def test_update():
-    token = TOKENS[0] if len(TOKENS) > 0 else None
-    update(token, "octocat", "Hello-World")
-    update(token, "octocat", "Hello-World")  # Update twice to test incremental update
+    upd.logger.setLevel(logging.DEBUG)
+    rest.logger.setLevel(logging.DEBUG)
+
+    token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
+
+    # Update twice to test incremental update
+    upd.update(token, "octocat", "Hello-World")
+    upd.update(token, "octocat", "Hello-World")
+
+    # A big test to see whether everything is working
+    upd.update(token, "Mihara", "RasterPropMonitor")
+    upd.update(token, "Mihara", "RasterPropMonitor")

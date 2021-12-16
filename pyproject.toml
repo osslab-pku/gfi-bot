@@ -1,5 +1,7 @@
 [gfibot]
 projects = [
+    "Mihara/RasterPropMonitor",
+    "Revolutionary-Games/Thrive",
     "osmlab/name-suggestion-index",
     "scikit-learn/scikit-learn",
     "pandas-dev/pandas",

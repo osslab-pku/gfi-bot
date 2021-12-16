@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d %(message)s",
+    format="%(asctime)s (PID %(process)d) [%(levelname)s] %(filename)s:%(lineno)d %(message)s",
     level=logging.INFO,
 )
 

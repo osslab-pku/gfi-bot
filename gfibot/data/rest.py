@@ -192,7 +192,46 @@ class RepoFetcher(object):
         return results
 
     def get_issue_detail(self, number: int) -> Dict[str, Any]:
-        raise NotImplementedError()
+        issue = request_github(self.gh, self.repo.get_issue, (number,))
+        if issue is None:
+            raise ValueError(f"issue #{number} not found")
+        events = []
+        for event in list(request_github(self.gh, issue.get_timeline, default=[])):
+            event = event.raw_data
+            additional_props = {}
+            if event["event"] in ["assigned", "unassigned"]:
+                additional_props["assignee"] = event["assignee"]["login"]
+            elif event["event"] in ["labeled", "unlabeled"]:
+                additional_props["label"] = event["label"]["name"]
+            elif event["event"] == "commented":
+                additional_props["comment"] = event["body"]
+                additional_props["commenter"] = event["user"]["login"]
+            elif event["event"] == "cross-referenced":
+                additional_props["source"] = event["source"]["issue"]["number"]
+            elif event["event"] == "referenced":
+                additional_props["commit"] = event["commit_id"]
+            if "created_at" in event and event["created_at"] is not None:
+                t = parse_date(event["created_at"]).astimezone(timezone.utc)
+            else:
+                t = None
+            if "actor" in event and event["actor"] is not None:
+                actor = event["actor"]["login"]
+            else:
+                actor = None
+            events.append(
+                {
+                    "type": event["event"],
+                    "time": t,
+                    "actor": actor,
+                    **additional_props,
+                }
+            )
+        return {
+            "owner": self.owner,
+            "name": self.name,
+            "number": number,
+            "events": events,
+        }
 
     def get_pull_detail(self, number: int) -> Dict[str, Any]:
         pull = request_github(self.gh, self.repo.get_pull, (number,))
@@ -201,7 +240,7 @@ class RepoFetcher(object):
         return {
             "owner": self.owner,
             "name": self.name,
-            "number": pull.number,
+            "number": number,
             "commits": request_github(
                 self.gh, lambda: [c.sha for c in pull.get_commits()], []
             ),

@@ -128,6 +128,7 @@ def locate_resolved_issues(
                 {
                     "owner": fetcher.owner,
                     "name": fetcher.name,
+                    "is_pull": False,
                     "closed_at": {"$gte": since},
                 }
             )
@@ -140,7 +141,13 @@ def locate_resolved_issues(
     logger.info("%d newly closed issues since %s", len(all_issues), since)
 
     resolved = defaultdict(
-        lambda: {"number": None, "resolver": None, "resolver_commit_num": None}
+        lambda: {
+            "owner": fetcher.owner,
+            "name": fetcher.name,
+            "number": None,
+            "resolver": None,
+            "resolver_commit_num": None,
+        }
     )
 
     # Note that, we first get possible issue resolver *using commits*,
@@ -155,7 +162,7 @@ def locate_resolved_issues(
         commits_before = set()
         for c2 in author2commits[c["author"]]:
             if c2["authored_at"] < c["authored_at"]:
-                commits_before.add(c2)
+                commits_before.add(c2["sha"])
         for num in match_issue_numbers(c["message"]):
             if num not in closed_nums:
                 continue
@@ -164,7 +171,7 @@ def locate_resolved_issues(
                 num,
                 c["sha"],
                 c["author"],
-                commits_before,
+                len(commits_before),
             )
             resolved[num]["number"] = num
             resolved[num]["resolver"] = c["author"]
@@ -180,18 +187,22 @@ def locate_resolved_issues(
                     {
                         "owner": fetcher.owner,
                         "name": fetcher.name,
+                        "is_pull": True,
                         "merged_at": {"$gt": t1, "$lt": t2},
                     }
                 )
             )
-        logger.debug(
-            "Candidate PRs: %s, rate remaining = %s",
-            [pr["number"] for pr in prs],
-            fetcher.gh.rate_limiting,
-        )
+        if len(prs) > 0:
+            logger.debug(
+                "Candidate PRs %s for issue %d, rate remaining = %s",
+                [pr["number"] for pr in prs],
+                issue["number"],
+                fetcher.gh.rate_limiting,
+            )
         for pr in prs:
             pr_details = fetcher.get_pull_detail(pr["number"])
-            text = "\n".join([pr["title"], pr["body"], *pr_details["comments"]])
+            text = [pr["title"], pr["body"], *pr_details["comments"]]
+            text = "\n".join([t for t in text if t is not None])
             commits_before = set()
             for c in author2commits[pr["user"]]:
                 if (
@@ -201,11 +212,11 @@ def locate_resolved_issues(
                     commits_before.add(c["sha"])
             if issue["number"] in match_issue_numbers(text):
                 logger.debug(
-                    "Issue #%d resolved in #%s by %s (%d prior commits)",
+                    "Issue #%d resolved in #%d by %s (%d prior commits)",
                     issue["number"],
                     pr["number"],
                     pr["user"],
-                    commits_before,
+                    len(commits_before),
                 )
                 resolved[issue["number"]]["number"] = issue["number"]
                 resolved[issue["number"]]["resolver"] = c["author"]
@@ -214,8 +225,28 @@ def locate_resolved_issues(
     return list(resolved.values())
 
 
-def update_issue_details(fetcher: RepoFetcher, number: int) -> Dict[str, Any]:
-    raise NotImplementedError()
+def update_issue_details(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
+    """Fetch data for issues that will be used for RecGFI training."""
+    resolved_issues = locate_resolved_issues(fetcher, since)
+    for resolved in resolved_issues:
+        logger.debug(
+            "Fetching details for issue #%d, rate remaining = %s",
+            resolved["number"],
+            fetcher.gh.rate_limiting,
+        )
+        resolved["events"] = fetcher.get_issue_detail(resolved["number"])["events"]
+    with Database() as db:
+        for issue in resolved_issues:
+            db.issues.replace_one(
+                {
+                    "owner": fetcher.owner,
+                    "name": fetcher.name,
+                    "number": issue["number"],
+                },
+                issue,
+                upsert=True,
+            )
+    return resolved_issues
 
 
 def update(token: str, owner: str, name: str) -> None:
@@ -228,7 +259,7 @@ def update(token: str, owner: str, name: str) -> None:
         since = repo["updated_at"]
     repo["updated_at"] = datetime.now(timezone.utc)
 
-    logging.info("Update stars, commits, and issues since %s", since)
+    logger.info("Update stars, commits, and issues since %s", since)
     stars = update_stars(fetcher, since)
     commits = update_commits(fetcher, since)
     issues = update_issues(fetcher, since)
@@ -246,6 +277,8 @@ def update(token: str, owner: str, name: str) -> None:
         db.repos.replace_one(
             {"owner": fetcher.owner, "name": fetcher.name}, repo, upsert=True
         )
+
+    update_issue_details(fetcher, since)
 
 
 if __name__ == "__main__":

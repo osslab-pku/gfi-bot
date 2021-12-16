@@ -1,28 +1,15 @@
 {
   "bsonType": "object",
-  "description": "Issue statistics for RecGFI training",
+  "description": "Additional issue information for RecGFI training",
   "required": [
-    "created_at",
-    "updated_at",
     "owner",
     "name",
     "number",
-    "user",
-    "title",
-    "body",
-    "labels",
-    "events",
-    "comments"
+    "resolver",
+    "resolver_commit_num",
+    "events"
   ],
   "properties": {
-    "created_at": {
-      "bsonType": "date",
-      "description": "The time when this document is added to this collection"
-    },
-    "updated_at": {
-      "bsonType": "date",
-      "description": "The last time when this document is updated (to reflect latest statistics)"
-    },
     "owner": {
       "bsonType": "string",
       "description": "Issue's repository owner name"
@@ -35,80 +22,32 @@
       "bsonType": "int",
       "description": "Issue number in GitHub"
     },
-    "user": {
+    "resolver": {
       "bsonType": "string",
-      "description": "Issue reporter (GitHub username)"
+      "description": "Issue resolver's GitHub user name"
     },
-    "title": {
-      "bsonType": "string",
-      "description": "Issue title"
-    },
-    "body": {
-      "bsonType": "string",
-      "description": "Issue body"
-    },
-    "labels": {
-      "bsonType": "array",
-      "items": {
-        "bsonType": "object",
-        "required": ["added", "removed", "name"],
-        "additionalProperties": false,
-        "properties": {
-          "added": {
-            "bsonType": "date",
-            "description": "The time when this label is added"
-          },
-          "removed": {
-            "bsonType": ["date", "null"],
-            "description": "The time when this label is removed, null if never removed"
-          },
-          "name": {
-            "bsonType": "string",
-            "description": "Name of the label"
-          }
-        }
-      }
+    "resolver_commit_num": {
+      "bsonType": "int",
+      "description": "Issue resolver's commits to this repo, before the issue is resolved"
     },
     "events": {
       "bsonType": "array",
+      "description": "Issue events. For assigned, unassigned, labeled, unlabeled, referenced, cross-referenced, and commented events, additional fields are available",
       "items": {
         "bsonType": "object",
-        "required": ["time", "type", "user"],
-        "additionalProperties": false,
+        "required": ["type", "time", "actor"],
         "properties": {
-          "time": {
-            "bsonType": "date",
-            "description": "The time when this event happened"
-          },
           "type": {
             "bsonType": "string",
             "description": "Type of the event"
           },
-          "user": {
-            "bsonType": ["string", "null"],
-            "description": "The GitHub user (login name) associated with the event, can be null"
-          }
-        }
-      }
-    },
-    "comments": {
-      "bsonType": "array",
-      "items": {
-        "bsonType": "object",
-        "required": ["time", "user", "body"],
-        "additionalProperties": false,
-        "properties": {
           "time": {
-            "bsonType": "date",
-            "description": "The time when this comment is added"
+            "bsonType": ["date", "null"],
+            "description": "The time when this event happened, can be null for some events"
           },
-          "user": {
-            "bsonType": "string",
-            "description": "The GitHub user (login name) who added this comment"
-          },
-          "body": {
-            "bsonType": "string",
-            "description": "The comment body"
+          "actor": {
+            "bsonType": ["string", "null"],
+            "description": "The GitHub user (login name) associated with the event, can be null for some events"
           }
         }
       }
