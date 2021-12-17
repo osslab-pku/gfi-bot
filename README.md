@@ -56,7 +56,7 @@ As mentioned before, the MongoDB instance serves as a "single source of truth" a
 * [`gfibot.repos.issues`](schemas/repos.issues.json): Basic data for all repository issues. Has a compound unique index on (`name`, `owner`, `number`).
 * [`gfibot.repos.users`](schemas/repos.users.json): User data *per repository*. Has a compound unique index on (`name`, `owner`, `user`).
 * [`gfibot.issues`](schemas/issues.json): Additional data for issues that will be used for RecGFI training (i.e., resolved by a commit/PR). Has a compound unique index on (`name`, `owner`, `number`).
-* [`gfibot.users`](schemas/users.json): User data. Has a unique index on `name`.
+* [`gfibot.users`](schemas/users.json): User data. Has a unique index on `name`. (TODO: Need to implement incremental data fetch for this collection.)
 
 ## Deployment
 

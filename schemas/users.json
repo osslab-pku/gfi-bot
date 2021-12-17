@@ -1,16 +1,7 @@
 {
   "bsonType": "object",
   "description": "User statsitics for RecGFI training",
-  "required": [
-    "created_at",
-    "updated_at",
-    "user",
-    "repos",
-    "followers",
-    "commits",
-    "issues",
-    "pulls"
-  ],
+  "required": ["created_at", "updated_at", "user", "repos", "issues", "pulls"],
   "properties": {
     "created_at": {
       "bsonType": "date",
@@ -26,11 +17,11 @@
     },
     "repos": {
       "bsonType": "object",
-      "description": "Statistics for repositories owned by this user",
+      "description": "Repositories owned by this user",
       "items": {
         "bsonType": "object",
         "description": "Statistics for a single repository",
-        "required": ["name", "created_at", "stars"],
+        "required": ["name", "created_at"],
         "properties": {
           "name": {
             "bsonType": "string",
@@ -39,106 +30,58 @@
           "created_at": {
             "bsonType": "date",
             "description": "Date of repository creation"
-          },
-          "stars": {
-            "bsonType": "array",
-            "description": "A time series describing star changes since repository creation",
-            "items": {
-              "bsonType": "object",
-              "required": ["month", "count"],
-              "additionalProperties": false,
-              "properties": {
-                "month": {
-                  "bsonType": "date",
-                  "description": "The month"
-                },
-                "count": {
-                  "bsonType": "int",
-                  "minimum": 0,
-                  "description": "Number of stars received in this month, can be an approximate value"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "followers": {
-      "bsonType": "array",
-      "description": "A time series describing follower changes since user creation",
-      "items": {
-        "bsonType": "object",
-        "required": ["month", "count"],
-        "additionalProperties": false,
-        "properties": {
-          "month": {
-            "bsonType": "date",
-            "description": "The month"
-          },
-          "count": {
-            "bsonType": "int",
-            "minimum": 0,
-            "description": "Number of followers the user received in this month, can be an approximate value"
-          }
-        }
-      }
-    },
-    "commits": {
-      "bsonType": "array",
-      "description": "A time series describing commit changes since user creation",
-      "items": {
-        "bsonType": "object",
-        "required": ["month", "count"],
-        "additionalProperties": false,
-        "properties": {
-          "month": {
-            "bsonType": "date",
-            "description": "The month"
-          },
-          "count": {
-            "bsonType": "int",
-            "minimum": 0,
-            "description": "Number of commits the user made in this month, can be an approximate value"
           }
         }
       }
     },
     "issues": {
       "bsonType": "array",
-      "description": "A time series describing issue changes since user creation",
+      "description": "Issue created by this user",
       "items": {
         "bsonType": "object",
-        "required": ["month", "count"],
-        "additionalProperties": false,
+        "required": ["owner", "name", "number", "created_at"],
         "properties": {
-          "month": {
-            "bsonType": "date",
-            "description": "The month"
+          "owner": {
+            "bsonType": "string",
+            "description": "Repository owner"
           },
-          "count": {
+          "name": {
+            "bsonType": "string",
+            "description": "Repository name"
+          },
+          "number": {
             "bsonType": "int",
-            "minimum": 0,
-            "description": "Number of issues the user opened in this month, can be an approximate value"
+            "description": "Issue number"
+          },
+          "created_at": {
+            "bsonType": "date",
+            "description": "Date of issue creation"
           }
         }
       }
     },
     "pulls": {
       "bsonType": "array",
-      "description": "A time series describing pull request changes since user creation",
+      "description": "Pull requests created by this user",
       "items": {
         "bsonType": "object",
-        "required": ["month", "count"],
-        "additionalProperties": false,
+        "required": ["owner", "name", "number", "created_at"],
         "properties": {
-          "month": {
-            "bsonType": "date",
-            "description": "The month"
+          "owner": {
+            "bsonType": "string",
+            "description": "Repository owner"
           },
-          "count": {
+          "name": {
+            "bsonType": "string",
+            "description": "Repository name"
+          },
+          "number": {
             "bsonType": "int",
-            "minimum": 0,
-            "description": "Number of pull requests the user opened in this month, can be an approximate value"
+            "description": "Pull request number"
+          },
+          "created_at": {
+            "bsonType": "date",
+            "description": "Date of request creation"
           }
         }
       }

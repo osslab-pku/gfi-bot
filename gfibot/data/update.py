@@ -258,6 +258,8 @@ def update_resolved_issues(
 
 
 def update_user(user: str, since: datetime) -> None:
+    # TODO: We need an efficient approach to fetch user profile from GitHub,
+    #   we may use the GraphQL API with more user-related features than the REST API
     raise NotImplementedError()
 
 
