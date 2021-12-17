@@ -81,7 +81,7 @@
           },
           "created_at": {
             "bsonType": "date",
-            "description": "Date of request creation"
+            "description": "Date of pull request creation"
           }
         }
       }
