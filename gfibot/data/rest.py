@@ -90,7 +90,9 @@ class RepoFetcher(object):
         stars = request_github(
             self.gh, lambda: self.repo.get_stargazers_with_dates(), default=[]
         ).reversed
-        page_num = get_page_num(self.gh.per_page, stars.totalCount)
+        page_num = request_github(
+            self.gh, lambda: get_page_num(self.gh.per_page, stars.totalCount), default=0
+        )
         for p in range(0, page_num):
             logger.debug("star page %d/%d, rate %s", p, page_num, self.gh.rate_limiting)
             for star in request_github(self.gh, stars.get_page, (p,), []):
@@ -120,7 +122,11 @@ class RepoFetcher(object):
         commits = request_github(
             self.gh, lambda: self.repo.get_commits(since=since), default=[]
         )
-        page_num = get_page_num(self.gh.per_page, commits.totalCount)
+        page_num = request_github(
+            self.gh,
+            lambda: get_page_num(self.gh.per_page, commits.totalCount),
+            default=0,
+        )
         for p in range(0, page_num):
             logger.debug(
                 "commit page %d/%d, rate %s", p, page_num, self.gh.rate_limiting
@@ -159,7 +165,11 @@ class RepoFetcher(object):
             lambda: self.repo.get_issues(since=since, direction="asc", state="all"),
             default=[],
         )
-        page_num = get_page_num(self.gh.per_page, issues.totalCount)
+        page_num = request_github(
+            self.gh,
+            lambda: get_page_num(self.gh.per_page, issues.totalCount),
+            default=0,
+        )
         for p in range(0, page_num):
             logger.debug(
                 "issue page %d/%d, rate %s", p, page_num, self.gh.rate_limiting
@@ -199,36 +209,43 @@ class RepoFetcher(object):
         if issue is None:
             raise ValueError(f"issue #{number} not found")
         events = []
-        for event in list(request_github(self.gh, issue.get_timeline, default=[])):
-            event = event.raw_data
-            additional_props = {}
-            if event["event"] in ["assigned", "unassigned"]:
-                additional_props["assignee"] = event["assignee"]["login"]
-            elif event["event"] in ["labeled", "unlabeled"]:
-                additional_props["label"] = event["label"]["name"]
-            elif event["event"] == "commented":
-                additional_props["comment"] = event["body"]
-                additional_props["commenter"] = event["user"]["login"]
-            elif event["event"] == "cross-referenced":
-                additional_props["source"] = event["source"]["issue"]["number"]
-            elif event["event"] == "referenced":
-                additional_props["commit"] = event["commit_id"]
-            if "created_at" in event and event["created_at"] is not None:
-                t = parse_date(event["created_at"]).astimezone(timezone.utc)
-            else:
-                t = None
-            if "actor" in event and event["actor"] is not None:
-                actor = event["actor"]["login"]
-            else:
-                actor = None
-            events.append(
-                {
-                    "type": event["event"],
-                    "time": t,
-                    "actor": actor,
-                    **additional_props,
-                }
-            )
+        timeline_events = request_github(self.gh, issue.get_timeline, default=[])
+        page_num = request_github(
+            self.gh,
+            lambda: get_page_num(self.gh.per_page, timeline_events.totalCount),
+            default=0,
+        )
+        for p in range(0, page_num):
+            for event in request_github(self.gh, timeline_events.get_page, (p,), []):
+                event = event.raw_data
+                additional_props = {}
+                if event["event"] in ["assigned", "unassigned"]:
+                    additional_props["assignee"] = event["assignee"]["login"]
+                elif event["event"] in ["labeled", "unlabeled"]:
+                    additional_props["label"] = event["label"]["name"]
+                elif event["event"] == "commented":
+                    additional_props["comment"] = event["body"]
+                    additional_props["commenter"] = event["user"]["login"]
+                elif event["event"] == "cross-referenced":
+                    additional_props["source"] = event["source"]["issue"]["number"]
+                elif event["event"] == "referenced":
+                    additional_props["commit"] = event["commit_id"]
+                if "created_at" in event and event["created_at"] is not None:
+                    t = parse_date(event["created_at"]).astimezone(timezone.utc)
+                else:
+                    t = None
+                if "actor" in event and event["actor"] is not None:
+                    actor = event["actor"]["login"]
+                else:
+                    actor = None
+                events.append(
+                    {
+                        "type": event["event"],
+                        "time": t,
+                        "actor": actor,
+                        **additional_props,
+                    }
+                )
         return {
             "owner": self.owner,
             "name": self.name,
