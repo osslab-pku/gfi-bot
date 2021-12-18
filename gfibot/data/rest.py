@@ -220,7 +220,8 @@ class RepoFetcher(object):
                 event = event.raw_data
                 additional_props = {}
                 if event["event"] in ["assigned", "unassigned"]:
-                    additional_props["assignee"] = event["assignee"]["login"]
+                    if event["assignee"] is not None:
+                        additional_props["assignee"] = event["assignee"]["login"]
                 elif event["event"] in ["labeled", "unlabeled"]:
                     additional_props["label"] = event["label"]["name"]
                 elif event["event"] == "commented":
