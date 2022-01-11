@@ -1,7 +1,5 @@
 import numpy as np
 
-#model = sm.GLM.from_formula("oneyear ~  cmtnum_m + cmtratio + cmtpeople + fork + numissue + ownert + ownercmtnum_m + ownfoll + nummem + numwat ", family = sm.families.Binomial(), data=df)
-
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score
 import utils 
