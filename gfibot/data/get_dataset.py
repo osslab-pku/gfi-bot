@@ -75,29 +75,6 @@ def count_text_len(str):
     if str==None:
         return 0
     return len(str.split())
-def commenttrans2seq(r):
-    comment=[]
-    c=r.values
-    for i in c:
-        comment.append(str(i).split())
-    w2vCommentModel = Word2Vec(sentences=comment, hs=0, negative=5, min_count=5, window=5, workers=4, size=128)
-    w2vCommentModel.save("emb_comment")
-    word2vecCom = Word2Vec.load("emb_comment").wv
-    vocabCom = word2vecCom.vocab
-
-    lst=r.split()
-    seq=[]
-    for i in lst:
-        if i in vocabCom:
-            seq.append(vocabCom[i].index)
-        else:
-            pass   
-    seq=seq[:120]#max_com_length=120
-    while(len(seq)<120):
-        seq.append(0)            
-    return seq
-    
-
 
 def get_userdata(owner,reponame,user,commits,issues,issdb,t):
     if user=='ghost':
@@ -116,18 +93,17 @@ def get_userdata(owner,reponame,user,commits,issues,issdb,t):
 
     usriss=issues.find({'user':user,'is_pull':False})
     usralliss=[iss for iss in usriss if iss['created_at']<t]
+    issues_in_repo=sum([(iss['owner']==owner and iss['name']==reponame) for iss in usralliss])
+    usralliss=[iss for iss in usriss if iss['closed_at'] is not None and iss['closed_at']<t]
     isslist=[iss['number'] for iss in usralliss if iss['owner']==owner and iss['name']==reponame]
-    issues_in_repo=len(isslist)
-    if issues_in_repo==0:
+    if isslist==[]:
         issue_closer_commits=[]
     else:
         issue_closer_commits=issdb.find({'number':{'$in':isslist}})
         issue_closer_commits=[i['resolver_commit_num'] for i in issue_closer_commits if i is not None]
-
     usrpr=issues.find({'user':user,'is_pull':True})
     usrallpr=[pr for pr in usrpr if pr['created_at']<t]
     pulls_in_repo=sum([pr['owner']==owner and pr['name']==reponame for pr in usrallpr])
-
     return [commits_in_repo,issues_in_repo,pulls_in_repo,issue_closer_commits]#commits_all,user['repos_owned'],user['stars_received'],user['followers'],user['issues_all'],user['pulls_all'],
 
 def get_feature(id,owner,reponame,number,resolver,resolver_commit_num,resolved_in,eventslist):
@@ -142,8 +118,8 @@ def get_feature(id,owner,reponame,number,resolver,resolver_commit_num,resolved_i
         return None
 
     mgclient = pymongo.MongoClient('mongodb://localhost:27017/',connect=False)
-    dataset=mgclient['gfibot']['dataset']
-    if dataset.find_one({'owner':owner,'name':reponame,'number':number}) is not None:
+    issuedataset=mgclient['gfibot']['issuedataset']
+    if issuedataset.find_one({'owner':owner,'name':reponame,'number':number}) is not None:
         mgclient.close()
         logging.info('skip')
         return
@@ -173,6 +149,7 @@ def get_feature(id,owner,reponame,number,resolver,resolver_commit_num,resolved_i
     title=issue['title']
     body=issue['body']
     alllabels=issue['labels']
+    clst=issue['closed_at']
 
     for event in eventslist:
         etyp=event['type']
@@ -258,9 +235,6 @@ def get_feature(id,owner,reponame,number,resolver,resolver_commit_num,resolved_i
     [ownercmt,owneriss,ownerpr,ownerissues]=get_userdata(owner,reponame,owner,commits,issues,issdb,t)
     [rptcmt,rptiss,rptpr,rptissues]=get_userdata(owner,reponame,rpt,commits,issues,issdb,t)
 
-
-
-
     NumOfCode=count_code_number(body)
     body=delete_code(body)
     NumOfUrls=count_url(body)
@@ -290,7 +264,7 @@ def get_feature(id,owner,reponame,number,resolver,resolver_commit_num,resolved_i
     df["rptnpratio"]=df["rptisscmtlist"].apply(getratio)
     df["rptissnum"]=df["rptisscmtlist"].apply(getissnum)
     '''
-    dataset.insert_one({'owner':owner,'name':reponame,'number':number, 'resolver_commit_num':resolver_commit_num, 'pro_star':pro_star,'isslist':isslist,'propr':propr,
+    issuedataset.insert_one({'owner':owner,'name':reponame,'number':number, 'resolver_commit_num':resolver_commit_num, 'clst':clst, 'pro_star':pro_star,'isslist':isslist,'propr':propr,
                 'rptcmt':rptcmt, 'rptiss':rptiss,'rptpr':rptpr, 'rptissues':rptissues,
                 'ownercmt':ownercmt, 'owneriss':owneriss,'ownerpr':ownerpr, 'ownerissues':ownerissues,
                 'procmt':procmt, 'contributornum':contributornum, 'crtclsissnum':crtclsissnum, 'openiss':openiss, 'openissratio':openissratio, 'clsisst':clsisst,
@@ -311,14 +285,14 @@ if __name__ == '__main__':
     myclient = pymongo.MongoClient('mongodb://localhost:27017/',connect=False)
     mydb = myclient['gfibot']['issues']
     issuelist=[[x['_id'],x['owner'],x['name'],x['number'],x['resolver'],x['resolver_commit_num'],x['resolved_in'],x['events']] for x in mydb.find()]
-    #myclient['gfibot'].drop_collection('dataset')
+    #myclient['gfibot'].drop_collection('issuedataset')
     logging.info(len(issuelist))
 
-    if 'dataset' in myclient['gfibot'].list_collection_names():
+    if 'issuedataset' in myclient['gfibot'].list_collection_names():
                 logging.warning(
                     "Collection %s already exists (%d documents), skipping",
-                    'dataset',
-                    myclient['gfibot']['dataset'].count_documents(filter={}),
+                    'issuedataset',
+                    myclient['gfibot']['issuedataset'].count_documents(filter={}),
                 )
                 logging.info(
                     "Use --drop to drop all collections before re-initializing"
@@ -326,8 +300,8 @@ if __name__ == '__main__':
     else:
         with open('dataset.json', 'r') as f:
             schema = json.load(f)
-        myclient['gfibot'].create_collection('dataset', validator={"$jsonSchema": schema})
-        addind=['owner','name','number','resolver_commit_num','pro_star','isslist','propr', 'rptcmt', 'rptiss','rptpr', 'rptissues','ownercmt', 'owneriss','ownerpr', 'ownerissues','procmt', 'contributornum', 'crtclsissnum', 'openiss', 'openissratio', 'clsisst',
+        myclient['gfibot'].create_collection('issuedataset', validator={"$jsonSchema": schema})
+        addind=['owner','name','number','resolver_commit_num','clst','pro_star','isslist','propr', 'rptcmt', 'rptiss','rptpr', 'rptissues','ownercmt', 'owneriss','ownerpr', 'ownerissues','procmt', 'contributornum', 'crtclsissnum', 'openiss', 'openissratio', 'clsisst',
               'labels', 'events', 'commentusers', 'rpthasevent', 'rpthascomment',
               'NumOfCode','NumOfUrls','NumOfPics','coleman_liau_index','flesch_reading_ease','flesch_kincaid_grade',
               'automated_readability_index','LengthOfTitle','LengthOfDescription','commentnum',
@@ -339,7 +313,7 @@ if __name__ == '__main__':
                 uni=True
             else:
                 uni=False
-            myclient['gfibot']['dataset'].create_index(
+            myclient['gfibot']['issuedataset'].create_index(
             [(ind, pymongo.ASCENDING)],
             unique=uni,
             )
