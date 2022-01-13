@@ -290,14 +290,14 @@ def load_train_test_data(df,settype,owner,name):
         test_data=df.iloc[p_train_split+1:]
 
     print(train_data[train_data.ifnew == 1].shape[0],train_data[train_data.ifnew == 0].shape[0],test_data.shape[0])#ifnew=1和0的数量
-    #p_train = train_data[train_data.ifnew == 1]
-    #p_train = p_train.sample(frac=5000/p_train.shape[0],replace=True,random_state=0)
+    p_train = train_data[train_data.ifnew == 1]
+    p_train = p_train.sample(frac=2000/p_train.shape[0],replace=True,random_state=0)
 
-    #n_train = train_data[train_data.ifnew == 0]
-    #n_train=n_train.sample(frac=5000/n_train.shape[0],replace=True,random_state=0)
+    n_train = train_data[train_data.ifnew == 0]
+    n_train=n_train.sample(frac=2000/n_train.shape[0],replace=True,random_state=0)
 
-    #train_data=pd.concat([p_train,n_train],ignore_index=True)
-    #train_data=train_data.sample(frac=1, random_state=0)
+    train_data=pd.concat([p_train,n_train],ignore_index=True)
+    train_data=train_data.sample(frac=1, random_state=0)
     y_train=train_data['ifnew']
     y_test=test_data['ifnew']
 
@@ -321,7 +321,6 @@ def load_train_test_data(df,settype,owner,name):
     X_train=train_data
     X_test=test_data
     return X_train, X_test, y_train, y_test
-
 
 def get_all_metrics(eval_labels, pred_labels,scores):
     fpr, tpr, thresholds_keras = roc_curve(eval_labels,scores)
