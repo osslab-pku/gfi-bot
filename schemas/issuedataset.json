@@ -1,0 +1,172 @@
+{
+    "bsonType": "object",
+    "description": "Dataset for RecGFI training",
+    "required": [
+        "owner","name","number","resolver_commit_num","pro_star","isslist","propr", "rptcmt", "rptiss","rptpr", "rptissues","ownercmt", "owneriss","ownerpr", "ownerissues","procmt", "contributornum", "crtclsissnum", "openiss", "openissratio", "clsisst",
+        "labels", "events", "commentusers", "rpthasevent","rpthascomment","NumOfCode","NumOfUrls","NumOfPics","coleman_liau_index","flesch_reading_ease","flesch_kincaid_grade",
+        "automated_readability_index","LengthOfTitle","LengthOfDescription","commentnum","title","body","comment"
+    ],
+
+    "properties": {
+      "owner": {
+        "bsonType": "string",
+        "description": "Issue's repository owner name"
+      },
+      "name": {
+        "bsonType": "string",
+        "description": "Issue's repository name"
+      },
+      "number": {
+        "bsonType": "int",
+        "description": "Issue number in GitHub"
+      },
+      "resolver_commit_num": {
+        "bsonType": "int",
+        "description": "Issue resolver's commits to this repo, before the issue is resolved"
+      },
+      "clst": {
+        "bsonType": "date",
+        "description": "The time when the issue is closed"
+      },
+      "pro_star": {
+        "bsonType": "int",
+        "description": "Issue's repository star"
+      },
+      "isslist": {
+        "bsonType": "array",
+        "description": "List of resolver_commit_num for issues in repository"
+      },
+      "propr": {
+        "bsonType": "int",
+        "description": "the number of repository prs"
+      },
+      "rptcmt": {
+        "bsonType": "int",
+        "description": "number of commits in repo from the reporter"
+      },
+      "rptiss": {
+        "bsonType": "int",
+        "description": "number of issues in repo from the reporter"
+      },
+      "rptpr": {
+        "bsonType": "int",
+        "description": "Number of prs from the reporter"
+      },
+      "rptissues": {
+        "bsonType": "array",
+        "description": "resolver_commit_num of issues reported by the owner"
+      },
+      "ownercmt": {
+        "bsonType": "int",
+        "description": "Number of commits from the owner"
+      },
+      "owneriss": {
+        "bsonType": "int",
+        "description": "Number of issues reported by the owner"
+      },
+      "ownerpr": {
+        "bsonType": "int",
+        "description": "Number of prs from the owner"
+      },
+      "ownerissues": {
+        "bsonType": "array",
+        "description": "resolver_commit_num of issues reported by the owner"
+      },
+      "procmt": {
+        "bsonType": "int",
+        "description": "Number of commits"
+      },
+      "contributornum": {
+        "bsonType": "int",
+        "description": "Number of contributors"
+      },
+      "crtclsissnum": {
+        "bsonType": "int",
+        "description": "Number of closed issues"
+      },
+      "openiss": {
+        "bsonType": "int",
+        "description": "Number of open issues"
+      },
+      "openissratio": {
+        "bsonType": "double",
+        "description": "Ratio of open/all issues"
+      },
+      "clsisst": {
+        "bsonType": "double",
+        "description": "Median time for issues to be closed"
+      },
+      "labels": {
+        "bsonType": "array",
+        "description": "Number of different labels"
+      },
+      "events": {
+        "bsonType": "array",
+        "description": "Experience of eventers"
+      },
+      "commentusers": {
+        "bsonType": "array",
+        "description": "Experience of commenters"
+      },
+      "rpthasevent": {
+        "bsonType": "int",
+        "description": "If reporter attended events in the issue"
+      },
+      "rpthascomment": {
+        "bsonType": "int",
+        "description": "If reporter commented in the issue"
+      },
+      "NumOfCode": {
+        "bsonType": "int",
+        "description": "Number of code snipps in repo"
+      },
+      "NumOfUrls": {
+        "bsonType": "int",
+        "description": "Number of urls in repo"
+      },
+      "NumOfPics": {
+        "bsonType": "int",
+        "description": "Number of pictures in repo"
+      },
+      "coleman_liau_index": {
+        "bsonType": "double",
+        "description": "Readability index"
+      },
+      "flesch_reading_ease": {
+        "bsonType": "double",
+        "description": "Readability index"
+      },
+      "flesch_kincaid_grade": {
+        "bsonType": "double",
+        "description": "Readability index"
+      },
+      "automated_readability_index": {
+        "bsonType": "double",
+        "description": "Readability index"
+      },
+      "LengthOfTitle": {
+        "bsonType": "int",
+        "description": "Length of issue title"
+      },
+      "LengthOfDescription": {
+        "bsonType": "int",
+        "description": "Length of issue description"
+      },
+      "commentnum": {
+        "bsonType": "int",
+        "description": "Number of comments"
+      },
+      "title": {
+        "bsonType": "string",
+        "description": "Issue title"
+      },
+      "body": {
+        "bsonType": "string",
+        "description": "Issue description"
+      },
+      "comment": {
+        "bsonType": "string",
+        "description": "Issue comments"
+      }
+    }
+  }
