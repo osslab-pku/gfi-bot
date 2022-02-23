@@ -1,0 +1,17 @@
+.pageContainer {
+    width: 100%;
+    position: absolute;
+    margin-top: 56px;
+    bottom: 0;
+    top: 0;
+    max-width: 100vw;
+}
+
+.singlePage {
+    width: 100%;
+    bottom: 0;
+    top: 0;
+    max-width: 1320px;
+    margin: 0 auto;
+    min-width: 30vw;
+}
