@@ -8,6 +8,7 @@ import {RepoGraphContainer} from './repoDataDemonstrator';
 
 import {getRepoNum, getRepoInfo} from '../../api/api';
 import {GFIPagination} from '../gfiComponents';
+import Fade from 'react-reveal/Fade'
 
 /*
     TODO: @MSKYurina
@@ -25,9 +26,9 @@ export const Repositories = (props) => {
     useEffect(() => {
         getRepoNum().then((num) => {
             if (num && Number.isInteger(num)) {
-                return setTotalRepos(num)
+                setTotalRepos(num)
             } else {
-                return setTotalRepos(0)
+                setTotalRepos(0)
             }
         })
     })
@@ -37,10 +38,12 @@ export const Repositories = (props) => {
         let beginIdx = (pageIdx - 1) * repoListCapacity
         getRepoInfo(beginIdx, repoListCapacity).then((repoList) => {
             if (repoList && Array.isArray(repoList)) {
-                return setInfoList(repoList)
+                setInfoList(repoList)
             } else {
-                return setInfoList([])
+                setInfoList([])
             }
+        }).then(() => {
+            setActiveCardIdx(0)
         })
     }, [pageIdx])
 
@@ -53,7 +56,13 @@ export const Repositories = (props) => {
 
     const projectsInfos = (info, index) => {
         return (
-            <RepoInfoCard key={'infoCard' + index} initInfo={info} index={index} nowactive={activeCardIdx} callback={projectCardOnClick}/>
+            <RepoInfoCard
+                key={'infoCard' + index}
+                initInfo={info}
+                index={index}
+                nowactive={activeCardIdx}
+                callback={projectCardOnClick}
+            />
         )
     }
 
@@ -76,7 +85,6 @@ export const Repositories = (props) => {
     const toPage = (i) => {
         if (1 <= i && i <= pageNums()) {
             setPageIdx(i)
-            setActiveCardIdx(0)
         }
     }
 
@@ -96,33 +104,32 @@ export const Repositories = (props) => {
             window.alert('Please input a number')
         }
     }
+    
+    // a little trick
+    let [showCards, setShowCards] = useState(false)
+    let [cardInfoList, setCardInfoList] = useState([])
+    let [cardInfoListToDisplay, setCardInfoListToDisplay] = useState([])
 
-    const renderStarGraph = () => {
+    useEffect(() => {
         if (infoList.length && activeCardIdx < infoList.length) {
+            setShowCards(false)
             let parsedInfoList = JSON.parse(infoList[activeCardIdx])
-            if (parsedInfoList && parsedInfoList.monthly_stars) {
-                return <RepoGraphContainer info={parsedInfoList.monthly_stars} title={'Stars By Month'}/>
+            if (parsedInfoList) {
+                setCardInfoList(parsedInfoList)
+            } else {
+                setCardInfoList([])
             }
+        } else {
+            setCardInfoList([])
         }
-    }
+    }, [activeCardIdx, infoList])
 
-    const renderIssueGraph = () => {
-        if (infoList.length && activeCardIdx < infoList.length) {
-            let parsedInfoList = JSON.parse(infoList[activeCardIdx])
-            if (parsedInfoList && parsedInfoList.monthly_issues) {
-                return <RepoGraphContainer info={parsedInfoList.monthly_issues} title={'Issues By Month'}/>
-            }
-        }
-    }
-
-    const renderCommitGraph = () => {
-        if (infoList.length && activeCardIdx < infoList.length) {
-            let parsedInfoList = JSON.parse(infoList[activeCardIdx])
-            if (parsedInfoList && parsedInfoList.monthly_commits) {
-                return <RepoGraphContainer info={parsedInfoList.monthly_commits} title={'Commits By Month'}/>
-            }
-        }
-    }
+    useEffect(() => {
+        setTimeout(() => {
+            setShowCards(true)
+            setCardInfoListToDisplay(cardInfoList)
+        }, 200)
+    }, [cardInfoList])
 
     return (
         <Container className={'singlePage'}>
@@ -131,9 +138,7 @@ export const Repositories = (props) => {
             </Row>
             <Row>
                 <Col sm={4} style={{
-                    paddingRight: '0px',
-                    minWidth: '410px'
-                    // the minimum width of the pagination component is 410 px
+                    minWidth: '330px',
                 }}>
                     <Row>
                         <Col>
@@ -163,15 +168,24 @@ export const Repositories = (props) => {
                     </Row>
                 </Col>
                 <Col sm={8}>
-                    <Row>
-                        {renderStarGraph()}
-                    </Row>
-                    <Row>
-                        {renderIssueGraph()}
-                    </Row>
-                    <Row>
-                        {renderCommitGraph()}
-                    </Row>
+                    <Fade top delay={0} distance={'7%'} when={showCards} force={true}>
+                        <RepoGraphContainer
+                            info={'monthly_stars' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_stars: []}
+                            title={'Stars By Month'}
+                        />
+                    </Fade>
+                    <Fade top delay={100} distance={'7%'} when={showCards} force={true}>
+                        <RepoGraphContainer
+                            info={'monthly_issues' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_issues: []}
+                            title={'Issues By Month'}
+                        />
+                    </Fade>
+                    <Fade top delay={200} distance={'7%'} when={showCards} force={true}>
+                        <RepoGraphContainer
+                            info={'monthly_commits' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_commits: []}
+                            title={'Commits By Month'}
+                        />
+                    </Fade>
                 </Col>
             </Row>
             <Row>
@@ -183,7 +197,7 @@ export const Repositories = (props) => {
 
 const RepoInfoCard = (props) => {
     let [isActive, setIsActive] = useState(false)
-    const [idx, setIdx] = useState(props.index)
+    const [idx] = useState(props.index)
 
     const repoCardOnClick = () => {
         props.callback(idx)
@@ -191,7 +205,7 @@ const RepoInfoCard = (props) => {
 
     useEffect(() => {
         setIsActive(props.nowactive === idx)
-    })
+    }, [props.nowactive, idx])
 
     const getStars = (monthly_stars: Array) => {
         let counter = 0

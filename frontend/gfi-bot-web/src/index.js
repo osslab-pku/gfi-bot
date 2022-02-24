@@ -9,11 +9,12 @@ import {persistor, store} from './module/storage/configureStorage';
 import {PersistGate} from "redux-persist/integration/react";
 
 import {BrowserRouter, Route, Switch} from 'react-router-dom';
-import {MainPage} from './pages/mainPage';
-import {Header} from './pages/header';
+import {DescriptionPage} from './pages/descriptionPage';
+import {GFIHeader} from './pages/GFIHeader';
 import {Repositories} from './pages/repositories/repositories';
 
 import {Container} from 'react-bootstrap';
+import {MainPage} from './pages/mainPage';
 
 ReactDOM.render(
     <React.StrictMode>
@@ -25,10 +26,10 @@ ReactDOM.render(
                 <PersistGate loading={null} persistor={persistor}>
                     <BrowserRouter>
                         <Container fluid className={'no-gutters mx-0 px-0'}>
-                            <Header />
+                            <GFIHeader />
                             <Switch>
                                 <Route exact path={'/'} component={MainPage} />
-                                <Route path={'/home'} component={MainPage} />
+                                <Route path={'/home'} component={DescriptionPage} />
                                 <Route path={'/repos'} component={Repositories} />
                             </Switch>
                         </Container>

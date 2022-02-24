@@ -3,7 +3,7 @@ import {Container, Nav, Navbar} from 'react-bootstrap';
 import {LinkContainer} from 'react-router-bootstrap';
 import {GithubFilled} from '@ant-design/icons';
 
-export const Header = () => {
+export const GFIHeader = () => {
 
     return (
         <Navbar bg={'light'} sticky={'top'}>

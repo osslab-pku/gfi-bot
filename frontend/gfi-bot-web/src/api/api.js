@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-export const DEV_URL = 'http://172.18.182.44:5000/'
+// for local development
+export const DEV_URL = 'https://dev.mskyurina.top'
 
 export const getRepoNum = async () => {
     return await asyncGet('/api/repos/num', null)
