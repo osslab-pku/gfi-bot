@@ -4,6 +4,8 @@ import ReactECharts from 'echarts-for-react';
 
 export const RepoGraphContainer = (props) => {
 
+    const {info, title} = props
+
     const dataMonthParser = (info) => {
         return info.map((item, _) => {
             return item.month
@@ -39,29 +41,29 @@ export const RepoGraphContainer = (props) => {
     }
 
     const render = () => {
-        if (props && props.info && props.info.length) {
+        if (info && info.length) {
             return (
                 <Container>
                     <Row>
-                        <Col className={'float-end'}
-                             style={{
-                                 textAlign: 'right',
-                                 fontWeight: 'bolder',
-                                 fontSize: 'larger',
-                                 marginBottom: '10px',
+                        <Col style={{
+                            textAlign: 'left',
+                            fontWeight: 'bolder',
+                            fontSize: 'larger',
+                            marginBottom: '10px',
+                            marginLeft: '40px',
                         }}>
-                            {props.title}
+                            {title}
                         </Col>
                     </Row>
                     <Row>
                         <Col>
-                            {renderData(props.info)}
+                            {renderData(info)}
                         </Col>
                     </Row>
                 </Container>
             )
         } else {
-            return <Container />
+            return <></>
         }
     }
 
@@ -69,23 +71,28 @@ export const RepoGraphContainer = (props) => {
 }
 
 const RepoDataGraph = (props) => {
+
+    const {xData, yData} = props
+
     let options = {
-        grid: { top: 10, right: 10, bottom: 50, left: 30 },
+        grid: { top: 10, right: 10, bottom: 50, left: 40 },
         xAxis: {
             type: 'category',
-            data: props.xData,
+            data: xData,
         },
         yAxis: {
             type: 'value',
         },
         series: [{
-            data: props.yData,
+            data: yData,
             type: 'line',
             smooth: 'true',
+            animation: false,
         }],
         tooltip: {
             trigger: 'axis',
         },
+        animation: false,
     }
 
     return (

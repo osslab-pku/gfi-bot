@@ -25,16 +25,16 @@ export const GFICopyright = () => {
 
 export const GFISearchBar = (props) => {
 
-    const calStyle = (style, isBtn) => {
+    const calStyle = (fieldStyle, isBtn) => {
         if (isBtn === true) {
-            if (style === 'large') {
-                return 4
+            if (fieldStyle === 'large') {
+                return 2
             } else {
                 return 1
             }
         } else {
-            if (style === 'large') {
-                return 8
+            if (fieldStyle === 'large') {
+                return 10
             } else {
                 return 4
             }
@@ -46,11 +46,11 @@ export const GFISearchBar = (props) => {
             <Row style={{marginTop: '20px', marginBottom: '20px'}}>
                 <Form.Group>
                     <InputGroup>
-                        <Col sm={calStyle(props.style, false)}>
+                        <Col sm={calStyle(props.fieldStyle, false)}>
                             <Form.Control placeholder={props.description} />
                         </Col>
                         <Col/>
-                        <Col sm={calStyle(props.style, true)}>
+                        <Col sm={calStyle(props.fieldStyle, true)}>
                             <Button style={{float: 'right'}} onClick={() => {props.search()}}> {props.title} </Button>
                         </Col>
                     </InputGroup>
