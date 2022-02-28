@@ -15,13 +15,18 @@ export const getRepoInfo = async (beginIdx, capacity) => {
 }
 
 const asyncGet = async (url, params) => {
-    let res = await axios.get(url, {
-        baseURL: DEV_URL,
-        params: params
-    })
-    if (res?.status === 200) {
-        return res.data.result
-    } else {
+    try {
+        let res = await axios.get(url, {
+            baseURL: DEV_URL,
+            params: params
+        })
+        if (res?.status === 200) {
+            return res.data.result
+        } else {
+            throw new Error('server response failed')
+        }
+    } catch (e) {
         return null
     }
+
 }

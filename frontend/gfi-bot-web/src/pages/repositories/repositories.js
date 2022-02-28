@@ -1,13 +1,12 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Alert, Badge, Col, Container, ListGroup, Row} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 
 import {checkIsNumber} from '../../utils';
-import {GFISearchBar, GFICopyright} from '../gfiComponents';
+import {GFISearchBar, GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} from '../gfiComponents';
 import {RepoGraphContainer} from './repoDataDemonstrator';
 
 import {getRepoNum, getRepoInfo} from '../../api/api';
-import {GFIPagination} from '../gfiComponents';
 import Fade from 'react-reveal/Fade'
 
 /*
@@ -23,24 +22,33 @@ export const Repositories = (props) => {
     let [pageIdx, setPageIdx] = useState(1)
 
     let [totalRepos, setTotalRepos] = useState(0)
+    let [showAlarm, setShowAlarm] = useState(false)
+    let [progress, setProgress] = useState('0%')
+    let [showProgressBar, setShowProgressBar] = useState(false)
+
     useEffect(() => {
+        setShowProgressBar(true)
         getRepoNum().then((num) => {
             if (num && Number.isInteger(num)) {
+                setProgress('20%')
                 setTotalRepos(num)
             } else {
                 setTotalRepos(0)
+                setShowAlarm(true)
             }
         })
-    })
+    }, [pageIdx])
 
     let [infoList, setInfoList] = useState([])
     useEffect(() => {
         let beginIdx = (pageIdx - 1) * repoListCapacity
+        setProgress('60%')
         getRepoInfo(beginIdx, repoListCapacity).then((repoList) => {
             if (repoList && Array.isArray(repoList)) {
                 setInfoList(repoList)
             } else {
                 setInfoList([])
+                setShowAlarm(true)
             }
         }).then(() => {
             setActiveCardIdx(0)
@@ -84,6 +92,7 @@ export const Repositories = (props) => {
 
     const toPage = (i) => {
         if (1 <= i && i <= pageNums()) {
+            setProgress('0%')
             setPageIdx(i)
         }
     }
@@ -116,6 +125,11 @@ export const Repositories = (props) => {
             let parsedInfoList = JSON.parse(infoList[activeCardIdx])
             if (parsedInfoList) {
                 setCardInfoList(parsedInfoList)
+                if (showAlarm) {
+                    setShowAlarm(false)
+                }
+
+                setProgress('100%')
             } else {
                 setCardInfoList([])
             }
@@ -129,69 +143,106 @@ export const Repositories = (props) => {
             setShowCards(true)
             setCardInfoListToDisplay(cardInfoList)
         }, 200)
-    }, [cardInfoList])
+    }, [cardInfoList, progress])
+
+    const renderAlarmInfo = () => {
+        if (showAlarm) {
+            return (
+                <Row style={{
+                    marginTop: '10px',
+                    marginBottom: '-25px',
+                }}>
+                    <Col>
+                        <GFIAlarm title={'Lost connection with server'} onClose={() => {setShowAlarm(false)}} />
+                    </Col>
+                </Row>
+            )
+        } else {
+            return <></>
+        }
+    }
+
+    const renderProgressBar = () => {
+        const height = '3px'
+
+        if (showProgressBar) {
+            return (
+                <GFIProgressBar
+                    barWidth={progress}
+                    onFinished={() => {setShowProgressBar(false)}}
+                    height={height}
+                />
+            )
+        } else {
+            return <div style={{height: height}} />
+        }
+    }
 
     return (
-        <Container className={'singlePage'}>
-            <Row>
-                <GFISearchBar description={'Search for your project'} title={'search'} />
-            </Row>
-            <Row>
-                <Col sm={4} style={{
-                    minWidth: '330px',
-                }}>
-                    <Row>
-                        <Col>
-                            <Alert variant={'success'}>
-                                <Alert.Heading> Data from {totalRepos} different GitHub repositories </Alert.Heading>
-                            </Alert>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col>
-                            <ListGroup style={{
-                                marginBottom: '10px',
-                            }}>
-                                {renderProjectsInfos(infoList)}
-                            </ListGroup>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <GFIPagination
-                            pageIdx={pageIdx}
-                            toPage={(pageNum) => toPage(pageNum)}
-                            pageNums={pageNums()}
-                            onFormInput={(target) => onFormInput(target)}
-                            onPageBtnClicked={() => onPageBtnClicked()}
-                            maxPagingCount={3}
-                        />
-                    </Row>
-                </Col>
-                <Col sm={8}>
-                    <Fade top delay={0} distance={'7%'} when={showCards} force={true}>
-                        <RepoGraphContainer
-                            info={'monthly_stars' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_stars: []}
-                            title={'Stars By Month'}
-                        />
-                    </Fade>
-                    <Fade top delay={100} distance={'7%'} when={showCards} force={true}>
-                        <RepoGraphContainer
-                            info={'monthly_issues' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_issues: []}
-                            title={'Issues By Month'}
-                        />
-                    </Fade>
-                    <Fade top delay={200} distance={'7%'} when={showCards} force={true}>
-                        <RepoGraphContainer
-                            info={'monthly_commits' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_commits: []}
-                            title={'Commits By Month'}
-                        />
-                    </Fade>
-                </Col>
-            </Row>
-            <Row>
-                <GFICopyright />
-            </Row>
-        </Container>
+        <>
+            {renderProgressBar()}
+            <Container className={'singlePage'}>
+                {renderAlarmInfo()}
+                <Row>
+                    <GFISearchBar description={'Search for your project'} title={'search'} />
+                </Row>
+                <Row>
+                    <Col sm={4} style={{
+                        minWidth: '330px',
+                    }}>
+                        <Row>
+                            <Col>
+                                <Alert variant={'success'}>
+                                    <Alert.Heading> Data from {totalRepos} different GitHub repositories </Alert.Heading>
+                                </Alert>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col>
+                                <ListGroup style={{
+                                    marginBottom: '10px',
+                                }}>
+                                    {renderProjectsInfos(infoList)}
+                                </ListGroup>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <GFIPagination
+                                pageIdx={pageIdx}
+                                toPage={(pageNum) => toPage(pageNum)}
+                                pageNums={pageNums()}
+                                onFormInput={(target) => onFormInput(target)}
+                                onPageBtnClicked={() => onPageBtnClicked()}
+                                maxPagingCount={3}
+                            />
+                        </Row>
+                    </Col>
+                    <Col sm={8}>
+                        <Fade top delay={0} distance={'7%'} when={showCards} force={true}>
+                            <RepoGraphContainer
+                                info={'monthly_stars' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_stars: []}
+                                title={'Stars By Month'}
+                            />
+                        </Fade>
+                        <Fade top delay={100} distance={'7%'} when={showCards} force={true}>
+                            <RepoGraphContainer
+                                info={'monthly_issues' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_issues: []}
+                                title={'Issues By Month'}
+                            />
+                        </Fade>
+                        <Fade top delay={200} distance={'7%'} when={showCards} force={true}>
+                            <RepoGraphContainer
+                                info={'monthly_commits' in cardInfoListToDisplay ? cardInfoListToDisplay.monthly_commits: []}
+                                title={'Commits By Month'}
+                            />
+                        </Fade>
+                    </Col>
+                </Row>
+                <Row>
+                    <GFICopyright />
+                </Row>
+            </Container>
+        </>
     )
 }
 

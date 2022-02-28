@@ -2,9 +2,7 @@ import React from 'react';
 import {Col, Container, Row} from 'react-bootstrap';
 import ReactECharts from 'echarts-for-react';
 
-export const RepoGraphContainer = (props) => {
-
-    const {info, title} = props
+export const RepoGraphContainer = ({info, title}) => {
 
     const dataMonthParser = (info) => {
         return info.map((item, _) => {
@@ -70,9 +68,7 @@ export const RepoGraphContainer = (props) => {
     return render()
 }
 
-const RepoDataGraph = (props) => {
-
-    const {xData, yData} = props
+const RepoDataGraph = ({xData, yData}) => {
 
     let options = {
         grid: { top: 10, right: 10, bottom: 50, left: 40 },
