@@ -1,10 +1,11 @@
-import {Container, Col, Row, Form, InputGroup, Button, Pagination} from 'react-bootstrap';
-import React from 'react';
-import {defaultFontFamily} from '../utils';
+import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from 'react-bootstrap';
+import React, {createRef} from 'react';
+import {checkIsNumber, defaultFontFamily} from '../utils';
+import {gsap} from 'gsap';
 
 export const GFICopyright = () => {
 
-    const copyright = 'Copyright ©2021 OSS Lab, Peking University'
+    const copyright = 'Copyright © 2021 OSS Lab, Peking University. All rights reserved.'
 
     return (
         <Container style={{
@@ -23,7 +24,7 @@ export const GFICopyright = () => {
     )
 }
 
-export const GFISearchBar = (props) => {
+export const GFISearchBar = ({fieldStyle, search, title, description}) => {
 
     const calStyle = (fieldStyle, isBtn) => {
         if (isBtn === true) {
@@ -46,12 +47,12 @@ export const GFISearchBar = (props) => {
             <Row style={{marginTop: '20px', marginBottom: '20px'}}>
                 <Form.Group>
                     <InputGroup>
-                        <Col sm={calStyle(props.fieldStyle, false)}>
-                            <Form.Control placeholder={props.description} />
+                        <Col sm={calStyle(fieldStyle, false)}>
+                            <Form.Control placeholder={description} />
                         </Col>
                         <Col/>
-                        <Col sm={calStyle(props.fieldStyle, true)}>
-                            <Button style={{float: 'right'}} onClick={() => {props.search()}}> {props.title} </Button>
+                        <Col sm={calStyle(fieldStyle, true)}>
+                            <Button style={{float: 'right'}} onClick={() => {search()}}> {title} </Button>
                         </Col>
                     </InputGroup>
                 </Form.Group>
@@ -168,4 +169,121 @@ export const GFIPagination = (props) => {
             </Row>
         </Container>
     )
+}
+
+export class GFIAlarm extends React.Component {
+    constructor(props) {
+        super(props)
+        this.selfRef = createRef()
+    }
+
+    componentDidMount() {
+        let alarmTimeline = gsap.timeline()
+        alarmTimeline
+            .from(this.selfRef.current, {
+                duration: 0.4,
+                autoAlpha: 0,
+                y: -25,
+            })
+            .play()
+    }
+
+    alarmOnClose = () => {
+        const {onClose} = this.props
+        let timeline = gsap.timeline()
+        timeline
+            .to(this.selfRef.current, {
+                duration: 0.4,
+                autoAlpha: 0,
+                y: -25,
+            })
+            .eventCallback('onComplete', () => {
+                if (onClose && typeof onClose === 'function') {
+                    onClose()
+                }
+            })
+            .play()
+    }
+
+    render() {
+        const {title} = this.props
+        return (
+            <Alert
+                variant={'danger'}
+                dismissible={true}
+                ref={this.selfRef}
+                onClick={this.alarmOnClose}
+            >
+                {title}
+            </Alert>
+        );
+    }
+}
+
+export class GFIProgressBar extends React.Component {
+    constructor(props) {
+        super(props)
+        this.barRef = React.createRef()
+        this.state = {
+            barWidth: '0%',
+        }
+    }
+
+    checkValidWidth = (width: String) => {
+        return (checkIsNumber(width.slice(0, -1)) && width.slice(-1) === '%')
+            || checkIsNumber(width)
+    }
+
+    componentDidUpdate(prevProps, prevState, snapshot) {
+        const {barWidth, onFinished} = this.props
+        if (typeof barWidth === 'string'
+            && typeof prevProps.barWidth === 'string'
+            && this.checkValidWidth(barWidth)
+            && this.checkValidWidth(prevProps.barWidth)) {
+
+            if (barWidth === prevProps.barWidth) {
+                return
+            }
+
+            gsap
+                .to(this.barRef.current, {
+                    duration: 0.2,
+                    width: barWidth,
+                    paused: true
+                })
+                .eventCallback('onComplete', () => {
+                    this.setState({
+                        barWidth: barWidth,
+                    })
+                })
+                .play()
+
+            if (barWidth === '100%' || barWidth === window.innerWidth) {
+                gsap
+                    .to(this.barRef.current, {
+                        duration: 0.2,
+                        autoAlpha: 0,
+                    })
+                    .eventCallback('onComplete', () => {
+                        if (onFinished && typeof onFinished === 'function') {
+                            onFinished()
+                        }
+                    })
+                    .play()
+            }
+        }
+    }
+
+    render() {
+        const {height} = this.props
+
+        return (
+            <div style={{
+                backgroundColor: '#85a5ff',
+                height: height,
+                width: this.state.barWidth,
+                borderRadius: '2px',
+            }} ref={this.barRef} />
+        )
+    }
 }
