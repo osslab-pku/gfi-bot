@@ -65,8 +65,7 @@ def detailed_repo_issues(name: str):
         source_key_name='created_at',
         target_key_name='monthly_issues'
     )
-    
-        
+
 if __name__ == '__main__':
     
     repos = gfi_db.get_collection(db_repos)
