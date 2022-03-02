@@ -1,23 +1,39 @@
 import axios from 'axios';
+import {store} from '../module/storage/configureStorage';
 
 // for local development
-export const DEV_URL = 'https://dev.mskyurina.top'
+const DEV_URL = 'https://dev.mskyurina.top'
+
+export const gitHubLogin = () => {
+    const hasLogin = store.getState().hasLogin
+    if (hasLogin) {
+        window.location.reload(false)
+        return
+    }
+    gitHubOAuthLogin().then((url : String) => {
+        window.open(url)
+    })
+}
+
+const gitHubOAuthLogin = async () => {
+    return await asyncGet('/api/user/github/login', {}, true)
+}
 
 export const getRepoNum = async () => {
-    return await asyncGet('/api/repos/num', null)
+    return await asyncGet('/api/repos/num', {}, true)
 }
 
 export const getRepoInfo = async (beginIdx, capacity) => {
     return await asyncGet('/api/repos/info', {
         start: beginIdx,
         length: capacity,
-    })
+    }, true)
 }
 
-const asyncGet = async (url, params) => {
+const asyncGet = async (url: String, params, useBaseURL: boolean) => {
     try {
         let res = await axios.get(url, {
-            baseURL: DEV_URL,
+            baseURL: useBaseURL ? DEV_URL : '',
             params: params
         })
         if (res?.status === 200) {

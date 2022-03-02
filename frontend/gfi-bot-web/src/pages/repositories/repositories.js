@@ -1,4 +1,5 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
+import PropTypes from 'prop-types';
 import {Alert, Badge, Col, Container, ListGroup, Row} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 
@@ -8,12 +9,6 @@ import {RepoGraphContainer} from './repoDataDemonstrator';
 
 import {getRepoNum, getRepoInfo} from '../../api/api';
 import Fade from 'react-reveal/Fade'
-
-/*
-    TODO: @MSKYurina
-          More project information & plots
-          Cache
- */
 
 export const Repositories = (props) => {
 
@@ -68,7 +63,7 @@ export const Repositories = (props) => {
                 key={'infoCard' + index}
                 initInfo={info}
                 index={index}
-                nowactive={activeCardIdx}
+                nowActive={activeCardIdx}
                 callback={projectCardOnClick}
             />
         )
@@ -122,13 +117,13 @@ export const Repositories = (props) => {
     useEffect(() => {
         if (infoList.length && activeCardIdx < infoList.length) {
             setShowCards(false)
+            setCardInfoListToDisplay([])
             let parsedInfoList = JSON.parse(infoList[activeCardIdx])
             if (parsedInfoList) {
                 setCardInfoList(parsedInfoList)
                 if (showAlarm) {
                     setShowAlarm(false)
                 }
-
                 setProgress('100%')
             } else {
                 setCardInfoList([])
@@ -164,7 +159,6 @@ export const Repositories = (props) => {
 
     const renderProgressBar = () => {
         const height = '3px'
-
         if (showProgressBar) {
             return (
                 <GFIProgressBar
@@ -247,16 +241,13 @@ export const Repositories = (props) => {
 }
 
 const RepoInfoCard = (props) => {
+
     let [isActive, setIsActive] = useState(false)
     const [idx] = useState(props.index)
 
-    const repoCardOnClick = () => {
-        props.callback(idx)
-    }
-
     useEffect(() => {
-        setIsActive(props.nowactive === idx)
-    }, [props.nowactive, idx])
+        setIsActive(props.nowActive === idx)
+    }, [props.nowActive, idx])
 
     const getStars = (monthly_stars: Array) => {
         let counter = 0
@@ -269,7 +260,7 @@ const RepoInfoCard = (props) => {
     }
 
     return (
-        <ListGroup.Item action as={'button'} onClick={() => repoCardOnClick()} variant={isActive ? 'primary': 'light'}>
+        <ListGroup.Item action as={'button'} onClick={() => props.callback(idx)} variant={isActive ? 'primary': 'light'}>
             <Row>
                 <Col style={{fontWeight: 'bold', textDecoration: isActive? 'underline': 'none'}} sm={9}> {props.initInfo.name} </Col>
                 <Col sm={3}>
@@ -284,4 +275,15 @@ const RepoInfoCard = (props) => {
             </Row>
         </ListGroup.Item>
     )
+}
+
+RepoInfoCard.propTypes = {
+    language: PropTypes.string,
+    owner: PropTypes.string,
+    initInfo: PropTypes.shape({
+        name: PropTypes.string,
+        monthly_stars: PropTypes.array,
+    }),
+    nowActive: PropTypes.number,
+    index: PropTypes.number,
 }

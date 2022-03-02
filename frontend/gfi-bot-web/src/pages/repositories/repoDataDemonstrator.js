@@ -92,8 +92,6 @@ const RepoDataGraph = ({xData, yData}) => {
     }
 
     return (
-        <Container>
-            <ReactECharts option={options} />
-        </Container>
+        <ReactECharts option={options} />
     )
 }

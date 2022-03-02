@@ -2,6 +2,7 @@ import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from '
 import React, {createRef} from 'react';
 import {checkIsNumber, defaultFontFamily} from '../utils';
 import {gsap} from 'gsap';
+import PropTypes from 'prop-types';
 
 export const GFICopyright = () => {
 
@@ -61,6 +62,13 @@ export const GFISearchBar = ({fieldStyle, search, title, description}) => {
     )
 }
 
+GFISearchBar.propTypes = {
+    fieldStyle: PropTypes.oneOf(['large', '']),
+    search: PropTypes.func,
+    title: PropTypes.string,
+    description: PropTypes.string,
+}
+
 export const GFIPagination = (props) => {
 
     const maxPagingCount = props.maxPagingCount
@@ -117,7 +125,7 @@ export const GFIPagination = (props) => {
             let showDot: Boolean = !pageArray.includes(2)
             renderedArray.unshift(renderExpPagingItem(1, showDot))
         }
-        if (!pageArray.includes(pageNums)) {
+        if (!pageArray.includes(pageNums) && pageNums) {
             let showDot: Boolean = !pageArray.includes(pageNums - 1)
             renderedArray.push(renderExpPagingItem(pageNums, showDot))
         }
@@ -171,6 +179,15 @@ export const GFIPagination = (props) => {
     )
 }
 
+GFIPagination.propTypes = {
+    maxPagingCount: PropTypes.number,
+    pageNums: PropTypes.number,
+    pageIdx: PropTypes.number,
+    onPageBtnClicked: PropTypes.func,
+    toPage: PropTypes.func,
+    onFormInput: PropTypes.func,
+}
+
 export class GFIAlarm extends React.Component {
     constructor(props) {
         super(props)
@@ -198,7 +215,7 @@ export class GFIAlarm extends React.Component {
                 y: -25,
             })
             .eventCallback('onComplete', () => {
-                if (onClose && typeof onClose === 'function') {
+                if (onClose) {
                     onClose()
                 }
             })
@@ -220,6 +237,11 @@ export class GFIAlarm extends React.Component {
     }
 }
 
+GFIAlarm.propTypes = {
+    title: PropTypes.string,
+    onClose: PropTypes.func,
+}
+
 export class GFIProgressBar extends React.Component {
     constructor(props) {
         super(props)
@@ -236,9 +258,7 @@ export class GFIProgressBar extends React.Component {
 
     componentDidUpdate(prevProps, prevState, snapshot) {
         const {barWidth, onFinished} = this.props
-        if (typeof barWidth === 'string'
-            && typeof prevProps.barWidth === 'string'
-            && this.checkValidWidth(barWidth)
+        if (this.checkValidWidth(barWidth)
             && this.checkValidWidth(prevProps.barWidth)) {
 
             if (barWidth === prevProps.barWidth) {
@@ -265,7 +285,7 @@ export class GFIProgressBar extends React.Component {
                         autoAlpha: 0,
                     })
                     .eventCallback('onComplete', () => {
-                        if (onFinished && typeof onFinished === 'function') {
+                        if (onFinished) {
                             onFinished()
                         }
                     })
@@ -276,7 +296,6 @@ export class GFIProgressBar extends React.Component {
 
     render() {
         const {height} = this.props
-
         return (
             <div style={{
                 backgroundColor: '#85a5ff',
@@ -286,4 +305,10 @@ export class GFIProgressBar extends React.Component {
             }} ref={this.barRef} />
         )
     }
+}
+
+GFIProgressBar.propTypes = {
+    barWidth: PropTypes.string,
+    onFinished: PropTypes.func,
+    height: PropTypes.string,
 }
