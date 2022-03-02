@@ -7,22 +7,28 @@ const initialLoginState = {
 const LOGIN = 'LOGIN'
 const LOGOUT = 'LOGOUT'
 
-const loginAction = {
-    'type': LOGIN,
-    'token': String,
+export const createLogoutAction = () => {
+    return {
+        'type': LOGOUT,
+    }
 }
 
-export const logoutAction = {
-    'type': LOGOUT,
+export const createLoginAction = (id: String, name: String, avatar: String) => {
+    return {
+        'type': LOGIN,
+        'id': id,
+        'name': name,
+        'avatar': avatar,
+    }
 }
 
 export const loginReducer = (state = initialLoginState, action) => {
     switch (action.type) {
         case LOGIN: {
-            return { hasLogin: true, token: action.token }
+            return { hasLogin: true, id: action.id, name: action.name, avatar: action.avatar }
         }
         case LOGOUT:
-            return { hasLogin: false, token: null }
+            return { hasLogin: false, id: null, name: null, avatar: null}
         default:
             return state
     }

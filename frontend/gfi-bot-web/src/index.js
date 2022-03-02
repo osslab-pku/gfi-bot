@@ -10,11 +10,13 @@ import {PersistGate} from "redux-persist/integration/react";
 
 import {BrowserRouter, Route, Switch} from 'react-router-dom';
 import {DescriptionPage} from './pages/descriptionPage';
-import {GFIHeader} from './pages/GFIHeader';
+import {GFIHeader} from './pages/gfiHeader';
 import {Repositories} from './pages/repositories/repositories';
 
 import {Container} from 'react-bootstrap';
 import {MainPage} from './pages/mainPage';
+import {LoginRedirect} from './pages/login/welcomePage';
+import {WindowContextProvider} from './pages/app/windowContext';
 
 ReactDOM.render(
     <React.StrictMode>
@@ -24,16 +26,20 @@ ReactDOM.render(
             </Helmet>
             <Provider store={store}>
                 <PersistGate loading={null} persistor={persistor}>
-                    <BrowserRouter>
-                        <Container fluid className={'no-gutters mx-0 px-0'}>
-                            <GFIHeader />
-                            <Switch>
-                                <Route exact path={'/'} component={MainPage} />
-                                <Route path={'/home'} component={DescriptionPage} />
-                                <Route path={'/repos'} component={Repositories} />
-                            </Switch>
-                        </Container>
-                    </BrowserRouter>
+                    <WindowContextProvider>
+                        <BrowserRouter>
+                            <Container fluid className={'no-gutters mx-0 px-0'}>
+                                <GFIHeader />
+                                <Switch>
+                                    <Route exact path={'/'} component={MainPage} />
+                                    <Route path={'/home'} component={DescriptionPage} />
+                                    <Route path={'/repos'} component={Repositories} />
+                                    <Route path={'/login/redirect'} component={LoginRedirect} />
+                                    <Route path={'*'} component={MainPage} />
+                                 </Switch>
+                            </Container>
+                        </BrowserRouter>
+                    </WindowContextProvider>
                 </PersistGate>
             </Provider>
         </HelmetProvider>
