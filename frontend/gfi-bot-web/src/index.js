@@ -1,5 +1,4 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import React from 'react';import ReactDOM from 'react-dom';
 import './index.css';
 
 import reportWebVitals from './reportWebVitals';
@@ -22,7 +21,7 @@ ReactDOM.render(
     <React.StrictMode>
         <HelmetProvider>
             <Helmet>
-                <title> GFI-Bot </title>
+                <title> GFI Bot </title>
             </Helmet>
             <Provider store={store}>
                 <PersistGate loading={null} persistor={persistor}>

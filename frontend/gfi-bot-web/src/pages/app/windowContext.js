@@ -30,3 +30,10 @@ export const useWindowSize = () => {
     const {width, height} = useContext(windowContext)
     return {width, height}
 }
+
+const mobileThreshold = 630
+
+export const useIsMobile = () => {
+    const {width} = useContext(windowContext)
+    return width <= mobileThreshold
+}
