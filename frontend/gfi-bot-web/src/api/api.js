@@ -6,7 +6,8 @@ const DEV_URL = 'https://dev.mskyurina.top'
 
 export const gitHubLogin = () => {
     const hasLogin = store.getState().hasLogin
-    if (hasLogin) {
+    const userName = store.getState().name
+    if (hasLogin === true  && userName !== undefined) {
         window.location.reload(false)
         return
     }

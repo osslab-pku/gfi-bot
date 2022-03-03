@@ -1,31 +1,29 @@
-import React, {useEffect, useRef} from 'react';
-import {useSelector} from 'react-redux';
+import React, {useEffect, useRef, useState} from 'react';
+import {useSelector, useDispatch} from 'react-redux';
 
-import 'bootstrap/dist/css/bootstrap.min.css';
-import {Container, Nav, Navbar, Button} from 'react-bootstrap';
+import {Container, Nav, Navbar, Button, Popover, OverlayTrigger} from 'react-bootstrap';
 import {LinkContainer} from 'react-router-bootstrap';
-import {GithubFilled} from '@ant-design/icons';
+import {GithubFilled, UserDeleteOutlined} from '@ant-design/icons';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 import {gsap} from 'gsap';
 
-import {useWindowSize} from './app/windowContext';
+import {useIsMobile} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
 import {gitHubLogin} from '../api/api';
+import {createLogoutAction} from '../module/storage/reducers';
 
 import navLogo from '../assets/favicon-thumbnail.png';
 
 export const GFIHeader = () => {
 
-    const {width} = useWindowSize()
-    const widthThreshold = 630
-    const hasLogin = useSelector(state => {
-        if ('hasLogin' in state) return state.hasLogin
-        return undefined
-    })
-    const userName = useSelector(state => {
-        if ('name' in state) return state.name
-        return undefined
-    })
+    // Account Actions
+
+    const dispatch = useDispatch()
+
+    const logout = () => {
+        dispatch(createLogoutAction())
+    }
 
     const checkLogin = () => {
         // TODO: MSKYurina
@@ -33,27 +31,131 @@ export const GFIHeader = () => {
 
     useEffect(() => {
         checkLogin()
-        console.log(userName)
     }, [])
 
-    // Explain:
-    // The 'expand' property of React-bootstrap Navbar turn out to be effective (equals to 'false') even when set to 'true' or ''
-    // so temporarily using two functions to render navbar responsively
+    const hasLogin = useSelector(state => {
+        if ('hasLogin' in state) return state.hasLogin
+        return undefined
+    })
+
+    const userName = useSelector(state => {
+        if ('name' in state) return state.name
+        return undefined
+    })
+
+
+    // Login / Logout related components
+
+    const [popOverToggled, setPopOverToggled] = useState(false)
+    const [showPopOver, setShowPopOver] = useState(false)
+    const popOverRef = useRef(null)
+    const loginBtnRef = useRef(null)
+
+    const checkIfClosePopOver = (e: MouseEvent) => {
+        const ele = e.target
+        if (popOverRef.current && !popOverRef.current.contains(ele) && !loginBtnRef.current.contains(ele)) {
+            e.preventDefault()
+            e.stopPropagation()
+            setShowPopOver(false)
+        }
+    }
+
+    useEffect(() => {
+        if (popOverToggled === true) {
+            window.addEventListener('mousedown', (e) => checkIfClosePopOver(e))
+        }
+        return () => {
+            window.removeEventListener('mousedown', (e) => checkIfClosePopOver(e))
+        }
+    }, [popOverToggled])
+
+
+    // Popover menu, currently for user logout
+
+    const logoutPopover = (
+        <Popover id={'popover-basic'}>
+            <Popover.Body>
+                <div ref={popOverRef}>
+                    <p> <u> Hi, {userName} </u> </p>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}>
+                        <UserDeleteOutlined style={{
+                            fontSize: '17px',
+                        }}/>
+                        <Button
+                            onClick={logout}
+                            size={'sm'}
+                            variant={'outline-danger'}
+                            style={{ marginLeft: 'auto' }}
+                        >
+                            Logout
+                        </Button>
+                    </div>
+                </div>
+            </Popover.Body>
+        </Popover>
+    )
+
+
+    // Sign in component
 
     const signInLink = () => {
         const login = hasLogin === true && userName !== undefined
-        return (
-            <Button onClick={login ? () => {}: gitHubLogin} variant={'outline-secondary'} size={'sm'} style={{
-                marginRight: '15px',
-            }}>
-                {login ? userName : 'Sign in via GitHub'}
-            </Button>
-        )
+        if (!login) {
+            return  (
+                <Button
+                    onClick={gitHubLogin}
+                    variant={'outline-secondary'}
+                    size={'sm'}
+                    style={{ marginRight: '15px' }}
+                >
+                    {'Sign in via GitHub'}
+                </Button>
+            )
+        } else {
+            return (
+                <div ref={loginBtnRef}>
+                    <OverlayTrigger
+                        trigger={'click'}
+                        placement={'bottom'}
+                        overlay={logoutPopover}
+                        onToggle={() => {
+                            setShowPopOver(true)
+                            setPopOverToggled(true)
+                        }}
+                        show={showPopOver}
+                    >
+                        <Button
+                            variant={'outline-secondary'}
+                            size={'sm'}
+                            style={{
+                                marginRight: '15px',
+                            }}
+                            onClick={() => {
+                                if (showPopOver) {
+                                    setShowPopOver(false)
+                                    setPopOverToggled(false)
+                                }
+                            }}
+                        >
+                            {userName}
+                        </Button>
+                    </OverlayTrigger>
+                </div>
+            )
+        }
     }
 
+
+    // Display responsively
+
+    const isMobile = useIsMobile()
     const iconRef = useRef(null)
 
-    const renderNavItem = (isMobile: Boolean) => {
+    const renderNavItem = () => {
 
         const renderSignInItems = () => {
 
@@ -83,7 +185,7 @@ export const GFIHeader = () => {
                     }}>
                         <GithubFilled
                             style={{fontSize: '30px', color: normalColor}}
-                            onClick={() => window.open('https://github.com')}
+                            onClick={() => window.open('https://github.com/osslab-pku/gfi-bot')}
                             onMouseEnter={() => {
                                 hoverTimeline
                                     .pause()
@@ -122,10 +224,13 @@ export const GFIHeader = () => {
         const renderDesktopSignIn = () => {
             if (!isMobile) {
                 return (
-                    <Navbar.Collapse className={'justify-content-end'} style={{
-                        fontFamily: defaultFontFamily,
-                        maxWidth: '180px',
-                    }}>
+                    <Navbar.Collapse
+                        className={'justify-content-end'}
+                        style={{
+                            fontFamily: defaultFontFamily,
+                            maxWidth: '180px',
+                        }}
+                    >
                         {renderSignInItems()}
                     </Navbar.Collapse>
                 )
@@ -165,6 +270,10 @@ export const GFIHeader = () => {
         )
     }
 
+    // Explain:
+    // The 'expand' property of React-bootstrap Navbar turn out to be effective (equals to 'false') even when set to 'true' or ''
+    // so temporarily using two functions to render navbar responsively
+
     const renderDesktopNavbar = () => {
         return (
             <Navbar bg={'light'} sticky={'top'}>
@@ -182,7 +291,7 @@ export const GFIHeader = () => {
     }
 
     const render = () => {
-        if (width > widthThreshold) {
+        if (!isMobile) {
             return renderDesktopNavbar()
         } else {
             return renderMobileNavbar()

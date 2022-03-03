@@ -1,20 +1,27 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect} from 'react';
+import {useDispatch} from 'react-redux';
+import {useHistory} from 'react-router-dom';
+import PropTypes from 'prop-types';
 import {Container, Col, Row, ToastContainer, Toast} from 'react-bootstrap';
+
 import '../../style/gfiStyle.css'
 import {defaultFontFamily} from '../../utils';
-import {store} from '../../module/storage/configureStorage';
 import {createLoginAction} from '../../module/storage/reducers';
-import PropTypes from 'prop-types';
+
 
 export const LoginRedirect = (props) => {
+
+    const dispatch = useDispatch()
+    let history = useHistory()
 
     useEffect(() => {
         const params = new URLSearchParams(props.location.search)
         const userName = params.get('github_name')
         const userUrl = params.get('github_avatar_url')
         const userId = params.get('github_id')
-        store.dispatch(createLoginAction(userId, userName, userUrl))
-        window.location.replace('/?justLogin=true')
+        const userToken = params.get('github_token')
+        dispatch(createLoginAction(userId, userName, userToken, userUrl))
+        history.push('/', {justLogin: true})
     }, [])
 
     return (
