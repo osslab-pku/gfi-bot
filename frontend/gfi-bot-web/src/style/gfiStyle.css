@@ -15,3 +15,7 @@
     margin: 0 auto;
     min-width: 30vw;
 }
+
+.logo {
+    filter: invert(93%) sepia(93%) saturate(0%) hue-rotate(279deg) brightness(108%) contrast(108%);
+}

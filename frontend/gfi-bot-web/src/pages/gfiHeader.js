@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {useSelector} from 'react-redux';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -6,18 +6,26 @@ import {Container, Nav, Navbar, Button} from 'react-bootstrap';
 import {LinkContainer} from 'react-router-bootstrap';
 import {GithubFilled} from '@ant-design/icons';
 
+import {gsap} from 'gsap';
+
 import {useWindowSize} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
 import {gitHubLogin} from '../api/api';
 
-import {gsap} from 'gsap';
+import navLogo from '../assets/favicon-thumbnail.png';
 
 export const GFIHeader = () => {
 
     const {width} = useWindowSize()
-    const widthThreshold = 600
-    const hasLogin = useSelector(state => state.hasLogin)
-    const userName = useSelector(state => state.name)
+    const widthThreshold = 630
+    const hasLogin = useSelector(state => {
+        if ('hasLogin' in state) return state.hasLogin
+        return undefined
+    })
+    const userName = useSelector(state => {
+        if ('name' in state) return state.name
+        return undefined
+    })
 
     const checkLogin = () => {
         // TODO: MSKYurina
@@ -129,7 +137,16 @@ export const GFIHeader = () => {
         return (
             <Container style={{marginRight: '5px', marginLeft: '5px', maxWidth: '100vw'}}>
                 <LinkContainer to={'/'}>
-                    <Navbar.Brand> GFI-Bot </Navbar.Brand>
+                    <Navbar.Brand>
+                        <img
+                            alt={''}
+                            src={navLogo}
+                            width={'30'}
+                            height={'30'}
+                            className={'d-inline-block align-top'}
+                        />
+                        {' '} GFI-Bot
+                    </Navbar.Brand>
                 </LinkContainer>
                 <Navbar.Toggle />
                 <Navbar.Collapse>
