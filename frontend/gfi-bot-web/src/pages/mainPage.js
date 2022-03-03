@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {useLocation} from 'react-router-dom';
 import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from 'react-bootstrap';
 import {gsap} from 'gsap';
 
@@ -9,29 +10,30 @@ import gfiLogo from '../assets/gfi-logo.png'
 import '../style/gfiStyle.css'
 import {SearchOutlined} from '@ant-design/icons';
 import {defaultFontFamily} from '../utils';
-import {store} from '../module/storage/configureStorage';
 
 import {GFIWelcome} from './login/welcomePage';
 import {useIsMobile, useWindowSize} from './app/windowContext';
+import {useSelector} from 'react-redux';
 
 export const MainPage = (props) => {
-    let [userName, setUserName] = useState('')
-    let [userAvatarUrl, setUserAvatarUrl] = useState('')
     let [showLoginMsg, setShowLoginMsg] = useState(false)
 
     const isMobile = useIsMobile()
     const {width, height} = useWindowSize()
 
+    const userName = useSelector(state => {
+        if ('name' in state) return state.name
+        return undefined
+    })
+
+    const userAvatarUrl = useSelector(state => {
+        if ('avatar' in state) return state.avatar
+        return undefined
+    })
+
+    const location = useLocation()
     useEffect(() => {
-        let params = new URLSearchParams(props.location.search)
-        if (params.get('justLogin') === 'true') {
-            const storeState = store.getState()
-            if ('name' in storeState) {
-                setUserName(storeState.name)
-            }
-            if ('avatar' in storeState) {
-                setUserAvatarUrl(storeState.avatar)
-            }
+        if ('state' in location && location.state && location.state.justLogin === true) {
             setShowLoginMsg(true)
         }
     }, [])
@@ -151,6 +153,5 @@ export const MainPage = (props) => {
             }}>
             </Container>
         </>
-
     )
 }
