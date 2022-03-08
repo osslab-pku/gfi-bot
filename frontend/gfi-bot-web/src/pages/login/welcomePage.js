@@ -7,6 +7,7 @@ import {Container, Col, Row, ToastContainer, Toast} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 import {defaultFontFamily} from '../../utils';
 import {createLoginAction} from '../../module/storage/reducers';
+import {UserOutlined} from '@ant-design/icons';
 
 
 export const LoginRedirect = (props) => {
@@ -42,9 +43,8 @@ export const GFIWelcome = ({userName, userAvatarUrl, onClose, show}) => {
         }}>
             <Toast show={show} animation={true} onClose={() => onClose()}>
                 <Toast.Header>
-                    <img src={userAvatarUrl} alt={''} className={'rounded me-2'} style={{
-                        width: '30px',
-                    }}/>
+                    {userAvatarUrl ? <img src={userAvatarUrl} alt={''} className={'rounded me-2'} style={{ width: '30px' }}/>
+                        : <UserOutlined style={{ fontSize: '30px' }} />}
                     <strong className={'me-auto'}> Hello, {userName} </strong>
                 </Toast.Header>
                 <Toast.Body>

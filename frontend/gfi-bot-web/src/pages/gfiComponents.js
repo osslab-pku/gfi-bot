@@ -230,6 +230,9 @@ export class GFIAlarm extends React.Component {
                 dismissible={true}
                 ref={this.selfRef}
                 onClick={this.alarmOnClose}
+                style={{
+                    borderRadius: '5px',
+                }}
             >
                 {title}
             </Alert>
