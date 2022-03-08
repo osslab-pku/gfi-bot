@@ -1,4 +1,5 @@
 from http import client
+from signal import siginterrupt
 from flask import Flask, redirect, request
 from flask_cors import CORS
 
@@ -12,6 +13,8 @@ from typing import Dict, Final
 import requests
 
 import urllib.parse
+
+import numpy as np
 
 app = Flask(__name__)
 
@@ -32,8 +35,10 @@ db_repos_stars : Final = 'repos.stars'
 db_gfi_users : Final = 'gfi-users'
 db_github_tokens : Final = 'github-tokens'
 
+
 def generate_update_msg(dict: Dict) -> Dict:
     return { '$set': dict }
+
 
 class JSONEncoder(json.JSONEncoder):
     """
@@ -96,6 +101,51 @@ def github_login():
     }
 
 
+@app.route('/api/repos/recommend')
+def get_recommend_repo():
+    """
+    get recommened repo name (currently using random)
+    """
+    repos = gfi_db.get_collection(db_repos).find({})
+    res_list = []
+    for repo in repos:
+        res_list.append({ 
+            'name': repo['name'],
+            'owner': repo['owner'],
+        })
+    res = np.random.choice(res_list, size=1).tolist()[0]
+    return {
+        'code': 200,
+        'result': res
+    }
+
+
+@app.route('/api/issue/gfi')
+def get_issue_info():
+    """
+    get random issues by repo name
+    """
+    repo_name = request.args.get('repo')
+    if repo_name != None:
+        issues = gfi_db.get_collection(db_issue_dataset)
+        res = []
+        if issues.count_documents({ 'name': repo_name }) > 0:
+            for temp in issues.find({ 'name': repo_name }):
+                res.append(temp['number'])
+            res = np.random.choice(res, size=5).tolist()
+            return {
+                'code': 200,
+                'result': res,
+            }
+        else:
+            return {
+                'code': 404,
+                'result': 'repo not found'
+            }
+    else:
+        abort(400)
+    
+
 @app.route('/api/user/github/callback')
 def github_login_redirect():
     """
@@ -138,7 +188,7 @@ def github_login_redirect():
                         }
                     if user_collection.find_one_and_update({'github_id': user_res['id']}, generate_update_msg({'github_access_token': access_token})) == None:
                         user_collection.insert_one(user_data)
-                    return redirect('/login/redirect?github_name={}&github_id={}&github_avatar_url={}'.format(user_res['name'], user_res['id'], user_res['avatar_url']), code=302)
+                    return redirect('/login/redirect?github_name={}&github_id={}&github_token={}&github_avatar_url={}'.format(user_res['name'], user_res['id'], access_token, user_res['avatar_url']), code=302)
                 return {
                     'code': r.status_code,
                     'result': r.text
@@ -158,4 +208,3 @@ def github_login_redirect():
             'code': 400,
             'result': 'No code provided',
         }
-
