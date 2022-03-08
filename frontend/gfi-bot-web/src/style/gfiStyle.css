@@ -19,3 +19,101 @@
 .logo {
     filter: invert(93%) sepia(93%) saturate(0%) hue-rotate(279deg) brightness(108%) contrast(108%);
 }
+
+.background {
+    filter: blur(6px) brightness(85%);
+    /* blur may cause white edge of pic */
+    transform: scale(1.02);
+    background-color: rgb(56, 63, 73);
+}
+
+.transparent {
+    background-color: rgba(255, 255, 255, 0);
+    border-color: rgba(255, 255, 255, 0);
+}
+
+.roundedContainer {
+    border: solid 2px white;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 7px;
+}
+
+.largeRadius {
+    border-radius: 15px;
+}
+
+.issueCardTitle {
+    margin: 10px;
+    font-size: larger;
+    font-weight: bold;
+    line-height: 1.3;
+    display: flex;
+    align-items: flex-start;
+    padding: 0;
+}
+
+.markdown a {
+    word-break: break-all;
+    word-wrap: break-word;
+}
+
+.markdown pre {
+    background-color: rgb(183, 183, 183);
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+}
+
+.status-tag {
+    height: fit-content;
+    border-radius: 9999px;
+    width: fit-content;
+    padding-right: 8px;
+    padding-left: 8px;
+    border-width: 2px;
+    font-weight: bold;
+    box-sizing: border-box;
+    text-align: center;
+    margin-left: 5px;
+}
+
+.resolved {
+    border: #a0d468 solid;
+    color: #a0d468;
+}
+
+.closed {
+    border: #d46868 solid;
+    color: #d46868;
+}
+
+.open {
+    border: #61DAFBFF solid;
+    color: #61DAFBFF;
+}
+
+.issue-title code {
+    color: #3b3b3b;
+}
+
+.issue-title p {
+    margin-bottom: 0;
+}
+
+.issue-card-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20%;
+    min-width: 30px;
+    max-width: 100px;
+    border-radius: 5px;
+}
+
+.on-display {
+    width: 25px;
+    height: 25px;
+    border-radius: 100px;
+    margin-bottom: 5px;
+}
