@@ -21,9 +21,9 @@
 }
 
 .background {
-    filter: blur(6px) brightness(85%);
+    /*filter: blur(6px) brightness(85%);*/
     /* blur may cause white edge of pic */
-    transform: scale(1.02);
+    /*transform: scale(1.02);*/
     background-color: rgb(56, 63, 73);
 }
 
@@ -116,4 +116,9 @@
     height: 25px;
     border-radius: 100px;
     margin-bottom: 5px;
+}
+
+.sign-in {
+    width: -webkit-max-content;
+    width: -moz-fit-content;
 }
