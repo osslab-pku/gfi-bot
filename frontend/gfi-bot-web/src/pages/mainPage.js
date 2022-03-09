@@ -262,9 +262,9 @@ export const MainPage = (props) => {
                 </Row>
             </Container>
             <Container style={{
-                backgroundImage: `url(${background})`,
-                backgroundSize: 'cover',
-                backgroundAttachment: 'fixed',
+                // backgroundImage: `url(${background})`,
+                // backgroundSize: 'cover',
+                // backgroundAttachment: 'fixed',
                 width: width,
                 maxWidth: width,
                 height: height,
