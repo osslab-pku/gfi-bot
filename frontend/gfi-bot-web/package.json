@@ -71,6 +71,7 @@
     "react-transition-group": "^4.4.2",
     "redux": "^4.1.2",
     "redux-persist": "^6.0.0",
+    "remark-gemoji": "^7.0.1",
     "remark-gfm": "^3.0.1",
     "remark-github": "^11.2.2",
     "resolve": "^1.20.0",

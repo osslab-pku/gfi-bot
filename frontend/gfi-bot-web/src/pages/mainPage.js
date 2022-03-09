@@ -9,6 +9,7 @@ import {gsap} from 'gsap';
 import {ReloadOutlined, UpOutlined, DownOutlined} from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkGemoji from 'remark-gemoji';
 
 import background from '../assets/Tokyo-Tower-.jpg'
 import gfiLogo from '../assets/gfi-logo.png'
@@ -20,7 +21,6 @@ import {checkIsNumber, defaultFontFamily} from '../utils';
 import {GFIWelcome} from './login/welcomePage';
 import {GFIAlarm, GFICopyright} from './gfiComponents';
 import {getRecommendedRepoInfo, getGFIByRepoName, getIssueByRepoInfo} from '../api/api';
-import {createLogoutAction} from '../module/storage/reducers';
 
 // TODO: MSKYurina
 //  Pagination & Animation
@@ -482,7 +482,7 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
                         }}>
                             <ReactMarkdown
                                 children={body}
-                                remarkPlugins={[remarkGfm]}
+                                remarkPlugins={[remarkGfm, remarkGemoji]}
                                 className={'markdown'}
                             />
                         </Col>
