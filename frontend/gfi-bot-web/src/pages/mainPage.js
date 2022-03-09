@@ -237,7 +237,7 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
 
     let [issueIdList, setIssueIdList] = useState([])
     useEffect(() => {
-        console.log(repoInfo)
+        setIssueIdList([])
         if (repoInfo && repoInfo.name) {
             getGFIByRepoName(repoInfo.name).then((res) => {
                 if (Array.isArray(res)) {
@@ -245,7 +245,6 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
                     setIssueIdList(res)
                 } else {
                     onRequestFailed('Lost connection with server')
-                    setIssueIdList([])
                 }
             })
         }
@@ -354,6 +353,7 @@ const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequest
     let [displayData, setDisplayData] = useState(defaultIssueData)
 
     useEffect(() => {
+        setDisplayData(defaultIssueData)
         getIssueByRepoInfo(repoName, repoOwner, issueId).then((res) => {
             if (res.code === 200) {
                 if ('number' in res.result && 'title' in res.result && 'state' in res.result
@@ -371,10 +371,9 @@ const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequest
                 onRequestFailed('GitHub API rate limit exceeded, you may sign in using a GitHub account to continue')
             } else {
                 onRequestFailed('Lost connection with GitHub server')
-                setDisplayData(defaultIssueData)
             }
         })
-    }, [])
+    }, [repoName, repoOwner, issueId])
 
     const detailOnShow = () => {
         detailTimeline
