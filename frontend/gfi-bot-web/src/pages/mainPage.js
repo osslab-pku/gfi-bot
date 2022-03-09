@@ -51,13 +51,18 @@ export const MainPage = (props) => {
         name: '',
         owner: '',
     })
-    let [issueIdList, setIssueIdList] = useState([])
-    let [issueInfoList, setIssueInfoList] = useState([])
 
     let [alarmConfig, setAlarmConfig] = useState({
         show: false,
         msg: ''
     })
+
+    const showAlarm = (msg) => {
+        setAlarmConfig({
+            show: true,
+            msg: msg,
+        })
+    }
     
     const fetchRepoInfo = async () => {
         const res = await getRecommendedRepoInfo()
@@ -79,63 +84,8 @@ export const MainPage = (props) => {
     }, [])
 
     useEffect(() => {
-        getGFIByRepoName(repoInfo.name).then((res) => {
-            if (Array.isArray(res)) {
-                setIssueIdList(res)
-            } else {
-                setIssueIdList([])
-            }
-        })
+        console.log(repoInfo)
     }, [repoInfo])
-
-    useEffect(() => {
-        if (Array.isArray(issueIdList)) {
-            (async () => {
-                let tempIssueInfoList = []
-                for (let i = 0; i <= issueIdList.length; i++) {
-                    const issueId = issueIdList[i]
-                    if (checkIsNumber(issueId)) {
-                        const id = Number(issueId)
-                        const res = await getIssueByRepoInfo(repoInfo.name, repoInfo.owner, id)
-                        if (res.code === 200) {
-                            tempIssueInfoList.push(res.result)
-                        } else if (res.code === 403) {
-                            setAlarmConfig({
-                                show: true,
-                                msg: 'GitHub API rate limit exceeded, you may sign in using a GitHub account to continue'
-                            })
-                            break
-                        }
-                    }
-                }
-                setIssueInfoList(tempIssueInfoList)
-            })()
-        }
-    }, [issueIdList])
-
-    const GFIInfoList = (infoList: Array) => {
-        return infoList.map((value) => {
-            if ('number' in value && 'title' in value && 'state' in value
-                && 'active_lock_reason' in value && 'body' in value && 'html_url' in value ) {
-                return {
-                    issueId: value.number,
-                    title: value.title,
-                    body: value.body,
-                    isClosed: value.state === 'closed',
-                    hasResolved: value.active_lock_reason === 'resolved',
-                    htmlURL: value.html_url,
-                }
-            } else {
-                return {
-                    issueId: '',
-                    title: '',
-                    body: '',
-                    isClosed: false,
-                    hasResolved: false,
-                }
-            }
-        })
-    }
 
     const location = useLocation()
     useEffect(() => {
@@ -224,9 +174,12 @@ export const MainPage = (props) => {
                             maxWidth: isMobile ? '100%' : '70%',
                         }}>
                             <InfoShowComponent
-                                repoName={repoInfo.name}
-                                gfiList={GFIInfoList(issueInfoList)}
+                                key={repoInfo}
+                                repoInfo={repoInfo}
                                 onRefresh={fetchRepoInfo}
+                                onRequestFailed={(msg) => {
+                                    showAlarm(msg)
+                                }}
                             />
                         </Container>
                     </Col>
@@ -241,7 +194,7 @@ export const MainPage = (props) => {
                 <Row style={{
                     marginBottom: alarmConfig.show? '-25px': '0',
                 }}>
-                    {alarmConfig.show? <GFIAlarm title={alarmConfig.msg} onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}} /> : <></>}
+                    {alarmConfig.show ? <GFIAlarm title={alarmConfig.msg} onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}} /> : <></>}
                 </Row>
                 <Row>
                     <GFIWelcome
@@ -280,7 +233,23 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
 
     let expRef = useRef(null)
 
-    const {repoName, gfiList, onRefresh} = props
+    const {repoInfo, onRefresh, onRequestFailed} = props
+
+    let [issueIdList, setIssueIdList] = useState([])
+    useEffect(() => {
+        console.log(repoInfo)
+        if (repoInfo && repoInfo.name) {
+            getGFIByRepoName(repoInfo.name).then((res) => {
+                if (Array.isArray(res)) {
+                    console.log(res)
+                    setIssueIdList(res)
+                } else {
+                    onRequestFailed('Lost connection with server')
+                    setIssueIdList([])
+                }
+            })
+        }
+    }, [repoInfo])
 
     return (
         <Container style={{
@@ -335,47 +304,77 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
                         backgroundColor: 'rgba(255, 255, 255, 0)',
                         borderColor: 'rgba(255, 255, 255, 0)',
                     }}>
-                        <u> {repoName} </u>
+                        <u> {repoInfo.name} </u>
                     </div>
                 </Col>
-                {gfiList.map((info, idx) => {
+                {issueIdList && typeof Array.isArray(issueIdList) ? issueIdList.map((issueId, idx) => {
                     return (
                         <Row key={`gfi-card-${idx}`}>
                             <GFIIssueDisplayCard
-                                issueId={info.issueId}
-                                title={info.title}
-                                body={info.body}
-                                isClosed={info.isClosed}
-                                hasResolved={info.hasResolved}
-                                htmlURL={info.htmlURL}
+                                issueId={issueId && checkIsNumber(issueId) ? Number(issueId) : ''}
+                                repoOwner={repoInfo.owner}
+                                repoName={repoInfo.name}
+                                onRequestFailed={(msg) => {
+                                    onRequestFailed(msg)
+                                }}
                             />
                         </Row>
                     )
-                })}
+                }) : <></>}
             </Row>
         </Container>
     )
 })
 
 InfoShowComponent.propTypes = {
-    repoName: PropTypes.string,
-    gfiList: PropTypes.arrayOf(PropTypes.shape({
-        issueId: PropTypes.number,
-        title: PropTypes.string,
-        body: PropTypes.string,
-        isClosed: PropTypes.bool,
-        hasResolved: PropTypes.bool,
-        htmlURL: PropTypes.string
-    })),
+    repoInfo: PropTypes.shape({
+        name: PropTypes.string,
+        owner: PropTypes.string,
+    }),
     onRefresh: PropTypes.func,
+    onRequestFailed: PropTypes.func,
 }
 
-const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasResolved, htmlURL}, ref) => {
+const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequestFailed}, ref) => {
 
     let detailedRef = useRef(null)
     let detailTimeline = gsap.timeline()
     let [detailOnDisplay, setDetailOnDisplay] = useState(false)
     let [detailBtn, setDetailBtn] = useState(false)
+
+    const defaultIssueData = {
+        issueId: '',
+        title: '',
+        body: '',
+        isClosed: false,
+        hasResolved: false,
+        htmlURL: '',
+    }
+
+    let [displayData, setDisplayData] = useState(defaultIssueData)
+
+    useEffect(() => {
+        getIssueByRepoInfo(repoName, repoOwner, issueId).then((res) => {
+            if (res.code === 200) {
+                if ('number' in res.result && 'title' in res.result && 'state' in res.result
+                    && 'active_lock_reason' in res.result && 'body' in res.result && 'html_url' in res.result) {
+                    setDisplayData({
+                        issueId: res.result.number,
+                        title: res.result.title,
+                        body: res.result.body,
+                        isClosed: res.result.state === 'closed',
+                        hasResolved: res.result.active_lock_reason === 'resolved',
+                        htmlURL: res.result.html_url,
+                    })
+                }
+            } else if (res.code === 403) {
+                onRequestFailed('GitHub API rate limit exceeded, you may sign in using a GitHub account to continue')
+            } else {
+                onRequestFailed('Lost connection with GitHub server')
+                setDisplayData(defaultIssueData)
+            }
+        })
+    }, [])
 
     const detailOnShow = () => {
         detailTimeline
@@ -414,7 +413,11 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
     const issueLabel = (title) => {
         return (
             <button onClick={() => {
-                window.open(htmlURL)
+                if (displayData.htmlURL) {
+                    window.open(displayData.htmlURL)
+                } else {
+                    onRequestFailed('Request failed, GitHub API rate limit exceeded or lost connection with GitHub server')
+                }
             }} style={{
                 border: 'none',
                 backgroundColor: 'white',
@@ -481,7 +484,7 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
                             color: '#373f49',
                         }}>
                             <ReactMarkdown
-                                children={body}
+                                children={displayData.body}
                                 remarkPlugins={[remarkGfm, remarkGemoji]}
                                 className={'markdown'}
                             />
@@ -497,8 +500,8 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
                                 justifyContent: 'flex-start',
                                 alignItems: 'center',
                             }}>
-                                {isClosed ? <GFIIssueStatusTag type={'Closed'} /> : <GFIIssueStatusTag type={'Open'} />}
-                                {hasResolved ? <GFIIssueStatusTag type={'Resolved'} /> : <></>}
+                                {displayData.isClosed ? <GFIIssueStatusTag type={'Closed'} /> : <GFIIssueStatusTag type={'Open'} />}
+                                {displayData.hasResolved ? <GFIIssueStatusTag type={'Resolved'} /> : <></>}
                             </div>
                         </Col>
                     </Row>
@@ -520,7 +523,7 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
                     {issueLabel('#' + issueId)}
                     <div>
                         <ReactMarkdown
-                            children={title}
+                            children={displayData.title}
                             remarkPlugins={[remarkGfm]}
                             className={'issue-title'}
                         />
@@ -541,12 +544,10 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
 })
 
 GFIIssueDisplayCard.propTypes = {
+    repoName: PropTypes.string,
+    repoOwner: PropTypes.string,
     issueId: PropTypes.number,
-    title: PropTypes.string,
-    body: PropTypes.string,
-    isClosed: PropTypes.string,
-    hasResolved: PropTypes.bool,
-    htmlURL: PropTypes.string
+    onRequestFailed: PropTypes.func,
 }
 
 const GFIIssueStatusTag = ({type}) => {
