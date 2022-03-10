@@ -303,7 +303,7 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
                         backgroundColor: 'rgba(255, 255, 255, 0)',
                         borderColor: 'rgba(255, 255, 255, 0)',
                     }}>
-                        <u> {repoInfo.name} </u>
+                        <u> {repoInfo && 'name' in repoInfo ? repoInfo.name : ''} </u>
                     </div>
                 </Col>
                 {issueIdList && typeof Array.isArray(issueIdList) ? issueIdList.map((issueId, idx) => {
