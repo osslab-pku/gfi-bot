@@ -369,8 +369,6 @@ const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequest
                 }
             } else if (res.code === 403) {
                 onRequestFailed('GitHub API rate limit exceeded, you may sign in using a GitHub account to continue')
-            } else {
-                onRequestFailed('Lost connection with GitHub server')
             }
         })
     }, [repoName, repoOwner, issueId])
@@ -434,38 +432,23 @@ const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequest
     }
 
     const displayBtn = () => {
-
-        if (!detailBtn) {
-            return (
-                <>
-                    <Button
-                        className={'issue-card-btn on-display'}
-                        variant={'outline-light'}
-                        onClick={detailOnShow}
-                    >
-                        <DownOutlined style={{fontSize: '14px'}} />
-                    </Button>
-                    <div style={{
-                        fontWeight: 'bold',
-                        marginRight: '10px',
-                    }}>
-                        Show Details
-                    </div>
-                </>
-            )
-        } else {
-            return (
-                <>
-                    <Button
-                        className={'issue-card-btn on-display'}
-                        variant={'outline-light'}
-                        onClick={detailOffShow}
-                    >
-                        <UpOutlined style={{fontSize: '14px'}} />
-                    </Button>
-                </>
-            )
-        }
+        return (
+            <>
+                <Button
+                    className={'issue-card-btn on-display'}
+                    variant={'outline-light'}
+                    onClick={detailBtn ? detailOffShow : detailOnShow}
+                >
+                    {detailBtn? <UpOutlined style={{fontSize: '14px'}}/> : <DownOutlined style={{fontSize: '14px'}}/>}
+                </Button>
+                <div style={{
+                    fontWeight: 'bold',
+                    marginRight: '10px',
+                }}>
+                    {detailBtn ? 'Hide Details': 'Show Details'}
+                </div>
+            </>
+        )
     }
 
     const details = () => {
