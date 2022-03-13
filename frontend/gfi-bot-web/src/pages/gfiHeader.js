@@ -10,7 +10,7 @@ import {gsap} from 'gsap';
 
 import {useIsMobile} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
-import {gitHubLogin} from '../api/githubApi';
+import {gitHubLogin} from '../api/api';
 import {createLogoutAction} from '../module/storage/reducers';
 import '../style/gfiStyle.css'
 

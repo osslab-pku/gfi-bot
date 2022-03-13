@@ -20,8 +20,7 @@ import {checkIsNumber, defaultFontFamily} from '../utils';
 
 import {GFIWelcome} from './login/welcomePage';
 import {GFIAlarm, GFICopyright} from './gfiComponents';
-import {getRecommendedRepoInfo, getGFIByRepoName, getRepoNum, getIssueNum, getLanguageTags} from '../api/api';
-import {getIssueByRepoInfo} from '../api/githubApi';
+import {getRecommendedRepoInfo, getGFIByRepoName, getIssueByRepoInfo} from '../api/api';
 
 // TODO: MSKYurina
 //  Pagination & Animation
@@ -166,11 +165,7 @@ export const MainPage = (props) => {
                     {isMobile ? <></> : <Col/>}
                 </Row>
                 <Row>
-                    <Col style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'flex-start',
-                    }}>
+                    <Col>
                         <Container style={{
                             marginTop: '30px',
                             display: 'flex',
@@ -187,12 +182,6 @@ export const MainPage = (props) => {
                                 }}
                             />
                         </Container>
-                        {(width > 1000) ? <Container style={{
-                            maxWidth: '30%',
-                            marginTop: '30px',
-                        }}>
-                            <GFIDadaKanban />
-                        </Container> : <></>}
                     </Col>
                 </Row>
             </>
@@ -204,7 +193,6 @@ export const MainPage = (props) => {
             <Container className={'singlePage'}>
                 <Row style={{
                     marginBottom: alarmConfig.show? '-25px': '0',
-                    marginTop: alarmConfig.show? '25px': '0',
                 }}>
                     {alarmConfig.show ? <GFIAlarm title={alarmConfig.msg} onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}} /> : <></>}
                 </Row>
@@ -565,87 +553,3 @@ const GFIIssueStatusTag = ({type}) => {
 GFIIssueStatusTag.propTypes = {
     type: PropTypes.oneOf(['Resolved', 'Open', 'Closed'])
 }
-
-const GFIDadaKanban = forwardRef((props, ref) => {
-
-    let [repoNum, setRepoNum] = useState(0)
-    let [issueNum, setIssueNum] = useState(0)
-    let [GFINum, setGFINum] = useState(0)
-    let [langTags, setLangTags] = useState([])
-
-    useEffect(() => {
-        getRepoNum().then((res) => {
-            if (res && checkIsNumber(res)) {
-                setRepoNum(res)
-            }
-        })
-    }, [])
-
-    useEffect(() => {
-        getIssueNum().then((res) => {
-            if (res && checkIsNumber(res)) {
-                setIssueNum(res)
-                setGFINum(Math.round(res * 0.05))
-            }
-        })
-    })
-
-    useEffect(() => {
-        getLanguageTags().then((res) => {
-            if (res && Array.isArray(res)) {
-                setLangTags(res)
-            }
-        })
-    }, [])
-
-    const renderLanguageTags = () => {
-        return langTags.map((val, index) => {
-                return (
-                    <button className={'gfi-rounded'} key={`lang-tag ${index}`}> {val} </button>
-                )
-            })
-    }
-
-    return (
-        <>
-            <div className={'gfi-wrapper kanban'} style={{
-                fontFamily: defaultFontFamily
-            }}>
-                <div className={'kanban wrapper'} style={{
-                    margin: '7px',
-                }}>
-
-                    <div className={'kanban'}>
-                        <div className={'kanban data'}>
-                            <div> Repos </div>
-                            <div> {repoNum} </div>
-                        </div>
-                    </div>
-
-                    <div className={'kanban'}>
-                        <div className={'kanban data'}>
-                            <div> Issues </div>
-                            <div> {issueNum} </div>
-                        </div>
-                    </div>
-
-                    <div className={'kanban'}>
-                        <div className={'kanban data'}>
-                            <div> GFIs </div>
-                            <div> {GFINum} </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className={'gfi-wrapper tags'}>
-                    <div>
-                        Languages
-                    </div>
-                    <div className={'tags wrapper'}>
-                        {renderLanguageTags()}
-                    </div>
-                </div>
-            </div>
-        </>
-    )
-})
