@@ -10,8 +10,9 @@ import {gsap} from 'gsap';
 
 import {useIsMobile} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
-import {gitHubLogin} from '../api/api';
+import {gitHubLogin} from '../api/githubApi';
 import {createLogoutAction} from '../module/storage/reducers';
+import '../style/gfiStyle.css'
 
 import navLogo from '../assets/favicon-thumbnail.png';
 
@@ -111,6 +112,7 @@ export const GFIHeader = () => {
                     variant={'outline-secondary'}
                     size={'sm'}
                     style={{ marginRight: '15px' }}
+                    className={'sign-in'}
                 >
                     {'Sign in via GitHub'}
                 </Button>

@@ -126,8 +126,8 @@ def get_recommend_repo():
         'code': 200,
         'result': res
     }
-
-
+  
+  
 @app.route('/api/issue/num')
 def get_issue_num():
     issues = gfi_db.get_collection(db_issue_dataset)
@@ -136,7 +136,7 @@ def get_issue_num():
         'result': issues.count_documents({})
     }
 
-
+  
 @app.route('/api/issue/gfi')
 def get_issue_info():
     """

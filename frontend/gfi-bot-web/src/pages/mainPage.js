@@ -9,6 +9,7 @@ import {gsap} from 'gsap';
 import {ReloadOutlined, UpOutlined, DownOutlined} from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkGemoji from 'remark-gemoji';
 
 import background from '../assets/Tokyo-Tower-.jpg'
 import gfiLogo from '../assets/gfi-logo.png'
@@ -19,8 +20,8 @@ import {checkIsNumber, defaultFontFamily} from '../utils';
 
 import {GFIWelcome} from './login/welcomePage';
 import {GFIAlarm, GFICopyright} from './gfiComponents';
-import {getRecommendedRepoInfo, getGFIByRepoName, getIssueByRepoInfo} from '../api/api';
-import {createLogoutAction} from '../module/storage/reducers';
+import {getRecommendedRepoInfo, getGFIByRepoName, getRepoNum, getIssueNum, getLanguageTags} from '../api/api';
+import {getIssueByRepoInfo} from '../api/githubApi';
 
 // TODO: MSKYurina
 //  Pagination & Animation
@@ -51,13 +52,18 @@ export const MainPage = (props) => {
         name: '',
         owner: '',
     })
-    let [issueIdList, setIssueIdList] = useState([])
-    let [issueInfoList, setIssueInfoList] = useState([])
 
     let [alarmConfig, setAlarmConfig] = useState({
         show: false,
         msg: ''
     })
+
+    const showAlarm = (msg) => {
+        setAlarmConfig({
+            show: true,
+            msg: msg,
+        })
+    }
     
     const fetchRepoInfo = async () => {
         const res = await getRecommendedRepoInfo()
@@ -79,63 +85,8 @@ export const MainPage = (props) => {
     }, [])
 
     useEffect(() => {
-        getGFIByRepoName(repoInfo.name).then((res) => {
-            if (Array.isArray(res)) {
-                setIssueIdList(res)
-            } else {
-                setIssueIdList([])
-            }
-        })
+        console.log(repoInfo)
     }, [repoInfo])
-
-    useEffect(() => {
-        if (Array.isArray(issueIdList)) {
-            (async () => {
-                let tempIssueInfoList = []
-                for (let i = 0; i <= issueIdList.length; i++) {
-                    const issueId = issueIdList[i]
-                    if (checkIsNumber(issueId)) {
-                        const id = Number(issueId)
-                        const res = await getIssueByRepoInfo(repoInfo.name, repoInfo.owner, id)
-                        if (res.code === 200) {
-                            tempIssueInfoList.push(res.result)
-                        } else if (res.code === 403) {
-                            setAlarmConfig({
-                                show: true,
-                                msg: 'GitHub API rate limit exceeded, you may sign in using a GitHub account to continue'
-                            })
-                            break
-                        }
-                    }
-                }
-                setIssueInfoList(tempIssueInfoList)
-            })()
-        }
-    }, [issueIdList])
-
-    const GFIInfoList = (infoList: Array) => {
-        return infoList.map((value) => {
-            if ('number' in value && 'title' in value && 'state' in value
-                && 'active_lock_reason' in value && 'body' in value && 'html_url' in value ) {
-                return {
-                    issueId: value.number,
-                    title: value.title,
-                    body: value.body,
-                    isClosed: value.state === 'closed',
-                    hasResolved: value.active_lock_reason === 'resolved',
-                    htmlURL: value.html_url,
-                }
-            } else {
-                return {
-                    issueId: '',
-                    title: '',
-                    body: '',
-                    isClosed: false,
-                    hasResolved: false,
-                }
-            }
-        })
-    }
 
     const location = useLocation()
     useEffect(() => {
@@ -215,7 +166,11 @@ export const MainPage = (props) => {
                     {isMobile ? <></> : <Col/>}
                 </Row>
                 <Row>
-                    <Col>
+                    <Col style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'flex-start',
+                    }}>
                         <Container style={{
                             marginTop: '30px',
                             display: 'flex',
@@ -224,11 +179,20 @@ export const MainPage = (props) => {
                             maxWidth: isMobile ? '100%' : '70%',
                         }}>
                             <InfoShowComponent
-                                repoName={repoInfo.name}
-                                gfiList={GFIInfoList(issueInfoList)}
+                                key={repoInfo}
+                                repoInfo={repoInfo}
                                 onRefresh={fetchRepoInfo}
+                                onRequestFailed={(msg) => {
+                                    showAlarm(msg)
+                                }}
                             />
                         </Container>
+                        {(width > 1000) ? <Container style={{
+                            maxWidth: '30%',
+                            marginTop: '30px',
+                        }}>
+                            <GFIDadaKanban />
+                        </Container> : <></>}
                     </Col>
                 </Row>
             </>
@@ -240,8 +204,9 @@ export const MainPage = (props) => {
             <Container className={'singlePage'}>
                 <Row style={{
                     marginBottom: alarmConfig.show? '-25px': '0',
+                    marginTop: alarmConfig.show? '25px': '0',
                 }}>
-                    {alarmConfig.show? <GFIAlarm title={alarmConfig.msg} onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}} /> : <></>}
+                    {alarmConfig.show ? <GFIAlarm title={alarmConfig.msg} onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}} /> : <></>}
                 </Row>
                 <Row>
                     <GFIWelcome
@@ -262,9 +227,9 @@ export const MainPage = (props) => {
                 </Row>
             </Container>
             <Container style={{
-                backgroundImage: `url(${background})`,
-                backgroundSize: 'cover',
-                backgroundAttachment: 'fixed',
+                // backgroundImage: `url(${background})`,
+                // backgroundSize: 'cover',
+                // backgroundAttachment: 'fixed',
                 width: width,
                 maxWidth: width,
                 height: height,
@@ -280,7 +245,22 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
 
     let expRef = useRef(null)
 
-    const {repoName, gfiList, onRefresh} = props
+    const {repoInfo, onRefresh, onRequestFailed} = props
+
+    let [issueIdList, setIssueIdList] = useState([])
+    useEffect(() => {
+        setIssueIdList([])
+        if (repoInfo && repoInfo.name) {
+            getGFIByRepoName(repoInfo.name).then((res) => {
+                if (Array.isArray(res)) {
+                    console.log(res)
+                    setIssueIdList(res)
+                } else {
+                    onRequestFailed('Lost connection with server')
+                }
+            })
+        }
+    }, [repoInfo])
 
     return (
         <Container style={{
@@ -335,47 +315,75 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
                         backgroundColor: 'rgba(255, 255, 255, 0)',
                         borderColor: 'rgba(255, 255, 255, 0)',
                     }}>
-                        <u> {repoName} </u>
+                        <u> {repoInfo && 'name' in repoInfo ? repoInfo.name : ''} </u>
                     </div>
                 </Col>
-                {gfiList.map((info, idx) => {
+                {issueIdList && typeof Array.isArray(issueIdList) ? issueIdList.map((issueId, idx) => {
                     return (
                         <Row key={`gfi-card-${idx}`}>
                             <GFIIssueDisplayCard
-                                issueId={info.issueId}
-                                title={info.title}
-                                body={info.body}
-                                isClosed={info.isClosed}
-                                hasResolved={info.hasResolved}
-                                htmlURL={info.htmlURL}
+                                issueId={issueId && checkIsNumber(issueId) ? Number(issueId) : ''}
+                                repoOwner={repoInfo.owner}
+                                repoName={repoInfo.name}
+                                onRequestFailed={(msg) => {
+                                    onRequestFailed(msg)
+                                }}
                             />
                         </Row>
                     )
-                })}
+                }) : <></>}
             </Row>
         </Container>
     )
 })
 
 InfoShowComponent.propTypes = {
-    repoName: PropTypes.string,
-    gfiList: PropTypes.arrayOf(PropTypes.shape({
-        issueId: PropTypes.number,
-        title: PropTypes.string,
-        body: PropTypes.string,
-        isClosed: PropTypes.bool,
-        hasResolved: PropTypes.bool,
-        htmlURL: PropTypes.string
-    })),
+    repoInfo: PropTypes.shape({
+        name: PropTypes.string,
+        owner: PropTypes.string,
+    }),
     onRefresh: PropTypes.func,
+    onRequestFailed: PropTypes.func,
 }
 
-const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasResolved, htmlURL}, ref) => {
+const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequestFailed}, ref) => {
 
     let detailedRef = useRef(null)
     let detailTimeline = gsap.timeline()
     let [detailOnDisplay, setDetailOnDisplay] = useState(false)
     let [detailBtn, setDetailBtn] = useState(false)
+
+    const defaultIssueData = {
+        issueId: '',
+        title: '',
+        body: '',
+        isClosed: false,
+        hasResolved: false,
+        htmlURL: '',
+    }
+
+    let [displayData, setDisplayData] = useState(defaultIssueData)
+
+    useEffect(() => {
+        setDisplayData(defaultIssueData)
+        getIssueByRepoInfo(repoName, repoOwner, issueId).then((res) => {
+            if (res.code === 200) {
+                if ('number' in res.result && 'title' in res.result && 'state' in res.result
+                    && 'active_lock_reason' in res.result && 'body' in res.result && 'html_url' in res.result) {
+                    setDisplayData({
+                        issueId: res.result.number,
+                        title: res.result.title,
+                        body: res.result.body,
+                        isClosed: res.result.state === 'closed',
+                        hasResolved: res.result.active_lock_reason === 'resolved',
+                        htmlURL: res.result.html_url,
+                    })
+                }
+            } else if (res.code === 403) {
+                onRequestFailed('GitHub API rate limit exceeded, you may sign in using a GitHub account to continue')
+            }
+        })
+    }, [repoName, repoOwner, issueId])
 
     const detailOnShow = () => {
         detailTimeline
@@ -414,7 +422,11 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
     const issueLabel = (title) => {
         return (
             <button onClick={() => {
-                window.open(htmlURL)
+                if (displayData.htmlURL) {
+                    window.open(displayData.htmlURL)
+                } else {
+                    onRequestFailed('Request failed, GitHub API rate limit exceeded or lost connection with GitHub server')
+                }
             }} style={{
                 border: 'none',
                 backgroundColor: 'white',
@@ -432,38 +444,23 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
     }
 
     const displayBtn = () => {
-
-        if (!detailBtn) {
-            return (
-                <>
-                    <Button
-                        className={'issue-card-btn on-display'}
-                        variant={'outline-light'}
-                        onClick={detailOnShow}
-                    >
-                        <DownOutlined style={{fontSize: '14px'}} />
-                    </Button>
-                    <div style={{
-                        fontWeight: 'bold',
-                        marginRight: '10px',
-                    }}>
-                        Show Details
-                    </div>
-                </>
-            )
-        } else {
-            return (
-                <>
-                    <Button
-                        className={'issue-card-btn on-display'}
-                        variant={'outline-light'}
-                        onClick={detailOffShow}
-                    >
-                        <UpOutlined style={{fontSize: '14px'}} />
-                    </Button>
-                </>
-            )
-        }
+        return (
+            <>
+                <Button
+                    className={'issue-card-btn on-display'}
+                    variant={'outline-light'}
+                    onClick={detailBtn ? detailOffShow : detailOnShow}
+                >
+                    {detailBtn? <UpOutlined style={{fontSize: '14px'}}/> : <DownOutlined style={{fontSize: '14px'}}/>}
+                </Button>
+                <div style={{
+                    fontWeight: 'bold',
+                    marginRight: '10px',
+                }}>
+                    {detailBtn ? 'Hide Details': 'Show Details'}
+                </div>
+            </>
+        )
     }
 
     const details = () => {
@@ -481,8 +478,8 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
                             color: '#373f49',
                         }}>
                             <ReactMarkdown
-                                children={body}
-                                remarkPlugins={[remarkGfm]}
+                                children={displayData.body}
+                                remarkPlugins={[remarkGfm, remarkGemoji]}
                                 className={'markdown'}
                             />
                         </Col>
@@ -497,8 +494,8 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
                                 justifyContent: 'flex-start',
                                 alignItems: 'center',
                             }}>
-                                {isClosed ? <GFIIssueStatusTag type={'Closed'} /> : <GFIIssueStatusTag type={'Open'} />}
-                                {hasResolved ? <GFIIssueStatusTag type={'Resolved'} /> : <></>}
+                                {displayData.isClosed ? <GFIIssueStatusTag type={'Closed'} /> : <GFIIssueStatusTag type={'Open'} />}
+                                {displayData.hasResolved ? <GFIIssueStatusTag type={'Resolved'} /> : <></>}
                             </div>
                         </Col>
                     </Row>
@@ -520,7 +517,7 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
                     {issueLabel('#' + issueId)}
                     <div>
                         <ReactMarkdown
-                            children={title}
+                            children={displayData.title}
                             remarkPlugins={[remarkGfm]}
                             className={'issue-title'}
                         />
@@ -541,12 +538,10 @@ const GFIIssueDisplayCard = forwardRef(({issueId, title, body, isClosed, hasReso
 })
 
 GFIIssueDisplayCard.propTypes = {
+    repoName: PropTypes.string,
+    repoOwner: PropTypes.string,
     issueId: PropTypes.number,
-    title: PropTypes.string,
-    body: PropTypes.string,
-    isClosed: PropTypes.string,
-    hasResolved: PropTypes.bool,
-    htmlURL: PropTypes.string
+    onRequestFailed: PropTypes.func,
 }
 
 const GFIIssueStatusTag = ({type}) => {
@@ -570,3 +565,84 @@ const GFIIssueStatusTag = ({type}) => {
 GFIIssueStatusTag.propTypes = {
     type: PropTypes.oneOf(['Resolved', 'Open', 'Closed'])
 }
+
+const GFIDadaKanban = forwardRef((props, ref) => {
+
+    let [repoNum, setRepoNum] = useState(0)
+    let [issueNum, setIssueNum] = useState(0)
+    let [GFINum, setGFINum] = useState(0)
+    let [langTags, setLangTags] = useState([])
+
+    useEffect(() => {
+
+        getRepoNum().then((res) => {
+            if (res && checkIsNumber(res)) {
+                setRepoNum(res)
+            }
+        })
+
+        getLanguageTags().then((res) => {
+            if (res && Array.isArray(res)) {
+                setLangTags(res)
+            }
+        })
+
+        getIssueNum().then((res) => {
+            if (res && checkIsNumber(res)) {
+                setIssueNum(res)
+                setGFINum(Math.round(res * 0.05))
+            }
+        })
+    }, [])
+
+    const renderLanguageTags = () => {
+        return langTags.map((val, index) => {
+                return (
+                    <button className={'gfi-rounded'} key={`lang-tag ${index}`}> {val} </button>
+                )
+            })
+    }
+
+    return (
+        <>
+            <div className={'gfi-wrapper kanban'} style={{
+                fontFamily: defaultFontFamily
+            }}>
+                <div className={'kanban wrapper'} style={{
+                    margin: '7px',
+                }}>
+
+                    <div className={'kanban'}>
+                        <div className={'kanban data'}>
+                            <div> Repos </div>
+                            <div> {repoNum} </div>
+                        </div>
+                    </div>
+
+                    <div className={'kanban'}>
+                        <div className={'kanban data'}>
+                            <div> Issues </div>
+                            <div> {issueNum} </div>
+                        </div>
+                    </div>
+
+                    <div className={'kanban'}>
+                        <div className={'kanban data'}>
+                            <div> GFIs </div>
+                            <div> {GFINum} </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={'gfi-wrapper tags'}>
+                    <div>
+                        Languages
+                    </div>
+                    <div className={'tags wrapper'}>
+                        {renderLanguageTags()}
+                    </div>
+                </div>
+            </div>
+        </>
+    )
+})
