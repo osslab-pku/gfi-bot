@@ -1,5 +1,3 @@
-from http import client
-from signal import siginterrupt
 from flask import Flask, redirect, request
 from flask_cors import CORS
 
@@ -87,6 +85,16 @@ def get_repo_info():
         abort(400)
 
 
+@app.route('/api/repos/language')
+def get_deduped_repo_languages():
+    repos = gfi_db.get_collection(db_repos)
+    languages = repos.distinct('language')
+    return {
+        'code': 200,
+        'result': languages
+    }
+
+
 GITHUB_LOGIN_URL : Final = 'https://github.com/login/oauth/authorize'
 
 @app.route('/api/user/github/login')
@@ -117,6 +125,15 @@ def get_recommend_repo():
     return {
         'code': 200,
         'result': res
+    }
+
+
+@app.route('/api/issue/num')
+def get_issue_num():
+    issues = gfi_db.get_collection(db_issue_dataset)
+    return {
+        'code': 200,
+        'result': issues.count_documents({})
     }
 
 
