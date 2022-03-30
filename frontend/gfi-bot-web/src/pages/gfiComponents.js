@@ -147,7 +147,7 @@ export const GFIPagination = (props) => {
     }
 
     return (
-        <Container style={{ overflow: 'hidden' }}>
+        <Container style={ props.needPadding ? { overflow: 'hidden'} : {overflow: 'hidden', padding: '0'} }>
             <Row style={{ marginTop: '10px' }}>
                 <Form.Group>
                     <Col sm={8} style={{ float: 'left' }}>
@@ -162,14 +162,15 @@ export const GFIPagination = (props) => {
                             maxWidth: '80px',
                             float: 'right',
                         }}>
-                            <Form.Control placeholder={props.pageIdx + '/' + props.pageNums}
-                                          onChange={(e) => {props.onFormInput(e.target)}}
-                                          onKeyDown={(e) => {
-                                              if (e.key === 'Enter') {
-                                                  e.preventDefault()
-                                                  props.onPageBtnClicked()
-                                              }
-                                          }}
+                            <Form.Control
+                                placeholder={props.pageIdx + '/' + props.pageNums}
+                                onChange={(e) => {props.onFormInput(e.target)}}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        props.onPageBtnClicked()
+                                    }
+                                }}
                             />
                         </Form.Label>
                     </Col>
@@ -186,6 +187,7 @@ GFIPagination.propTypes = {
     onPageBtnClicked: PropTypes.func,
     toPage: PropTypes.func,
     onFormInput: PropTypes.func,
+    needPadding: PropTypes.bool,
 }
 
 export class GFIAlarm extends React.Component {
@@ -315,3 +317,5 @@ GFIProgressBar.propTypes = {
     onFinished: PropTypes.func,
     height: PropTypes.string,
 }
+
+
