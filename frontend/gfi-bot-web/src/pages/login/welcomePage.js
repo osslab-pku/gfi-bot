@@ -2,7 +2,7 @@ import React, {useEffect} from 'react';
 import {useDispatch} from 'react-redux';
 import {useHistory} from 'react-router-dom';
 import PropTypes from 'prop-types';
-import {Container, Col, Row, ToastContainer, Toast} from 'react-bootstrap';
+import {Container, Col, Row, ToastContainer, Toast, Button} from 'react-bootstrap';
 
 import '../../style/gfiStyle.css'
 import {defaultFontFamily} from '../../utils';
@@ -35,7 +35,7 @@ export const LoginRedirect = (props) => {
     )
 }
 
-export const GFIWelcome = ({userName, userAvatarUrl, onClose, show}) => {
+export const GFINotiToast = ({userName, userAvatarUrl, onClose, show, context, buttonContext, onClick}) => {
 
     return (
         <ToastContainer position={'top-end'} style={{
@@ -45,18 +45,34 @@ export const GFIWelcome = ({userName, userAvatarUrl, onClose, show}) => {
                 <Toast.Header>
                     {userAvatarUrl ? <img src={userAvatarUrl} alt={''} className={'rounded me-2'} style={{ width: '30px' }}/>
                         : <UserOutlined style={{ fontSize: '30px' }} />}
-                    <strong className={'me-auto'}> Hello, {userName} </strong>
+                    <strong className={'me-auto'} style={{ marginLeft: '5px' }}> Hello, {userName} </strong>
                 </Toast.Header>
                 <Toast.Body>
-                    Welcome to GFI-Bot
+                    {context ? context : 'Welcome to GFI-Bot'}
                 </Toast.Body>
+                {buttonContext ?
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        paddingRight: '1rem',
+                        paddingBottom: '0.5rem',
+                    }}>
+                        <Button variant={'outline-primary'} size={'sm'} onClick={onClick}>
+                            {buttonContext}
+                        </Button>
+                    </div>
+                    : <></>
+                }
             </Toast>
         </ToastContainer>
     )
 }
 
-GFIWelcome.propTypes = {
+GFINotiToast.propTypes = {
     userName: PropTypes.string,
     userAvatarUrl: PropTypes.string,
-    onClose: PropTypes.func
+    onClose: PropTypes.func,
+    context: PropTypes.string,
+    buttonContext: PropTypes.string,
+    onClick: PropTypes.func,
 }

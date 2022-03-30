@@ -7,7 +7,7 @@ import {checkIsNumber} from '../../utils';
 import {GFISearchBar, GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} from '../gfiComponents';
 import {RepoGraphContainer} from './repoDataDemonstrator';
 
-import {getRepoNum, getRepoInfo} from '../../api/api';
+import {getRepoNum, getRepoDetailedInfo} from '../../api/api';
 import Fade from 'react-reveal/Fade'
 
 export const Repositories = (props) => {
@@ -38,7 +38,7 @@ export const Repositories = (props) => {
     useEffect(() => {
         let beginIdx = (pageIdx - 1) * repoListCapacity
         setProgress('60%')
-        getRepoInfo(beginIdx, repoListCapacity).then((repoList) => {
+        getRepoDetailedInfo(beginIdx, repoListCapacity, '').then((repoList) => {
             if (repoList && Array.isArray(repoList)) {
                 setInfoList(repoList)
             } else {
@@ -175,7 +175,7 @@ export const Repositories = (props) => {
     return (
         <>
             {renderProgressBar()}
-            <Container className={'singlePage'}>
+            <Container className={'single-page'}>
                 {renderAlarmInfo()}
                 <Row>
                     <GFISearchBar description={'Search for your project'} title={'search'} />
@@ -208,6 +208,7 @@ export const Repositories = (props) => {
                                 onFormInput={(target) => onFormInput(target)}
                                 onPageBtnClicked={() => onPageBtnClicked()}
                                 maxPagingCount={3}
+                                needPadding={true}
                             />
                         </Row>
                     </Col>

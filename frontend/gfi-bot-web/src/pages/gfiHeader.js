@@ -28,6 +28,8 @@ export const GFIHeader = () => {
 
     const checkLogin = () => {
         // TODO: MSKYurina
+        // currently for debugging
+        logout()
     }
 
     useEffect(() => {
@@ -43,7 +45,6 @@ export const GFIHeader = () => {
         if ('name' in state) return state.name
         return undefined
     })
-
 
     // Login / Logout related components
 
@@ -69,7 +70,6 @@ export const GFIHeader = () => {
             window.removeEventListener('mousedown', (e) => checkIfClosePopOver(e))
         }
     }, [popOverToggled])
-
 
     // Popover menu, currently for user logout
 
@@ -99,7 +99,6 @@ export const GFIHeader = () => {
             </Popover.Body>
         </Popover>
     )
-
 
     // Sign in component
 
@@ -150,7 +149,6 @@ export const GFIHeader = () => {
             )
         }
     }
-
 
     // Display responsively
 

@@ -7,7 +7,7 @@
     max-width: 100vw;
 }
 
-.singlePage {
+.single-page {
     width: 100%;
     bottom: 0;
     top: 0;
@@ -32,7 +32,7 @@
     border-color: rgba(255, 255, 255, 0);
 }
 
-.roundedContainer {
+.rounded-container {
     border: solid 2px white;
     background-color: rgba(255, 255, 255, 0.1);
     color: white;
@@ -43,7 +43,7 @@
     border-radius: 15px;
 }
 
-.issueCardTitle {
+.issue-card-title {
     margin: 10px;
     font-size: larger;
     font-weight: bold;

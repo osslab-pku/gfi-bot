@@ -11,21 +11,30 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkGemoji from 'remark-gemoji';
 
-import background from '../assets/Tokyo-Tower-.jpg'
-import gfiLogo from '../assets/gfi-logo.png'
+import background from '../assets/Tokyo-Tower-.jpg';
+import gfiLogo from '../assets/gfi-logo.png';
 
 import '../style/gfiStyle.css'
 import {SearchOutlined} from '@ant-design/icons';
 import {checkIsNumber, defaultFontFamily} from '../utils';
 
-import {GFIWelcome} from './login/welcomePage';
-import {GFIAlarm, GFICopyright} from './gfiComponents';
-import {getRecommendedRepoInfo, getGFIByRepoName, getRepoNum, getIssueNum, getLanguageTags} from '../api/api';
-import {getIssueByRepoInfo} from '../api/githubApi';
+import {GFINotiToast} from './login/welcomePage';
+import {GFIAlarm, GFICopyright, GFIPagination} from './gfiComponents';
+import {
+    getRecommendedRepoInfo,
+    getGFIByRepoName,
+    getRepoNum,
+    getIssueNum,
+    getLanguageTags,
+    getRepoInfoByNameOrURL, getRepoDetailedInfo, getProcessingSearches
+} from '../api/api';
+import {getIssueByRepoInfo, userInfo} from '../api/githubApi';
+
+import {checkIsGitRepoURL} from '../utils';
+import {useSucceedQuery} from './app/processStatusProvider';
 
 // TODO: MSKYurina
-//  Pagination & Animation
-//  Check login
+// Animation & Searching History
 
 interface RepoInfo {
     name: string,
@@ -33,7 +42,14 @@ interface RepoInfo {
 }
 
 export const MainPage = (props) => {
+
     let [showLoginMsg, setShowLoginMsg] = useState(false)
+    let [showSearchMsg, setShowSearchMsg] = useState(false)
+
+    const succeedQuery = useSucceedQuery()
+    useEffect(() => {
+        console.log(succeedQuery)
+    }, [succeedQuery])
 
     const isMobile = useIsMobile()
     const {width, height} = useWindowSize()
@@ -47,11 +63,16 @@ export const MainPage = (props) => {
         if ('avatar' in state) return state.avatar
         return ''
     })
-    
-    let [repoInfo, setRepoInfo] = useState({
+
+    const defaultRepoInfo = {
         name: '',
         owner: '',
-    })
+        url: '',
+    }
+    
+    let [recommendedRepoInfo, setRecommendedRepoInfo] = useState(defaultRepoInfo)
+
+    let [searchedRepoInfo, setSearchedRepoInfo] = useState([defaultRepoInfo])
 
     let [alarmConfig, setAlarmConfig] = useState({
         show: false,
@@ -68,32 +89,104 @@ export const MainPage = (props) => {
     const fetchRepoInfo = async () => {
         const res = await getRecommendedRepoInfo()
         if ('name' in res && 'owner' in res) {
-            setRepoInfo(res)
+            setRecommendedRepoInfo(res)
         } else {
-            setRepoInfo({
+            setRecommendedRepoInfo({
                 name: '',
                 owner: '',
+                url: '',
             })
         }
     }
-    
+
+    const location = useLocation()
+
     useEffect(() => {
         getRecommendedRepoInfo()
             .then((info: RepoInfo) => {
-                setRepoInfo(info)
+                setRecommendedRepoInfo(info)
             })
-    }, [])
 
-    useEffect(() => {
-        console.log(repoInfo)
-    }, [repoInfo])
-
-    const location = useLocation()
-    useEffect(() => {
         if ('state' in location && location.state && location.state.justLogin === true) {
             setShowLoginMsg(true)
         }
     }, [])
+
+    const repoCapacity = 3
+    let [pageIdx, setPageIdx] = useState(1)
+    let [totalRepos, setTotalRepos] = useState(0)
+    let [repoTag, setRepoTag] = useState('')
+    let [pageFormInput, setPageFormInput] = useState(0)
+
+    const pageNums = () => {
+        if (totalRepos % repoCapacity === 0) {
+            return Math.floor(totalRepos / repoCapacity)
+        } else {
+            return Math.floor(totalRepos / repoCapacity) + 1
+        }
+    }
+
+    const toPage = (i) => {
+        if (1 <= i && i <= pageNums()) {
+            setPageIdx(i)
+        }
+    }
+
+    const onKanbanClicked = (e) => {
+        const tag = e.target.innerText
+        setSearchedRepoInfo([])
+        setShowRecommended(false)
+        getRepoNum(tag)
+            .then((res) => {
+                if (res && Number.isInteger(res)) {
+                    setTotalRepos(res)
+                    setRepoTag(tag)
+                } else {
+                    setTotalRepos(0)
+                }
+                setPageIdx(1)
+            })
+    }
+
+    useEffect(() => {
+        fetchRepoInfoList(1, repoTag)
+    }, [repoTag])
+
+    useEffect(() => {
+        fetchRepoInfoList(pageIdx, repoTag)
+    }, [pageIdx])
+
+    const fetchRepoInfoList = (pageNum, tag) => {
+        let beginIdx = (pageNum - 1) * repoCapacity
+        getRepoDetailedInfo(beginIdx, repoCapacity, tag).then((repoList) => {
+            if (repoList && Array.isArray(repoList)) {
+                const repoInfoList = repoList.map((repo, i) => {
+                    const parsedRepo = JSON.parse(repo)
+                    console.log(parsedRepo)
+                    if ('name' in parsedRepo && 'owner' in parsedRepo) {
+                        return {
+                            name: parsedRepo.name,
+                            owner: parsedRepo.owner,
+                            url: '',
+                        }
+                    } else {
+                        return defaultRepoInfo
+                    }
+                })
+                console.log(repoInfoList)
+                setSearchedRepoInfo(repoInfoList)
+            }
+        })
+    }
+
+    const onPageBtnClicked = () => {
+        if (checkIsNumber(pageFormInput)) {
+            pageFormInput = Number(pageFormInput)
+            if (pageFormInput > 0 && pageFormInput <= pageNums()) {
+                toPage(pageFormInput)
+            }
+        }
+    }
 
     const renderLogo = () => {
         if (width > 700 || isMobile) {
@@ -108,7 +201,100 @@ export const MainPage = (props) => {
         }
     }
 
+    let [searchURL, setSearchURL] = useState('')
+    let [showRecommended, setShowRecommended] = useState(true)
+    let [queryNums, setQueryNums] = useState(0)
+    let [succeedQueries, setSucceedQueries] = useState([])
+    let [searchStarted, setSearchStarted] = useState(false)
+    let [intervalId, setIntervalId] = useState(0)
+
+    const showSearchResult = () => {
+        if (succeedQueries.length && searchStarted) {
+            const repoInfo = succeedQueries.map((item, _) => {
+                return {
+                    name: item,
+                    owner: '',
+                    url: '',
+                }
+            })
+            if (repoInfo !== searchedRepoInfo) {
+                setSearchedRepoInfo(repoInfo)
+            }
+            setShowRecommended(false)
+            setSearchStarted(false)
+            setShowSearchMsg(false)
+        }
+    }
+
+    useEffect(() => {
+        if (queryNums === 0 && searchStarted) {
+            console.log('interval id', intervalId)
+            clearInterval(intervalId)
+            getProcessingSearches(true).then(() => {})
+            setShowSearchMsg(true)
+            console.log(succeedQueries)
+        }
+    }, [queryNums])
+
+    const handleSearchBtn = () => {
+        if (checkIsGitRepoURL(searchURL)) {
+            getRepoInfoByNameOrURL('', searchURL).then((res) => {
+                if (res && 'name' in res && 'owner' in res) {
+                    setShowRecommended(true)
+                    setRecommendedRepoInfo(res)
+                } else {
+                    const [hasLogin, userName] = userInfo()
+                    if (!hasLogin) {
+                        setAlarmConfig({
+                            show: true,
+                            msg: 'You Need to Login For Data Retrieving',
+                        })
+                    } else {
+                        if (searchStarted === false) {
+                            setSearchStarted(true)
+                            const id = setInterval(() => {
+                                getProcessingSearches().then((res) => {
+                                    console.log(res)
+                                    if ('user_query_num' in res) {
+                                        if (res.user_query_num !== 0) {
+                                            setAlarmConfig({
+                                                show: true,
+                                                msg: `${res.user_query_num} Requests Under Processing`,
+                                            })
+                                        }
+                                        setQueryNums(res.user_query_num)
+                                        if (queryNums === 0) {
+                                            clearInterval(intervalId)
+                                        }
+                                    }
+                                    if ('user_succeed_queries' in res) {
+                                        setSucceedQueries(res.user_succeed_queries)
+                                    }
+                                })
+                            }, 500)
+                            setIntervalId(id)
+                            console.log('interval id', id)
+                        }
+                    }
+                }
+            })
+        } else if (searchURL !== recommendedRepoInfo.name) {
+            getRepoInfoByNameOrURL(searchURL, '').then((res) => {
+                console.log(res)
+                if (res && ('name' in res) && ('owner' in res)) {
+                    setRecommendedRepoInfo(res)
+                } else {
+                    setAlarmConfig({
+                        show: true,
+                        msg: 'Repo Name Doesn\'t Exist',
+                    })
+                }
+            })
+        }
+    }
+
     const renderSearchArea = () => {
+
         return (
             <>
                 <Row>
@@ -132,13 +318,24 @@ export const MainPage = (props) => {
                                         borderRightColor: 'rgba(255, 255, 255, 0)',
                                     }}
                                     aria-describedby={'append-icon'}
+                                    onChange={(event) => {setSearchURL(event.target.value)}}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            handleSearchBtn()
+                                        }
+                                    }}
+                                    type={'input'}
                                 />
-                                <Button variant={'outline-light'} style={{
-                                    borderLeftColor: 'rgba(255, 255, 255, 0)',
-                                    width: '40px',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    display: 'flex',
+                                <Button
+                                    variant={'outline-light'}
+                                    onClick={handleSearchBtn}
+                                    style={{
+                                        borderLeftColor: 'rgba(255, 255, 255, 0)',
+                                        width: '40px',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        display: 'flex',
                                 }}>
                                     <SearchOutlined style={{
                                         display: 'flex',
@@ -154,6 +351,40 @@ export const MainPage = (props) => {
                 </Row>
             </>
         )
+    }
+
+    const renderInfoComponent = () => {
+        if (showRecommended) {
+            return (
+                <InfoShowComponent
+                    key={recommendedRepoInfo}
+                    repoInfo={recommendedRepoInfo}
+                    onRefresh={fetchRepoInfo}
+                    onRequestFailed={(msg) => {
+                        showAlarm(msg)
+                    }}
+                    isRecommended={showRecommended}
+                />
+            )
+        } else if (searchedRepoInfo.length) {
+            return searchedRepoInfo.map((item, _) => {
+                return (
+                    <InfoShowComponent
+                        key={item}
+                        repoInfo={item}
+                        onRefresh={fetchRepoInfo}
+                        onRequestFailed={(msg) => {
+                            showAlarm(msg)
+                        }}
+                        isRecommended={showRecommended}
+                    />
+                )
+            })
+        } else {
+            return (
+                <></>
+            )
+        }
     }
 
     const renderMainArea = () => {
@@ -177,21 +408,36 @@ export const MainPage = (props) => {
                             padding: '0px',
                             marginLeft: '0px',
                             maxWidth: isMobile ? '100%' : '70%',
+                            flexDirection: 'column',
                         }}>
-                            <InfoShowComponent
-                                key={repoInfo}
-                                repoInfo={repoInfo}
-                                onRefresh={fetchRepoInfo}
-                                onRequestFailed={(msg) => {
-                                    showAlarm(msg)
-                                }}
-                            />
+                            {renderInfoComponent()}
+                            {(showRecommended === false) ?
+                                <>
+                                    <style type={'text/css'}>
+                                        {`
+                                            .page-item.active .page-link {
+                                                background-color: rgb(56, 63, 73);
+                                                border-color: white
+                                            }
+                                        `}
+                                    </style>
+                                    <GFIPagination
+                                        pageIdx={pageIdx}
+                                        toPage={(pageNum) => {toPage(pageNum)}}
+                                        pageNums={pageNums()}
+                                        onFormInput={(target) => {setPageFormInput(target.value)}}
+                                        onPageBtnClicked={() => {onPageBtnClicked()}}
+                                        maxPagingCount={3}
+                                        needPadding={false}
+                                    />
+                                </> : <></>
+                            }
                         </Container>
                         {(width > 1000) ? <Container style={{
                             maxWidth: '30%',
                             marginTop: '30px',
                         }}>
-                            <GFIDadaKanban />
+                            <GFIDadaKanban onTagClicked={onKanbanClicked} />
                         </Container> : <></>}
                     </Col>
                 </Row>
@@ -201,21 +447,36 @@ export const MainPage = (props) => {
 
     return (
         <>
-            <Container className={'singlePage'}>
+            <Container className={'single-page'}>
                 <Row style={{
                     marginBottom: alarmConfig.show? '-25px': '0',
                     marginTop: alarmConfig.show? '25px': '0',
                 }}>
-                    {alarmConfig.show ? <GFIAlarm title={alarmConfig.msg} onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}} /> : <></>}
+                    {alarmConfig.show ?
+                        <GFIAlarm
+                            title={alarmConfig.msg}
+                            onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}}
+                        /> : <></>}
                 </Row>
                 <Row>
-                    <GFIWelcome
+                    <GFINotiToast
                         show={showLoginMsg}
                         userName={userName ? userName: 'visitor'}
                         userAvatarUrl={userAvatarUrl}
                         onClose={() => {
                             setShowLoginMsg(false)
                         }}
+                    />
+                    <GFINotiToast
+                        show={showSearchMsg}
+                        userName={userName ? userName: 'visitor'}
+                        userAvatarUrl={userAvatarUrl}
+                        onClose={() => {
+                            setShowSearchMsg(false)
+                        }}
+                        context={'Searching Completed!'}
+                        buttonContext={'Display'}
+                        onClick={showSearchResult}
                     />
                 </Row>
                 {renderMainArea()}
@@ -245,7 +506,7 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
 
     let expRef = useRef(null)
 
-    const {repoInfo, onRefresh, onRequestFailed} = props
+    const {repoInfo, onRefresh, onRequestFailed, isRecommended} = props
 
     let [issueIdList, setIssueIdList] = useState([])
     useEffect(() => {
@@ -253,7 +514,6 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
         if (repoInfo && repoInfo.name) {
             getGFIByRepoName(repoInfo.name).then((res) => {
                 if (Array.isArray(res)) {
-                    console.log(res)
                     setIssueIdList(res)
                 } else {
                     onRequestFailed('Lost connection with server')
@@ -262,47 +522,56 @@ const InfoShowComponent = React.forwardRef((props, ref) => {
         }
     }, [repoInfo])
 
+    const recommended = () => {
+        return (
+            <>
+                <div style={{
+                    height: '30px',
+                    borderColor: '#ffffff',
+                    border: 'solid 1px white',
+                    borderRadius: '15px',
+                    boxSizing: 'border-box',
+                    marginRight: '20px',
+                    display: 'inline-block',
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start',
+                    }}>
+                        <p style={{
+                            paddingLeft: '12px',
+                            marginTop: '1.5px',
+                            marginBottom: '0px',
+                            fontFamily: defaultFontFamily,
+                            fontWeight: 'bold',
+                            color: 'white',
+                        }}> Recommended </p>
+                        <Button variant={'outline-light'} onClick={onRefresh} className={'transparent'} style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            borderRadius: '20px',
+                            width: '40px',
+                        }}>
+                            <ReloadOutlined style={{
+                                color: 'white',
+                            }} />
+                        </Button>
+                    </div>
+                </div>
+            </>
+        )
+    }
+
     return (
         <Container style={{
             padding: '15px',
             marginLeft: '0px',
-        }} className={'roundedContainer largeRadius'}>
+            marginBottom: '2rem',
+        }} className={'rounded-container largeRadius'}>
             <Row>
                 <Col>
-                    <div style={{
-                        height: '30px',
-                        borderColor: '#ffffff',
-                        border: 'solid 1px white',
-                        borderRadius: '15px',
-                        boxSizing: 'border-box',
-                        marginRight: '20px',
-                        display: 'inline-block',
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'flex-start',
-                        }}>
-                            <p style={{
-                                paddingLeft: '12px',
-                                marginTop: '1.5px',
-                                marginBottom: '0px',
-                                fontFamily: defaultFontFamily,
-                                fontWeight: 'bold',
-                                color: 'white',
-                            }}> Recommended </p>
-                            <Button variant={'outline-light'} onClick={() => onRefresh()} className={'transparent'} style={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                borderRadius: '20px',
-                                width: '40px',
-                            }}>
-                                <ReloadOutlined style={{
-                                    color: 'white',
-                                }} />
-                            </Button>
-                        </div>
-                    </div>
+                    {isRecommended ? recommended() : <></>}
                     <div style={{
                         fontFamily: defaultFontFamily,
                         fontSize: '32px',
@@ -344,6 +613,7 @@ InfoShowComponent.propTypes = {
     }),
     onRefresh: PropTypes.func,
     onRequestFailed: PropTypes.func,
+    isRecommended: PropTypes.bool,
 }
 
 const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequestFailed}, ref) => {
@@ -364,9 +634,8 @@ const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequest
 
     let [displayData, setDisplayData] = useState(defaultIssueData)
 
-    useEffect(() => {
-        setDisplayData(defaultIssueData)
-        getIssueByRepoInfo(repoName, repoOwner, issueId).then((res) => {
+    const getIssueInfo = (name, owner) => {
+        getIssueByRepoInfo(name, owner, issueId).then((res) => {
             if (res.code === 200) {
                 if ('number' in res.result && 'title' in res.result && 'state' in res.result
                     && 'active_lock_reason' in res.result && 'body' in res.result && 'html_url' in res.result) {
@@ -383,6 +652,20 @@ const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequest
                 onRequestFailed('GitHub API rate limit exceeded, you may sign in using a GitHub account to continue')
             }
         })
+    }
+
+    useEffect(() => {
+        setDisplayData(defaultIssueData)
+        if (!repoOwner || repoOwner === '') {
+            getRepoInfoByNameOrURL(repoName, '').then((res) => {
+                if (res && 'owner' in res) {
+                    getIssueInfo(repoName, res.owner)
+                }
+            })
+        } else {
+            getIssueInfo(repoName, repoOwner)
+        }
+
     }, [repoName, repoOwner, issueId])
 
     const detailOnShow = () => {
@@ -506,14 +789,25 @@ const GFIIssueDisplayCard = forwardRef(({repoName, repoOwner, issueId, onRequest
         }
     }
 
+    const cardClicked = (e) => {
+        if (!detailBtn) {
+            detailOnShow()
+        }
+    }
+
     return (
-        <Container style={{
-            margin: '10px',
-            backgroundColor: 'transparent',
-            fontFamily: defaultFontFamily,
-        }} className={'roundedContainer'}>
+        <Container
+            className={'rounded-container'}
+            style={{
+                margin: '10px',
+                backgroundColor: 'transparent',
+                fontFamily: defaultFontFamily,
+                cursor: detailBtn ? 'default' : 'pointer',
+            }}
+            onClick={cardClicked}
+        >
             <Row>
-                <Col className={'issueCardTitle'}>
+                <Col className={'issue-card-title'}>
                     {issueLabel('#' + issueId)}
                     <div>
                         <ReactMarkdown
@@ -566,7 +860,7 @@ GFIIssueStatusTag.propTypes = {
     type: PropTypes.oneOf(['Resolved', 'Open', 'Closed'])
 }
 
-const GFIDadaKanban = forwardRef((props, ref) => {
+const GFIDadaKanban = forwardRef(({onTagClicked}, ref) => {
 
     let [repoNum, setRepoNum] = useState(0)
     let [issueNum, setIssueNum] = useState(0)
@@ -575,7 +869,7 @@ const GFIDadaKanban = forwardRef((props, ref) => {
 
     useEffect(() => {
 
-        getRepoNum().then((res) => {
+        getRepoNum('').then((res) => {
             if (res && checkIsNumber(res)) {
                 setRepoNum(res)
             }
@@ -597,10 +891,16 @@ const GFIDadaKanban = forwardRef((props, ref) => {
 
     const renderLanguageTags = () => {
         return langTags.map((val, index) => {
-                return (
-                    <button className={'gfi-rounded'} key={`lang-tag ${index}`}> {val} </button>
-                )
-            })
+            return (
+                <button
+                    className={'gfi-rounded'}
+                    key={`lang-tag ${index}`}
+                    onClick={onTagClicked}
+                >
+                    {val}
+                </button>
+            )
+        })
     }
 
     return (
@@ -646,3 +946,7 @@ const GFIDadaKanban = forwardRef((props, ref) => {
         </>
     )
 })
+
+GFIDadaKanban.propTypes = {
+    onTagClicked: PropTypes.func,
+}

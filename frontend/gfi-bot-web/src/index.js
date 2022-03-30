@@ -1,4 +1,5 @@
-import React from 'react';import ReactDOM from 'react-dom';
+import React from 'react';
+import ReactDOM from 'react-dom';
 import './index.css';
 
 import reportWebVitals from './reportWebVitals';
@@ -16,6 +17,7 @@ import {Container} from 'react-bootstrap';
 import {MainPage} from './pages/mainPage';
 import {LoginRedirect} from './pages/login/welcomePage';
 import {WindowContextProvider} from './pages/app/windowContext';
+import {GFIQueryProcessContextProvider} from './pages/app/processStatusProvider';
 
 ReactDOM.render(
     <React.StrictMode>
@@ -26,18 +28,20 @@ ReactDOM.render(
             <Provider store={store}>
                 <PersistGate loading={null} persistor={persistor}>
                     <WindowContextProvider>
-                        <BrowserRouter>
-                            <Container fluid className={'no-gutters mx-0 px-0'}>
-                                <GFIHeader />
-                                <Switch>
-                                    <Route exact path={'/'} component={MainPage} />
-                                    <Route path={'/home'} component={DescriptionPage} />
-                                    <Route path={'/repos'} component={Repositories} />
-                                    <Route path={'/login/redirect'} component={LoginRedirect} />
-                                    <Route path={'*'} component={MainPage} />
-                                 </Switch>
-                            </Container>
-                        </BrowserRouter>
+                        <GFIQueryProcessContextProvider>
+                            <BrowserRouter>
+                                <Container fluid className={'no-gutters mx-0 px-0'}>
+                                    <GFIHeader />
+                                    <Switch>
+                                        <Route exact path={'/'} component={MainPage} />
+                                        <Route path={'/home'} component={DescriptionPage} />
+                                        <Route path={'/repos'} component={Repositories} />
+                                        <Route path={'/login/redirect'} component={LoginRedirect} />
+                                        <Route path={'*'} component={MainPage} />
+                                    </Switch>
+                                </Container>
+                            </BrowserRouter>
+                        </GFIQueryProcessContextProvider>
                     </WindowContextProvider>
                 </PersistGate>
             </Provider>

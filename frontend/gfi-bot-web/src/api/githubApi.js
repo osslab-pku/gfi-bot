@@ -3,9 +3,15 @@ import axios from 'axios';
 import {asyncGet} from './gfiQuery';
 import {DEV_URL} from './api';
 
+export const userInfo = () => {
+    return [
+        store.getState().hasLogin,
+        store.getState().name,
+    ]
+}
+
 export const gitHubLogin = () => {
-    const hasLogin = store.getState().hasLogin
-    const userName = store.getState().name
+    const [hasLogin, userName] = userInfo()
     if (hasLogin === true  && userName !== undefined) {
         window.location.reload()
         return
