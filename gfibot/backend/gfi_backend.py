@@ -439,6 +439,5 @@ def send_when_gfi_process_finished(repo_name, user_name):
     emit('socket_connected', {'data': 'material-ui'}, namespace='/gfi_process')
     app.logger.info('gfi_process finished')
 
-
-socketio.run(app, debug=True)
-    
+if __name__ == '__main__':
+    socketio.run(app, debug=True)
