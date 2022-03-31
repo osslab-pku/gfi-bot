@@ -376,7 +376,7 @@ def fetch_repo_gfi(repo_url, github_name):
     time.sleep(10)
     print('fetching repo gfi')
     repo_name = repo_url.split('.git')[0].split('/')[-1]
-    # send_email(user_github_id, 'Fetching repo gfi succeed', repo_url)
+    send_email(github_name, 'Fetching repo gfi succeed', repo_url)
     send_when_gfi_process_finished(repo_name, github_name)
 
 
