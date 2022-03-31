@@ -131,3 +131,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# github tokens
+gfibot/backend/set_tokens_private.py

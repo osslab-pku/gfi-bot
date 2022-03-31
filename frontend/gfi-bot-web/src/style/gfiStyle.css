@@ -1,0 +1,217 @@
+.pageContainer {
+    width: 100%;
+    position: absolute;
+    margin-top: 56px;
+    bottom: 0;
+    top: 0;
+    max-width: 100vw;
+}
+
+.single-page {
+    width: 100%;
+    bottom: 0;
+    top: 0;
+    max-width: 1320px;
+    margin: 0 auto;
+    min-width: 30vw;
+}
+
+.logo {
+    filter: invert(93%) sepia(93%) saturate(0%) hue-rotate(279deg) brightness(108%) contrast(108%);
+}
+
+.background {
+    /*filter: blur(6px) brightness(85%);*/
+    /* blur may cause white edge of pic */
+    /*transform: scale(1.02);*/
+    background-color: rgb(56, 63, 73);
+}
+
+.transparent {
+    background-color: rgba(255, 255, 255, 0);
+    border-color: rgba(255, 255, 255, 0);
+}
+
+.rounded-container {
+    border: solid 2px white;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 7px;
+}
+
+.largeRadius {
+    border-radius: 15px;
+}
+
+.issue-card-title {
+    margin: 10px;
+    font-size: larger;
+    font-weight: bold;
+    line-height: 1.3;
+    display: flex;
+    align-items: flex-start;
+    padding: 0;
+}
+
+.markdown a {
+    word-break: break-all;
+    word-wrap: break-word;
+}
+
+.markdown pre {
+    background-color: rgb(183, 183, 183);
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+}
+
+.status-tag {
+    height: fit-content;
+    border-radius: 9999px;
+    width: fit-content;
+    padding-right: 8px;
+    padding-left: 8px;
+    border-width: 2px;
+    font-weight: bold;
+    box-sizing: border-box;
+    text-align: center;
+    margin-left: 5px;
+}
+
+.resolved {
+    border: #a0d468 solid;
+    color: #a0d468;
+}
+
+.closed {
+    border: #d46868 solid;
+    color: #d46868;
+}
+
+.open {
+    border: #61DAFBFF solid;
+    color: #61DAFBFF;
+}
+
+.issue-title code {
+    color: #3b3b3b;
+}
+
+.issue-title p {
+    margin-bottom: 0;
+}
+
+.issue-card-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20%;
+    min-width: 30px;
+    max-width: 100px;
+    border-radius: 5px;
+}
+
+.on-display {
+    width: 25px;
+    height: 25px;
+    border-radius: 100px;
+    margin-bottom: 5px;
+}
+
+.sign-in {
+    width: -webkit-max-content;
+    width: -moz-fit-content;
+}
+
+.gfi-wrapper {
+    display: flex;
+    border-radius: 10px;
+    box-sizing: border-box;
+    border: 2px white solid;
+    width: 100%;
+    height: 100%;
+    padding-right:  5px;
+    padding-left: 5px;
+    color: white;
+}
+
+.gfi-wrapper.kanban {
+    flex-flow: column wrap;
+    align-items: center;
+}
+
+.kanban.wrapper {
+    width: 90%;
+    display: flex;
+    flex-flow: row-reverse wrap;
+    justify-content: space-evenly;
+}
+
+.kanban.wrapper > .kanban div {
+    display: flex;
+    flex-flow: column wrap;
+    align-items: center;
+}
+
+.kanban.data > div:first-child {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.kanban.data > div:last-child {
+    font-size: 1.4em;
+}
+
+.kanban.border {
+    background-color: white;
+    width: 1px;
+    border-radius: 999px;
+    margin: 5px;
+}
+
+.gfi-wrapper.tags {
+    display: flex;
+    flex-flow: column wrap;
+    width: 95%;
+    margin-bottom: 10px;
+    padding: 5px 10px;
+}
+
+.tags.wrapper {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: flex-start;
+    align-items: stretch;
+}
+
+.gfi-wrapper.tags div:first-child {
+    font-size: large;
+    font-weight: bold;
+}
+
+.tags > button {
+    margin: 3px 2px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+button.gfi-rounded  {
+    border: white 1px solid;
+    border-radius: 999px;
+    background-color: transparent;
+    box-sizing: border-box;
+    color: white;
+    transition: 0.1s ease-in-out;
+}
+
+button.gfi-rounded:hover {
+    color: black;
+    background-color: white;
+    transition: 0.1s ease-in-out;
+}
+
+button.gfi-rounded:active {
+    color: white;
+    background-color: cornflowerblue;
+    transition: 0.1s ease-in-out;
+}
