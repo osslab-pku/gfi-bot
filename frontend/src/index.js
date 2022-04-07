@@ -8,6 +8,7 @@ import {Provider} from 'react-redux';
 import {persistor, store} from './module/storage/configureStorage';
 import {PersistGate} from "redux-persist/integration/react";
 import {BrowserRouter, Route, Switch} from 'react-router-dom';
+import {CacheRoute, CacheSwitch} from 'react-router-cache-route';
 
 import {DescriptionPage} from './pages/descriptionPage';
 import {GFIHeader} from './pages/gfiHeader';
@@ -32,13 +33,13 @@ ReactDOM.render(
                             <BrowserRouter>
                                 <Container fluid className={'no-gutters mx-0 px-0'}>
                                     <GFIHeader />
-                                    <Switch>
-                                        <Route exact path={'/'} component={MainPage} />
+                                    <CacheSwitch>
+                                        <CacheRoute exact path={'/'} component={MainPage} />
                                         <Route path={'/home'} component={DescriptionPage} />
-                                        <Route path={'/repos'} component={Repositories} />
+                                        <CacheRoute path={'/repos'} component={Repositories} />
                                         <Route path={'/login/redirect'} component={LoginRedirect} />
-                                        <Route path={'*'} component={MainPage} />
-                                    </Switch>
+                                        <CacheRoute path={'*'} component={MainPage} />
+                                    </CacheSwitch>
                                 </Container>
                             </BrowserRouter>
                         </GFIQueryProcessContextProvider>

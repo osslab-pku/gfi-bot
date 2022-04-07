@@ -147,7 +147,7 @@ export const GFIPagination = (props) => {
     }
 
     return (
-        <Container style={ props.needPadding ? { overflow: 'hidden'} : {overflow: 'hidden', padding: '0'} }>
+        <Container style={ props.needPadding ? { overflow: 'hidden'} : {overflow: 'hidden', padding: '0'} } className={props.className}>
             <Row style={{ marginTop: '10px' }}>
                 <Form.Group>
                     <Col sm={8} style={{ float: 'left' }}>
@@ -188,6 +188,7 @@ GFIPagination.propTypes = {
     toPage: PropTypes.func,
     onFormInput: PropTypes.func,
     needPadding: PropTypes.bool,
+    className: PropTypes.string,
 }
 
 export class GFIAlarm extends React.Component {

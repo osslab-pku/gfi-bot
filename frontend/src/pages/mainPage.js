@@ -413,15 +413,8 @@ export const MainPage = (props) => {
                             {renderInfoComponent()}
                             {(showRecommended === false) ?
                                 <>
-                                    <style type={'text/css'}>
-                                        {`
-                                            .page-item.active .page-link {
-                                                background-color: rgb(56, 63, 73);
-                                                border-color: white
-                                            }
-                                        `}
-                                    </style>
                                     <GFIPagination
+                                        className={'dark-paging'}
                                         pageIdx={pageIdx}
                                         toPage={(pageNum) => {toPage(pageNum)}}
                                         pageNums={pageNums()}
