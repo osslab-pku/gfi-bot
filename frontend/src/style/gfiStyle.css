@@ -215,3 +215,18 @@ button.gfi-rounded:active {
     background-color: cornflowerblue;
     transition: 0.1s ease-in-out;
 }
+
+.dark-paging .page-item.active .page-link {
+    background-color: rgb(56, 63, 73);
+    border-color: white;
+}
+
+.dark-paging .page-link {
+    color: rgb(56, 63, 73);
+}
+
+.dark-paging .form-control {
+    background-color: transparent;
+    border-color: white;
+    color: white;
+}
