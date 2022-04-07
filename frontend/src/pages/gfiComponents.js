@@ -317,5 +317,3 @@ GFIProgressBar.propTypes = {
     onFinished: PropTypes.func,
     height: PropTypes.string,
 }
-
-

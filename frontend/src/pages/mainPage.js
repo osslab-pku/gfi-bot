@@ -69,7 +69,7 @@ export const MainPage = (props) => {
         owner: '',
         url: '',
     }
-    
+
     let [recommendedRepoInfo, setRecommendedRepoInfo] = useState(defaultRepoInfo)
 
     let [searchedRepoInfo, setSearchedRepoInfo] = useState([defaultRepoInfo])
@@ -85,7 +85,7 @@ export const MainPage = (props) => {
             msg: msg,
         })
     }
-    
+
     const fetchRepoInfo = async () => {
         const res = await getRecommendedRepoInfo()
         if ('name' in res && 'owner' in res) {

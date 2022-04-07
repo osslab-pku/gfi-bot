@@ -1,3 +1,6 @@
+# Ignore IDEA related files
+*.idea/
+
 # Ignore tokens.txt as it is very sensitive
 tokens.txt
 

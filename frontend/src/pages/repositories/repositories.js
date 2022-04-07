@@ -108,7 +108,7 @@ export const Repositories = (props) => {
             window.alert('Please input a number')
         }
     }
-    
+
     // a little trick
     let [showCards, setShowCards] = useState(false)
     let [cardInfoList, setCardInfoList] = useState([])
