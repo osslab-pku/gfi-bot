@@ -11,4 +11,4 @@ jobs:
         with:
           options: "--check --verbose"
           src: "."
-          version: "21.12b0"
+          version: "latest"
