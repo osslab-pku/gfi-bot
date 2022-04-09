@@ -12,37 +12,6 @@ projects = [
 url = "mongodb://localhost:27017"
 db = "gfibot"
 
-[mongodb.collections.repos]
-name = "repos"
-indexes = [{ fields = ["owner", "name"], unique = true }]
-
-[mongodb.collections.repos_stars]
-name = "repos.stars"
-indexes = [{ fields = ["owner", "name", "user"], unique = true }]
-
-[mongodb.collections.repos_commits]
-name = "repos.commits"
-indexes = [
-    { fields = ["owner", "name", "sha"], unique = true },
-    { fields = ["authored_at"], unique = false},
-]
-
-[mongodb.collections.repos_issues]
-name = "repos.issues"
-indexes = [
-    { fields = ["owner", "name", "number"], unique = true },
-    { fields = ["closed_at"], unique = false },
-    { fields = ["merged_at"], unique = false },
-]
-
-[mongodb.collections.issues]
-name = "issues"
-indexes = [{ fields = ["owner", "name", "number"], unique = true }]
-
-[mongodb.collections.users]
-name = "users"
-indexes = [{ fields = ["name"], unique = true }]
-
 [tool.poetry]
 name = "gfi-bot"
 version = "0.1.0"
@@ -50,6 +19,7 @@ description = "ML-powered 🤖 for finding and labeling good first issues in you
 authors = [
     "Hao He <heh@pku.edu.cn>",
     "Wenxin Xiao <wenxin.xiao@stu.pku.edu.cn>",
+    "Haonan Su <haonan.su@pku.edu.cn>",
     "Runzhi He <rzhe@pku.edu.cn>",
 ]
 
@@ -72,6 +42,7 @@ Flask = "^2.0.3"
 Flask-Cors = "^3.0.10"
 Flask-SocketIO = "^5.1.1"
 yagmail = "^0.15.277"
+mongoengine = "^0.24.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

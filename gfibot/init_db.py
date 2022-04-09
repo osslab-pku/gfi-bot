@@ -33,9 +33,9 @@ def init_db(mongo_url: str, db_name: str, collections: list, drop: bool) -> None
                 continue
 
             logging.info("Initializing Collection: %s", c)
-            with open(BASE_DIR / "schemas" / (c["name"] + ".json"), "r") as f:
-                schema = json.load(f)
-            db.create_collection(c["name"], validator={"$jsonSchema": schema})
+            # with open(BASE_DIR / "schemas" / (c["name"] + ".json"), "r") as f:
+            #    schema = json.load(f)
+            db.create_collection(c["name"])  # , validator={"$jsonSchema": schema})
             for index in c["indexes"]:
                 db[c["name"]].create_index(
                     [(f, pymongo.ASCENDING) for f in index["fields"]],
