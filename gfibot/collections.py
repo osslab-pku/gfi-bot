@@ -117,10 +117,10 @@ class Dataset(Document):
     meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
 
 
-class Issue(Document):
+class ResolvedIssue(Document):
     """
-    Additional issue information for RecGFI training.
-    Only issues in the tranining dataset will have documents in this collection.
+    Additional issue information for issue that are resolved by a developer.
+    These issues will be used as the training dataset for RecGFI training.
     """
 
     class Event(DynamicEmbeddedDocument):

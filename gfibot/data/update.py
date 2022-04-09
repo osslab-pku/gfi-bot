@@ -217,9 +217,9 @@ def update_resolved_issues(
             fetcher.get_rate_limit(),
         )
         for event in fetcher.get_issue_detail(resolved_issue["number"])["events"]:
-            resolved_issue["events"].append(Issue.Event(**event))
+            resolved_issue["events"].append(ResolvedIssue.Event(**event))
     for resolved_issue in resolved_issues:
-        Issue.objects(
+        ResolvedIssue.objects(
             owner=fetcher.owner, name=fetcher.name, number=resolved_issue["number"]
         ).upsert_one(**resolved_issue)
     return resolved_issues
