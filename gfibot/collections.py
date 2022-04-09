@@ -120,14 +120,15 @@ class Dataset(Document):
 class Issue(Document):
     """
     Additional issue information for RecGFI training.
-    only issues in the tranining dataset will have documents in this collection.
+    Only issues in the tranining dataset will have documents in this collection.
     """
 
-    class Event(EmbeddedDocument):
+    class Event(DynamicEmbeddedDocument):
         """
-        Object representing issue events
+        Object representing issue events.
         For assigned, unassigned, labeled, unlabeled, referenced,
-        cross-referenced, and commented events, additional fields are available
+            cross-referenced, and commented events, additional fields are available.
+        This document may contain additional fields depending on the specific event.
 
         Attributes:
             type: Type of the event
@@ -136,8 +137,8 @@ class Issue(Document):
         """
 
         type = StringField(required=True)
-        time = DateTimeField(required=True, null=True)
-        actor = StringField(required=True, null=True)
+        time = DateTimeField(null=True)
+        actor = StringField(null=True)
 
     owner = StringField(required=True)
     name = StringField(required=True)
@@ -169,7 +170,7 @@ class Repo(Document):
     name = StringField(required=True)
 
     # Main programming language (as returned by GitHub), can be None
-    language = StringField(required=True, null=True)
+    language = StringField(null=True)
 
     # The time when this repository is created in GitHub
     repo_created_at = DateTimeField(required=True)
@@ -192,11 +193,11 @@ class RepoCommit(Document):
     sha = StringField(required=True)
 
     # GitHub username of the commit author, can be None
-    author = StringField(required=True, null=True)
+    author = StringField(null=True)
     authored_at = DateTimeField(required=True)
 
     # GitHub username of the committer, can be None
-    committer = StringField(required=True)
+    committer = StringField(null=True)
     committed_at = DateTimeField(required=True)
 
     message = StringField(required=True)
@@ -218,16 +219,12 @@ class RepoIssue(Document):
     user = StringField(required=True)
     state = StringField(required=True, choices=("open", "closed"))
     created_at = DateTimeField(required=True)  # The time when this issue/PR is created
-    closed_at = DateTimeField(
-        required=True, null=True
-    )  # The time when this issue/PR is closed
+    closed_at = DateTimeField(null=True)  # The time when this issue/PR is closed
     is_pull = BooleanField(required=True)  # Whether the issue is a pull request
-    merged_at = DateTimeField(
-        required=True, null=True
-    )  # If a PR, the time when this PR is merged
+    merged_at = DateTimeField(null=True)  # If a PR, the time when this PR is merged
 
     title = StringField(required=True)
-    body = StringField(required=True)
+    body = StringField(null=True)
     labels = ListField(StringField(required=True))
 
     meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
@@ -239,7 +236,7 @@ class RepoStar(Document):
     owner = StringField(required=True)
     name = StringField(required=True)
     user = StringField(required=True)  # GitHub username who starred this repository
-    starred_at = StringField(required=True)  # Time of the starred event
+    starred_at = DateTimeField(required=True)  # Time of the starred event
 
     meta = {"indexes": [{"fields": ["owner", "name", "user"], "unique": True}]}
 

@@ -5,6 +5,7 @@ import gfibot.data.rest as rest
 
 from pprint import pprint
 from datetime import datetime, timezone
+from gfibot.collections import *
 
 
 def test_count_by_month():
@@ -81,19 +82,10 @@ def test_locate_resolve_issues():
             "message": "fixes #1",
         }
     ]
-    with gfibot.Database() as db:
-        for i in issues:
-            db.repos.issues.replace_one(
-                {"owner": owner, "name": name, "number": i["number"]},
-                i,
-                upsert=True,
-            )
-        for c in commits:
-            db.repos.commits.replace_one(
-                {"owner": owner, "name": name, "sha": c["sha"]},
-                c,
-                upsert=True,
-            )
+    for i in issues:
+        RepoIssue(**i).save()
+    for c in commits:
+        RepoCommit(**c).save()
 
     token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
     fetcher = rest.RepoFetcher(token, owner, name)

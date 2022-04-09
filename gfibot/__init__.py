@@ -1,7 +1,6 @@
 import toml
 import logging
-import pymongo
-import pymongo.database
+import mongoengine
 
 from typing import List
 from pathlib import Path
@@ -23,24 +22,6 @@ else:
 with open(BASE_DIR / "pyproject.toml", "r") as f:
     CONFIG = toml.load(f)
 
-
-class Database(object):
-    """Simple wrapper for accessing the MongoDB database
-
-    Should be used like:
-    ```
-    with gfibot.Database() as db:
-        db.repos.insert_one(...)
-    ```
-    """
-
-    def __init__(self):
-        pass
-
-    def __enter__(self) -> pymongo.database.Database:
-        global CONFIG
-        self.client = pymongo.MongoClient(CONFIG["mongodb"]["url"], tz_aware=True)
-        return self.client[CONFIG["mongodb"]["db"]]
-
-    def __exit__(self, *args, **kwargs):
-        self.client.close()
+mongoengine.connect(
+    CONFIG["mongodb"]["db"], host=CONFIG["mongodb"]["url"], tz_aware=True
+)

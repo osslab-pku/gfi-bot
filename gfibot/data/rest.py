@@ -64,6 +64,8 @@ def request_github(
 
 
 class RepoFetcher(object):
+    """Fetches repository data from GitHub"""
+
     def __init__(self, token: str, owner: str, name: str):
         self.gh = Github(token)
         self.gh.per_page = 100  # minimize rate limit consumption
