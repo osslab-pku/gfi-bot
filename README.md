@@ -48,7 +48,7 @@ As mentioned before, the MongoDB instance serves as a "single source of truth" a
 
 ### Development Guidelines
 
-Contributions should follow existing conventions and styles in the codebase with best effort. All commit messages should follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
+Contributions should follow existing conventions and styles in the codebase with best effort. Please add type annotations for all class members, function parameters, and return values. When writing commit messages, please follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
 
 ## Deployment
 

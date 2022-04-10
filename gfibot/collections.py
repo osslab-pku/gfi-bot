@@ -1,3 +1,5 @@
+from typing import List, Union
+from datetime import datetime
 from mongoengine import *
 
 
@@ -114,7 +116,12 @@ class Dataset(Document):
     rpthasevent = IntField(required=True)
     rpthascomment = IntField(required=True)
 
-    meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
+    meta = {
+        "indexes": [
+            {"fields": ["owner", "name", "number"], "unique": True},
+            {"fields": ["clst"]},
+        ]
+    }
 
 
 class ResolvedIssue(Document):
@@ -136,51 +143,53 @@ class ResolvedIssue(Document):
             actor: The GitHub user (login name) associated with the event, can be null for some events
         """
 
-        type = StringField(required=True)
-        time = DateTimeField(null=True)
-        actor = StringField(null=True)
+        type: str = StringField(required=True)
+        time: datetime = DateTimeField(null=True)
+        actor: str = StringField(null=True)
 
-    owner = StringField(required=True)
-    name = StringField(required=True)
-    number = IntField(required=True)
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    number: int = IntField(required=True)
 
     # Issue resolver's GitHub user name
-    resolver = StringField(required=True)
+    resolver: str = StringField(required=True)
     # If int, the PR number that resolved this issue.
     # If string, the commit hash that resolved this issue
-    resolved_in = DynamicField(
+    resolved_in: Union[int, str] = DynamicField(
         required=True, validation=lambda x: isinstance(x, (int, str))
     )
     # Issue resolver's commits to this repo, before the issue is resolved
-    resolver_commit_num = IntField(required=True)
+    resolver_commit_num: int = IntField(required=True)
 
-    events = ListField(EmbeddedDocumentField(Event))
+    events: List[Event] = ListField(EmbeddedDocumentField(Event))
+
+    meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
 
 
 class Repo(Document):
     """Repository statistics for RecGFI training"""
 
     class MonthCount(EmbeddedDocument):
-        month = DateTimeField(required=True)
-        count = IntField(required=True, min_value=0)
+        month: datetime = DateTimeField(required=True)
+        count: int = IntField(required=True, min_value=0)
 
-    created_at = DateTimeField(required=True)
-    updated_at = DateTimeField(required=True)
-    owner = StringField(required=True)
-    name = StringField(required=True)
+    created_at: datetime = DateTimeField(required=True)
+    updated_at: datetime = DateTimeField(required=True)
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
 
     # Main programming language (as returned by GitHub), can be None
-    language = StringField(null=True)
+    language: str = StringField(null=True)
 
     # The time when this repository is created in GitHub
-    repo_created_at = DateTimeField(required=True)
+    repo_created_at: datetime = DateTimeField(required=True)
 
     # Four time series describing number of new stars, commits, issues, and pulls
     #     in each month since repository creation
-    monthly_stars = EmbeddedDocumentListField(MonthCount)
-    monthly_commits = EmbeddedDocumentListField(MonthCount)
-    monthly_issues = EmbeddedDocumentListField(MonthCount)
-    monthly_pulls = EmbeddedDocumentListField(MonthCount)
+    monthly_stars: MonthCount = EmbeddedDocumentListField(MonthCount)
+    monthly_commits: MonthCount = EmbeddedDocumentListField(MonthCount)
+    monthly_issues: MonthCount = EmbeddedDocumentListField(MonthCount)
+    monthly_pulls: MonthCount = EmbeddedDocumentListField(MonthCount)
 
     meta = {"indexes": [{"fields": ["owner", "name"], "unique": True}]}
 
@@ -188,19 +197,19 @@ class Repo(Document):
 class RepoCommit(Document):
     """Repository commit statistics for RecGFI training"""
 
-    owner = StringField(required=True)
-    name = StringField(required=True)
-    sha = StringField(required=True)
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    sha: str = StringField(required=True)
 
     # GitHub username of the commit author, can be None
-    author = StringField(null=True)
-    authored_at = DateTimeField(required=True)
+    author: str = StringField(null=True)
+    authored_at: datetime = DateTimeField(required=True)
 
     # GitHub username of the committer, can be None
-    committer = StringField(null=True)
-    committed_at = DateTimeField(required=True)
+    committer: str = StringField(null=True)
+    committed_at: datetime = DateTimeField(required=True)
 
-    message = StringField(required=True)
+    message: str = StringField(required=True)
 
     meta = {"indexes": [{"fields": ["owner", "name", "sha"], "unique": True}]}
 
@@ -211,21 +220,27 @@ class RepoIssue(Document):
     Note that pull requests are also included in this collection
     """
 
-    owner = StringField(required=True)
-    name = StringField(required=True)
-    number = IntField(required=True, min_value=0)
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    number: int = IntField(required=True, min_value=0)
 
     # GitHub username of the issue reporter / PR submitter
-    user = StringField(required=True)
-    state = StringField(required=True, choices=("open", "closed"))
-    created_at = DateTimeField(required=True)  # The time when this issue/PR is created
-    closed_at = DateTimeField(null=True)  # The time when this issue/PR is closed
-    is_pull = BooleanField(required=True)  # Whether the issue is a pull request
-    merged_at = DateTimeField(null=True)  # If a PR, the time when this PR is merged
+    user: str = StringField(required=True)
+    state: str = StringField(required=True, choices=("open", "closed"))
+    created_at: datetime = DateTimeField(
+        required=True
+    )  # The time when this issue/PR is created
+    closed_at: datetime = DateTimeField(
+        null=True
+    )  # The time when this issue/PR is closed
+    is_pull: bool = BooleanField(required=True)  # Whether the issue is a pull request
+    merged_at: datetime = DateTimeField(
+        null=True
+    )  # If a PR, the time when this PR is merged
 
-    title = StringField(required=True)
-    body = StringField(null=True)
-    labels = ListField(StringField(required=True))
+    title: str = StringField(required=True)
+    body: str = StringField(null=True)
+    labels: List[str] = ListField(StringField(required=True))
 
     meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
 
@@ -233,10 +248,12 @@ class RepoIssue(Document):
 class RepoStar(Document):
     """Repository star statistics for RecGFI training"""
 
-    owner = StringField(required=True)
-    name = StringField(required=True)
-    user = StringField(required=True)  # GitHub username who starred this repository
-    starred_at = DateTimeField(required=True)  # Time of the starred event
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    user: str = StringField(
+        required=True
+    )  # GitHub username who starred this repository
+    starred_at: datetime = DateTimeField(required=True)  # Time of the starred event
 
     meta = {"indexes": [{"fields": ["owner", "name", "user"], "unique": True}]}
 
@@ -245,25 +262,25 @@ class User(Document):
     """User statistics for RecGFI training (TODO: This documentation is not finalized yet)"""
 
     class Repo(EmbeddedDocument):
-        name = StringField(required=True)
-        created_at = DateTimeField(required=True)
+        name: str = StringField(required=True)
+        created_at: datetime = DateTimeField(required=True)
 
     class Issue(EmbeddedDocument):
-        owner = StringField(required=True)
-        name = StringField(required=True)
-        number = IntField(required=True)
-        created_at = DateTimeField(required=True)
+        owner: str = StringField(required=True)
+        name: str = StringField(required=True)
+        number: int = IntField(required=True)
+        created_at: datetime = DateTimeField(required=True)
 
     class Pull(EmbeddedDocument):
-        owner = StringField(required=True)
-        name = StringField(required=True)
-        number = IntField(required=True)
-        created_at = DateTimeField(required=True)
+        owner: str = StringField(required=True)
+        name: str = StringField(required=True)
+        number: int = IntField(required=True)
+        created_at: datetime = DateTimeField(required=True)
 
-    created_at = DateTimeField(required=True)
-    updated_at = DateTimeField(required=True)
-    username = StringField(required=True, unique=True)
-    repos = EmbeddedDocumentListField(Repo)
-    issues = EmbeddedDocumentListField(Issue)
-    pulls = EmbeddedDocumentListField(Pull)
+    created_at: datetime = DateTimeField(required=True)
+    updated_at: datetime = DateTimeField(required=True)
+    username: str = StringField(required=True, unique=True)
+    repos: Repo = EmbeddedDocumentListField(Repo)
+    issues: Issue = EmbeddedDocumentListField(Issue)
+    pulls: Pull = EmbeddedDocumentListField(Pull)
     meta = {"indexes": [{"fields": ["username"], "unique": True}]}
