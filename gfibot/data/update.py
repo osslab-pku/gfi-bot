@@ -254,13 +254,17 @@ def update_repo(token: str, owner: str, name: str) -> None:
     commits = update_commits(fetcher, since)
     issues = update_issues(fetcher, since)
 
-    repo.monthly_stars = count_by_month([s["starred_at"] for s in stars])
-    repo.monthly_commits = count_by_month([c["committed_at"] for c in commits])
+    repo.monthly_stars = count_by_month(
+        RepoStar.objects(owner=owner, name=name).scalar("starred_at")
+    )
+    repo.monthly_commits = count_by_month(
+        RepoCommit.objects(owner=owner, name=name).scalar("committed_at")
+    )
     repo.monthly_issues = count_by_month(
-        [i["created_at"] for i in issues if not i["is_pull"]]
+        RepoIssue.objects(owner=owner, name=name, is_pull=False).scalar("created_at")
     )
     repo.monthly_pulls = count_by_month(
-        [i["created_at"] for i in issues if i["is_pull"]]
+        RepoIssue.objects(owner=owner, name=name, is_pull=True).scalar("created_at")
     )
     repo.save()
 
