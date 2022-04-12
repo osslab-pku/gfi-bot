@@ -14,7 +14,7 @@ from gfibot.data.rest import RepoFetcher, logger as rest_logger
 logger = logging.getLogger(__name__)
 
 
-def count_by_month(dates: List[datetime]) -> List[Dict[str, Any]]:
+def count_by_month(dates: List[datetime]) -> List[Repo.MonthCount]:
     counts = Counter(map(lambda d: (d.year, d.month), dates))
     return sorted(
         [
@@ -107,16 +107,17 @@ def update_issues(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]
 def locate_resolved_issues(
     fetcher: RepoFetcher, since: datetime
 ) -> List[Dict[str, Any]]:
-    all_issues: List[RepoIssue] = list(
-        RepoIssue.objects(
+    all_issues: Dict[int, RepoIssue] = {
+        i.number: i
+        for i in RepoIssue.objects(
             owner=fetcher.owner, name=fetcher.name, is_pull=False, closed_at__gte=since
         )
-    )
+    }
     all_commits: List[RepoCommit] = sorted(
         RepoCommit.objects(owner=fetcher.owner, name=fetcher.name),
         key=lambda c: c.authored_at,
     )
-    closed_nums = set(map(lambda i: i.number, all_issues))
+    closed_nums = set(map(lambda i: i.number, all_issues.values()))
     logger.info("%d newly closed issues since %s", len(all_issues), since)
 
     resolved = defaultdict(
@@ -124,6 +125,8 @@ def locate_resolved_issues(
             "owner": fetcher.owner,
             "name": fetcher.name,
             "number": None,
+            "created_at": None,
+            "resolved_at": None,
             "resolver": None,
             "resolved_in": None,
             "resolver_commit_num": None,
@@ -162,7 +165,7 @@ def locate_resolved_issues(
             resolved[num]["resolver_commit_num"] = len(commits_before)
     logger.info("%d issues found to be resolved by commits", len(resolved))
 
-    for issue in all_issues:
+    for issue in all_issues.values():
         t1 = issue.closed_at - timedelta(minutes=1)
         t2 = issue.closed_at + timedelta(minutes=1)
         prs: List[RepoIssue] = list(
@@ -202,6 +205,10 @@ def locate_resolved_issues(
                 resolved[issue.number]["resolved_in"] = pr.number
                 resolved[issue.number]["resolver_commit_num"] = len(commits_before)
     logger.info("%d issues found to be resolved by commits/PRs", len(resolved))
+
+    for num in resolved.keys():
+        resolved[num]["created_at"] = all_issues[num].created_at
+        resolved[num]["resolved_at"] = all_issues[num].closed_at
     return list(resolved.values())
 
 

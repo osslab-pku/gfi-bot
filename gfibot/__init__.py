@@ -1,4 +1,5 @@
 import toml
+import nltk
 import logging
 import mongoengine
 
@@ -25,3 +26,6 @@ with open(BASE_DIR / "pyproject.toml", "r") as f:
 mongoengine.connect(
     CONFIG["mongodb"]["db"], host=CONFIG["mongodb"]["url"], tz_aware=True
 )
+
+nltk.download("wordnet")
+nltk.download("omw-1.4")

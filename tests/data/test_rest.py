@@ -18,7 +18,7 @@ def test_get_month_interval():
     assert (until + timedelta(seconds=1)).month == 2
 
 
-def test_repo_fetcher():
+def test_repo_fetcher(mock_mongodb):
     now = datetime.now(timezone.utc)
     owner, name = "octocat", "hello-world"
     token = TOKENS[0] if len(TOKENS) > 0 else None
@@ -37,19 +37,19 @@ def test_repo_fetcher():
     stars = fetcher.get_stars(since=now - timedelta(days=7))
     pprint(stars)
     for star in stars:
-        RepoStar(**star).save()
+        RepoStar(**star).validate()
 
     commits = fetcher.get_commits(since=datetime(2000, 1, 1, tzinfo=timezone.utc))
     pprint(commits)
     assert len(commits) > 0
     for commit in commits:
-        RepoCommit(**commit).save()
+        RepoCommit(**commit).validate()
 
     issues = fetcher.get_issues(since=now - timedelta(days=7))
     pprint(issues)
     assert len(issues) >= 0
     for issue in issues:
-        RepoIssue(**issue).save()
+        RepoIssue(**issue).validate()
 
     pull = fetcher.get_pull_detail(32)
     pprint(pull)

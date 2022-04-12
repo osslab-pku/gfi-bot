@@ -25,24 +25,30 @@ authors = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pymongo = { extras = ["srv"], version = "^4.0.1" }
+# Utilities
 toml = "^0.10.2"
+tqdm = "^4.62.3"
+python-dateutil = "^2.8.2"
+# MongoDB
+pymongo = { extras = ["srv"], version = "^4.0.1" }
+mongoengine = "^0.24.1"
+mongomock = "^4.0.0"
+# Network
 requests = "^2.26.0"
 PyGithub = "^1.55"
-python-dateutil = "^2.8.2"
+Flask = "^2.0.3"
+Flask-Cors = "^3.0.10"
+Flask-SocketIO = "^5.1.1"
+yagmail = "^0.15.277"
+# Machine Learning and Data Science
 pandas = "^1.3.5"
 numpy = "^1.21.5"
 textstat = "^0.7.2"
 xgboost = "^1.5.1"
 sklearn = "^0.0"
 sentistrength = "^0.0.9"
-tqdm = "^4.62.3"
+nltk = "^3.7"
 gensim = "^4.1.2"
-Flask = "^2.0.3"
-Flask-Cors = "^3.0.10"
-Flask-SocketIO = "^5.1.1"
-yagmail = "^0.15.277"
-mongoengine = "^0.24.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
