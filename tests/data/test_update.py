@@ -1,13 +1,14 @@
-import logging
 import gfibot
 import gfibot.data.update as upd
 import gfibot.data.rest as rest
 
 from pprint import pprint
 from datetime import datetime, timezone
+from gfibot.collections import *
 
 
 def test_count_by_month():
+    assert upd.count_by_month([]) == []
     c = upd.count_by_month(
         [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2021, 3, 4)]
     )
@@ -23,7 +24,9 @@ def test_match_issue_numbers():
     assert upd.match_issue_numbers("Resolve #2 resolves #1 resolved #3") == [2, 1, 3]
 
 
-def test_locate_resolve_issues():
+def test_locate_resolved_issues(mock_mongodb):
+    # Sadly, this test requires interaction with GitHub API,
+    #     so mocking data is not entirely possible
     owner, name = "HabitRPG", "habitica"
     issues = [
         {
@@ -81,19 +84,10 @@ def test_locate_resolve_issues():
             "message": "fixes #1",
         }
     ]
-    with gfibot.Database() as db:
-        for i in issues:
-            db.repos.issues.replace_one(
-                {"owner": owner, "name": name, "number": i["number"]},
-                i,
-                upsert=True,
-            )
-        for c in commits:
-            db.repos.commits.replace_one(
-                {"owner": owner, "name": name, "sha": c["sha"]},
-                c,
-                upsert=True,
-            )
+    for i in issues:
+        RepoIssue(**i).save()
+    for c in commits:
+        RepoCommit(**c).save()
 
     token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
     fetcher = rest.RepoFetcher(token, owner, name)
@@ -107,18 +101,3 @@ def test_locate_resolve_issues():
         resolved[12698]["resolver"] == "a1"
         and resolved[12698]["resolver_commit_num"] == 1
     )
-
-
-def test_update_repo():
-    upd.logger.setLevel(logging.DEBUG)
-    rest.logger.setLevel(logging.DEBUG)
-
-    token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
-
-    # Update twice to test incremental update
-    upd.update_repo(token, "octocat", "Hello-World")
-    upd.update_repo(token, "octocat", "Hello-World")
-
-    # A big test to see whether everything is working
-    upd.update_repo(token, "Mihara", "RasterPropMonitor")
-    upd.update_repo(token, "Mihara", "RasterPropMonitor")
