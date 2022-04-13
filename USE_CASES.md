@@ -56,9 +56,10 @@ After GFI-Bot has been used for some time, he needs to be convinced that GFI-Bot
 
 To go one step further, he wants GFI-Bot to automatically label GFIs in his repository. For this purpose, he adds GFI-Bot as a GitHub app and write a configuration file (e.g., `.github/gfibot.yaml`) in his repository to specify:
 
-1. what kind of open issues should be considered for labeling (for example, only issues with a `confirmed` or `triaged` label), in order to follow project specific issue management conventions
-2. what labels to add (e.g., `good first issues`, `first timers`, etc)
-3. the probability threshold for adding a GFI label (e.g., 0.5, 0.7, etc)
-4. whether to leave comments on each open issue to show its predicted GFI fitness
+1. number of within-repository commits needed to disqualify a developer as a newcomer (default 3, can alter between 1-5, will choose the corresponding trained model for prediction)
+2. what kind of open issues should be considered for labeling (for example, only issues with a `confirmed` or `triaged` label), in order to follow project specific issue management conventions
+3. what labels to add (e.g., `good first issues`, `first timers`, etc)
+4. the probability threshold for adding a GFI label (e.g., 0.5, 0.7, etc)
+5. whether to leave comments on each open issue to show its predicted GFI fitness
 
 Then, GFI-Bot will comment and add labels for each qualified new issue, as configured by the repository configuration file.
