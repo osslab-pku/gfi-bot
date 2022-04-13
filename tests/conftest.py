@@ -172,25 +172,25 @@ def mock_mongodb():
             resolved_in=3,
             resolver_commit_num=1,
             events=[
-                ResolvedIssue.Event(
+                IssueEvent(
                     type="labeled",
                     label="bug",
                     actor="a1",
                     time=datetime(2022, 1, 3, tzinfo=timezone.utc),
                 ),
-                ResolvedIssue.Event(
+                IssueEvent(
                     type="labeled",
                     label="gfi",
                     actor="a2",
                     time=datetime(2022, 1, 3, tzinfo=timezone.utc),
                 ),
-                ResolvedIssue.Event(
+                IssueEvent(
                     type="unlabeled",
                     label="gfi",
                     actor="a2",
                     time=datetime(2022, 1, 3, tzinfo=timezone.utc),
                 ),
-                ResolvedIssue.Event(
+                IssueEvent(
                     type="commented",
                     actor="a2",
                     time=datetime(2022, 1, 3, tzinfo=timezone.utc),

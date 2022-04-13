@@ -219,9 +219,7 @@ def get_background_data(owner: str, name: str, t: datetime):
     return contributors, n_closed_issues, n_open_issues, issue_close_times
 
 
-def get_dynamics_data(
-    owner: str, name: str, events: List[ResolvedIssue.Event], t: datetime
-):
+def get_dynamics_data(owner: str, name: str, events: List[IssueEvent], t: datetime):
     """Retrieve additional data for computing dynamics related features"""
     labels, comments, comment_users, event_users = [], [], set(), set()
     for event in events:

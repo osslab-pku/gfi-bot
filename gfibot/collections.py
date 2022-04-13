@@ -146,44 +146,44 @@ class Dataset(Document):
     }
 
 
+class IssueEvent(DynamicEmbeddedDocument):
+    """
+    Object representing issue events.
+    For assigned, unassigned, labeled, unlabeled, referenced,
+        cross-referenced, and commented events, additional fields are available.
+    This document may contain **additional** fields depending on the specific event.
+    Attributes:
+        type: Type of the event
+        time: The time when this event happened, can be null for some events
+        actor: The GitHub user (login name) associated with the event, can be null for some events
+    Attributes (for commented):
+        comment: The comment text
+        commenter: The commenter GitHub username
+    Attributes (for labeled, unlabeled):
+        label: The label name
+    Attributes (for assigned, unassigned):
+        assignee: The assignee name
+    Attributes (for referenced, cross-referenced):
+        source: The source of reference (an issue number), may be null
+        commit: The commit SHA of the reference, may be null
+    """
+
+    type: str = StringField(required=True)
+    time: datetime = DateTimeField(null=True)
+    actor: str = StringField(null=True)
+    comment: str = StringField(null=True)
+    commenter: str = StringField(null=True)
+    label: str = StringField(null=True)
+    assignee: str = StringField(null=True)
+    source: int = IntField(null=True)
+    commit: str = StringField(null=True)
+
+
 class ResolvedIssue(Document):
     """
     Additional issue information for issue that are resolved by a developer.
     These issues will be used as the training dataset for RecGFI training.
     """
-
-    class Event(DynamicEmbeddedDocument):
-        """
-        Object representing issue events.
-        For assigned, unassigned, labeled, unlabeled, referenced,
-            cross-referenced, and commented events, additional fields are available.
-        This document may contain **additional** fields depending on the specific event.
-
-        Attributes:
-            type: Type of the event
-            time: The time when this event happened, can be null for some events
-            actor: The GitHub user (login name) associated with the event, can be null for some events
-        Attributes (for commented):
-            comment: The comment text
-            commenter: The commenter GitHub username
-        Attributes (for labeled, unlabeled):
-            label: The label name
-        Attributes (for assigned, unassigned):
-            assignee: The assignee name
-        Attributes (for referenced, cross-referenced):
-            source: The source of reference (an issue number), may be null
-            commit: The commit SHA of the reference, may be null
-        """
-
-        type: str = StringField(required=True)
-        time: datetime = DateTimeField(null=True)
-        actor: str = StringField(null=True)
-        comment: str = StringField(null=True)
-        commenter: str = StringField(null=True)
-        label: str = StringField(null=True)
-        assignee: str = StringField(null=True)
-        source: int = IntField(null=True)
-        commit: str = StringField(null=True)
 
     owner: str = StringField(required=True)
     name: str = StringField(required=True)
@@ -198,7 +198,7 @@ class ResolvedIssue(Document):
     # Issue resolver's commits to this repo, before the issue is resolved
     resolver_commit_num: int = IntField(required=True)
 
-    events: List[Event] = ListField(EmbeddedDocumentField(Event))
+    events: List[IssueEvent] = ListField(EmbeddedDocumentField(IssueEvent))
 
     meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
 
