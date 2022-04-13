@@ -14,6 +14,10 @@ W. Xiao, H. He, W. Xu, X. Tan, J. Dong, M. Zhou. Recommending Good First Issues 
 
 TODO: Add a quick usage guide after a prototype is finished.
 
+## Roadmap
+
+We describe our envisioned use cases for GFI-Bot in this [documentation](USE_CASES.md).
+
 ## Development
 
 ### Project Organization
