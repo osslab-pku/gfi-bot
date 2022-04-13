@@ -226,7 +226,8 @@ def get_dynamics_data(
     labels, comments, comment_users, event_users = [], [], set(), set()
     for event in events:
         if event.time <= t:
-            event_users.add(event.actor)
+            if event.actor is not None and event.actor != "ghost":
+                event_users.add(event.actor)
             if event.type == "labeled":
                 labels.append(event.label)
             elif event.type == "unlabeled":
@@ -236,7 +237,8 @@ def get_dynamics_data(
                     labels.remove(event.label)
             elif event.type == "commented":
                 comments.append(event.comment)
-                comment_users.add(event.actor)
+                if event.actor is not None and event.actor != "ghost":
+                    comment_users.add(event.actor)
     comment_users = [get_user_data(owner, name, user, t) for user in comment_users]
     event_users = [get_user_data(owner, name, user, t) for user in event_users]
     return labels, comments, comment_users, event_users
@@ -258,7 +260,7 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
         logger.error(f"{issue.owner}/{issue.name}#{issue.number}: Open or Pull Request")
         return
 
-    logger.info(f"{issue.owner}/{issue.name}#{issue.number} collecting")
+    logger.info(f"{issue.owner}/{issue.name}#{issue.number} (before {before}) start")
 
     repo: Repo = Repo.objects(owner=issue.owner, name=issue.name).first()
     contribs, n_closed, n_open, close_times = get_background_data(
@@ -320,7 +322,7 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
     data.event_users = event_users
 
     data.save()
-    logger.info(f"{issue.owner}/{issue.name}#{issue.number} is done")
+    logger.info(f"{issue.owner}/{issue.name}#{issue.number} (before {before}) is done")
     return data
 
 
@@ -331,6 +333,7 @@ if __name__ == "__main__":
     )
 
     for resolved_issue in ResolvedIssue.objects():
-        get_dataset(resolved_issue)
+        get_dataset(resolved_issue, resolved_issue.created_at)
+        get_dataset(resolved_issue, resolved_issue.resolved_at)
 
     logger.info("Finish!")
