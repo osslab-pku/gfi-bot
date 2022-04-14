@@ -30,7 +30,10 @@ def real_mongodb():
     CONFIG["mongodb"]["db"] = "gfibot-test"
 
     conn = mongoengine.connect(
-        CONFIG["mongodb"]["db"], host=CONFIG["mongodb"]["url"], tz_aware=True
+        CONFIG["mongodb"]["db"],
+        host=CONFIG["mongodb"]["url"],
+        tz_aware=True,
+        uuidRepresentation="standard",
     )
     conn.drop_database(CONFIG["mongodb"]["db"])
 
@@ -50,7 +53,10 @@ def mock_mongodb():
     CONFIG["mongodb"]["db"] = "gfibot-test2"
 
     mongoengine.connect(
-        CONFIG["mongodb"]["db"], host="mongomock://localhost", tz_aware=True
+        CONFIG["mongodb"]["db"],
+        host="mongomock://localhost",
+        tz_aware=True,
+        uuidRepresentation="standard",
     )
     # It seems that drop database does not work with mongomock
     collections = [

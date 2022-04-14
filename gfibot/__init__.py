@@ -24,7 +24,10 @@ with open(BASE_DIR / "pyproject.toml", "r") as f:
     CONFIG = toml.load(f)
 
 mongoengine.connect(
-    CONFIG["mongodb"]["db"], host=CONFIG["mongodb"]["url"], tz_aware=True
+    CONFIG["mongodb"]["db"],
+    host=CONFIG["mongodb"]["url"],
+    tz_aware=True,
+    uuidRepresentation="standard",
 )
 
 nltk.download("wordnet")

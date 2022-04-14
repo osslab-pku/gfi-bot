@@ -314,7 +314,7 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
     data.n_closed_issues = n_closed
     data.n_open_issues = n_open
     data.r_open_issues = n_open / (n_open + n_closed) if n_open + n_closed > 0 else 0
-    data.issue_close_time = np.median(close_times)
+    data.issue_close_time = np.median(close_times) if len(close_times) > 0 else 0
 
     # ---------- Dynamics ----------
     data.comments = comments
