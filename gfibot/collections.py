@@ -17,6 +17,7 @@ class Dataset(Document):
         before: The time when all features in this document is computed
 
         resolver_commit_num: Issue resolver's commits to this repo, before the issue is resolved
+                                if -1, means that the issue is still open
 
         ---------- Content ----------
 
@@ -98,7 +99,7 @@ class Dataset(Document):
     name: str = StringField(required=True)
     number: int = IntField(required=True)
     created_at: datetime = DateTimeField(required=True)
-    closed_at: datetime = DateTimeField(required=True)
+    closed_at: datetime = DateTimeField(null=True)
     before: datetime = DateTimeField(required=True)
 
     resolver_commit_num: int = IntField(required=True)
@@ -200,6 +201,21 @@ class ResolvedIssue(Document):
 
     events: List[IssueEvent] = ListField(EmbeddedDocumentField(IssueEvent))
 
+    meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
+
+
+class OpenIssue(Document):
+    """
+    Additional issue information for currently open issues.
+    These issues will be used as the testing dataset for RecGFI training.
+    """
+
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    number: int = IntField(required=True)
+    created_at: datetime = DateTimeField(required=True)
+    updated_at: datetime = DateTimeField(required=True)
+    events: List[IssueEvent] = ListField(EmbeddedDocumentField(IssueEvent))
     meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
 
 

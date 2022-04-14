@@ -615,8 +615,13 @@ def test_get_background_data(mock_mongodb):
     )
     assert contribs == {"a1"}
     assert n_closed == 2
-    assert n_open == 0
+    assert n_open == 1
     assert cls_time == [86400.0, 86400.0]
+
+    contribs, n_closed, n_open, cls_time = get_background_data(
+        "owner", "name", datetime(2022, 1, 3, tzinfo=timezone.utc)
+    )
+    assert n_closed == 1 and n_open == 1
 
 
 def test_get_dynamics_data(mock_mongodb):

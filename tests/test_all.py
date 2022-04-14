@@ -1,24 +1,22 @@
 import logging
 import gfibot
-import gfibot.data.update as upd
+import gfibot.data.update as update
 import gfibot.data.rest as rest
+import gfibot.data.dataset as dataset
 
 from gfibot.collections import *
 from gfibot.data.dataset import *
 
 
 def test_all(real_mongodb):
-    upd.logger.setLevel(logging.DEBUG)
+    update.logger.setLevel(logging.DEBUG)
     rest.logger.setLevel(logging.DEBUG)
+    dataset.logger.setLevel(logging.DEBUG)
 
     token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
 
     # Update twice to test incremental update
-    upd.update_repo(token, "octocat", "Hello-World")
-    upd.update_repo(token, "octocat", "Hello-World")
+    update.update_repo(token, "Mihara", "RasterPropMonitor")
+    update.update_repo(token, "Mihara", "RasterPropMonitor")
 
-    upd.update_repo(token, "Mihara", "RasterPropMonitor")
-    upd.update_repo(token, "Mihara", "RasterPropMonitor")
-
-    for resolved_issue in ResolvedIssue.objects():
-        get_dataset(resolved_issue, resolved_issue.resolved_at)
+    dataset.get_dataset_all()

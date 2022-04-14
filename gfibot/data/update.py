@@ -219,7 +219,7 @@ def update_resolved_issues(
     resolved_issues = locate_resolved_issues(fetcher, since)
     for resolved_issue in resolved_issues:
         logger.debug(
-            "Fetching details for issue #%d, rate remaining = %s",
+            "Fetching details for resolved issue #%d, rate remaining = %s",
             resolved_issue["number"],
             fetcher.get_rate_limit(),
         )
@@ -232,8 +232,33 @@ def update_resolved_issues(
     return resolved_issues
 
 
-def get_open_issues(fetcher: RepoFetcher, since: datetime):
-    pass
+def update_open_issues(fetcher: RepoFetcher, since: datetime):
+    """Fetch data for all new open issues"""
+    query = Q(name=fetcher.name, owner=fetcher.owner)
+    open_issues = RepoIssue.objects(query & Q(is_pull=False, state="open"))
+    for issue in open_issues:
+        existing = OpenIssue.objects(query & Q(number=issue.number))
+        if existing.count() > 0 and existing.first().updated_at >= since:
+            continue
+        elif existing.count() > 0:
+            open_issue = existing.first()
+        else:
+            open_issue = OpenIssue(
+                name=fetcher.name,
+                owner=fetcher.owner,
+                number=issue.number,
+                created_at=issue.created_at,
+                updated_at=since,
+            )
+        logger.debug(
+            "Fetching details for open issue #%d, rate remaining = %s",
+            issue.number,
+            fetcher.get_rate_limit(),
+        )
+        open_issue.events = [
+            IssueEvent(**e) for e in fetcher.get_issue_detail(issue.number)["events"]
+        ]
+        open_issue.save()
 
 
 def update_user(user: str, since: datetime) -> None:
@@ -273,6 +298,7 @@ def update_repo(token: str, owner: str, name: str) -> None:
     repo.save()
 
     resolved_issues = update_resolved_issues(fetcher, since)
+    update_open_issues(fetcher, since)
 
     all_users = set([owner])
     for commit in commits:

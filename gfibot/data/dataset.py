@@ -4,6 +4,7 @@ import logging
 import textstat
 import numpy as np
 
+from typing import Union
 from collections import Counter
 from gfibot.collections import *
 from mongoengine.queryset.visitor import Q
@@ -242,8 +243,8 @@ def get_dynamics_data(owner: str, name: str, events: List[IssueEvent], t: dateti
     return labels, comments, comment_users, event_users
 
 
-def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
-    """For a resolved issue, get the corresponding data for RecGFI training."""
+def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dataset:
+    """For a resolved or open issue, get the corresponding data for RecGFI training."""
     query = Q(owner=issue.owner, name=issue.name, number=issue.number)
 
     existing = Dataset.objects(query & Q(before=before))
@@ -254,8 +255,8 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
         return existing.first()
 
     repo_issue: RepoIssue = RepoIssue.objects(query).first()
-    if repo_issue.is_pull == True or repo_issue.state == "open":
-        logger.error(f"{issue.owner}/{issue.name}#{issue.number}: Open or Pull Request")
+    if repo_issue.is_pull == True:
+        logger.error(f"{issue.owner}/{issue.name}#{issue.number}: Pull Request")
         return
 
     logger.info(f"{issue.owner}/{issue.name}#{issue.number} (before {before}) start")
@@ -283,7 +284,9 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
     data.created_at = repo_issue.created_at
     data.closed_at = repo_issue.closed_at
     data.before = before
-    data.resolver_commit_num = issue.resolver_commit_num
+    data.resolver_commit_num = (
+        issue.resolver_commit_num if isinstance(issue, ResolvedIssue) else -1
+    )
 
     # ---------- Content ----------
     data.title = repo_issue.title
@@ -324,14 +327,30 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
     return data
 
 
+def get_dataset_all():
+    for i in ResolvedIssue.objects():
+        get_dataset(i, i.created_at)
+        get_dataset(i, i.resolved_at)
+
+    for i in OpenIssue.objects():
+        # determine whether this issue needs to be updated
+        if len(i.events) > 0:
+            last_updated = max(e.time for e in i.events)
+        else:
+            last_updated = i.created_at
+        existing = Dataset.objects(name=i.name, owner=i.owner, number=i.number)
+        if existing.count() > 0 and existing.first().before >= last_updated:
+            continue
+
+        get_dataset(i, i.updated_at)
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         format="%(asctime)s (Process %(process)d) [%(levelname)s] %(filename)s:%(lineno)d %(message)s",
         level=logging.INFO,
     )
 
-    for resolved_issue in ResolvedIssue.objects():
-        get_dataset(resolved_issue, resolved_issue.created_at)
-        get_dataset(resolved_issue, resolved_issue.resolved_at)
+    get_dataset_all()
 
     logger.info("Finish!")

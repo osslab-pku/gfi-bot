@@ -53,7 +53,16 @@ def mock_mongodb():
         CONFIG["mongodb"]["db"], host="mongomock://localhost", tz_aware=True
     )
     # It seems that drop database does not work with mongomock
-    for cls in [Repo, RepoIssue, RepoCommit, RepoStar, ResolvedIssue, Dataset]:
+    collections = [
+        Repo,
+        RepoIssue,
+        RepoCommit,
+        RepoStar,
+        OpenIssue,
+        ResolvedIssue,
+        Dataset,
+    ]
+    for cls in collections:
         cls.drop_collection()
 
     repos = [
@@ -76,7 +85,7 @@ def mock_mongodb():
             ],
             monthly_issues=[
                 Repo.MonthCount(
-                    month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=2
+                    month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=3
                 )
             ],
             monthly_pulls=[
@@ -123,7 +132,7 @@ def mock_mongodb():
             closed_at=datetime(2022, 1, 4, tzinfo=timezone.utc),
             title="issue 2",
             body="issue 2",
-            labels=[],
+            labels=["bug"],
             is_pull=False,
             merged_at=None,
         ),
@@ -140,6 +149,20 @@ def mock_mongodb():
             labels=[],
             is_pull=True,
             merged_at=datetime(2022, 1, 4, tzinfo=timezone.utc),
+        ),
+        RepoIssue(
+            owner="owner",
+            name="name",
+            number=4,
+            user="a2",
+            state="open",
+            created_at=datetime(2022, 1, 5, tzinfo=timezone.utc),
+            closed_at=None,
+            title="issue 4",
+            body="issue 4 body",
+            labels=["good first issue"],
+            is_pull=False,
+            merged_at=None,
         ),
     ]
     repo_stars = [
@@ -199,6 +222,23 @@ def mock_mongodb():
             ],
         ),
     ]
+    open_issues = [
+        OpenIssue(
+            owner="owner",
+            name="name",
+            number=4,
+            created_at=datetime(2022, 1, 5, tzinfo=timezone.utc),
+            updated_at=datetime(2022, 1, 5, tzinfo=timezone.utc),
+            events=[
+                IssueEvent(
+                    type="labeled",
+                    label="good first issue",
+                    actor="a1",
+                    time=datetime(2022, 1, 5, tzinfo=timezone.utc),
+                )
+            ],
+        )
+    ]
 
     for repo in repos:
         repo.save()
@@ -209,9 +249,12 @@ def mock_mongodb():
     for star in repo_stars:
         star.save()
     for resolved_issue in resolved_issues:
-        ResolvedIssue.save(resolved_issue)
+        resolved_issue.save()
         get_dataset(resolved_issue, resolved_issue.resolved_at)
         get_dataset(resolved_issue, resolved_issue.created_at)
+    for open_issue in open_issues:
+        open_issue.save()
+        get_dataset(open_issue, open_issue.updated_at)
 
     yield
 
