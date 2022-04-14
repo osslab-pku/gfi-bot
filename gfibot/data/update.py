@@ -259,6 +259,10 @@ def update_open_issues(fetcher: RepoFetcher, since: datetime):
             IssueEvent(**e) for e in fetcher.get_issue_detail(issue.number)["events"]
         ]
         open_issue.save()
+    closed_issue_nums = list(
+        RepoIssue.objects(query & Q(is_pull=False, state="closed")).scalar("number")
+    )
+    OpenIssue.objects(query & Q(number__in=closed_issue_nums)).delete()
 
 
 def update_user(user: str, since: datetime) -> None:

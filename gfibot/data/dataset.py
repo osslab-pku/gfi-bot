@@ -247,6 +247,9 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
     """For a resolved or open issue, get the corresponding data for RecGFI training."""
     query = Q(owner=issue.owner, name=issue.name, number=issue.number)
 
+    if isinstance(issue, ResolvedIssue):
+        Dataset.objects(query & Q(resolver_commit_num=-1)).delete()
+
     existing = Dataset.objects(query & Q(before=before))
     if existing.count() > 0:
         logger.info(
