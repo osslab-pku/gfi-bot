@@ -340,6 +340,7 @@ def get_dataset_all():
             last_updated = i.created_at
         existing = Dataset.objects(name=i.name, owner=i.owner, number=i.number)
         if existing.count() > 0 and existing.first().before >= last_updated:
+            logger.info(f"{i.owner}/{i.name}#{i.number}): no need to update")
             continue
 
         get_dataset(i, i.updated_at)
