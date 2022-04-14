@@ -1,8 +1,9 @@
 import re
 import logging
 import argparse
+import numpy as np
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Iterable
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
@@ -39,7 +40,7 @@ def match_issue_numbers(text: str) -> List[int]:
     return numbers
 
 
-def update_repo_stat(fetcher: RepoFetcher) -> Repo:
+def update_repo_info(fetcher: RepoFetcher) -> Repo:
     logger.info("Updating repo: %s/%s", fetcher.owner, fetcher.name)
     repo = Repo.objects(owner=fetcher.owner, name=fetcher.name)
     if repo.count() == 0:
@@ -49,16 +50,13 @@ def update_repo_stat(fetcher: RepoFetcher) -> Repo:
             updated_at=None,
             owner=fetcher.owner,
             name=fetcher.name,
-            language=None,
-            repo_created_at=None,
-            monthly_stars=[],
-            monthly_commits=[],
-            monthly_issues=[],
         )
     else:
         repo = repo.first()
 
     for k, v in fetcher.get_stats().items():
+        if k == "languages":
+            v = [Repo.LanguageCount(language=k2, count=v2) for k2, v2 in v.items()]
         setattr(repo, k, v)
     logger.info("Repo stats updated, rate remaining %s", fetcher.get_rate_limit())
     return repo
@@ -102,6 +100,31 @@ def update_issues(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]
             owner=fetcher.owner, name=fetcher.name, number=issue["number"]
         ).upsert_one(**issue)
     return issues
+
+
+def update_repo_stats(repo: Repo):
+    owner, name = repo.owner, repo.name
+    all_issues: List[RepoIssue] = list(RepoIssue.objects(owner=owner, name=name))
+
+    # Median issue close time
+    closed_t = [
+        (i.closed_at - i.created_at).total_seconds()
+        for i in all_issues
+        if i.state == "closed" and not i.is_pull
+    ]
+    repo.median_issue_close_time = np.median(closed_t) if len(closed_t) > 0 else None
+
+    # Monthly data
+    repo.monthly_stars = count_by_month(
+        RepoStar.objects(owner=owner, name=name).scalar("starred_at")
+    )
+    repo.monthly_commits = count_by_month(
+        RepoCommit.objects(owner=owner, name=name).scalar("committed_at")
+    )
+    repo.monthly_issues = count_by_month(
+        [i.created_at for i in all_issues if not i.is_pull]
+    )
+    repo.monthly_pulls = count_by_month([i.created_at for i in all_issues if i.is_pull])
 
 
 def locate_resolved_issues(
@@ -232,15 +255,16 @@ def update_resolved_issues(
     return resolved_issues
 
 
-def update_open_issues(fetcher: RepoFetcher, since: datetime):
+def update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
     """Fetch data for all new open issues"""
     query = Q(name=fetcher.name, owner=fetcher.owner)
-    open_issues = RepoIssue.objects(query & Q(is_pull=False, state="open"))
+    open_issues = RepoIssue.objects(
+        query & Q(is_pull=False, state="open", number__in=nums)
+    )
+    logger.info("%d open issues updated since %s", open_issues.count(), since)
     for issue in open_issues:
         existing = OpenIssue.objects(query & Q(number=issue.number))
-        if existing.count() > 0 and existing.first().updated_at >= since:
-            continue
-        elif existing.count() > 0:
+        if existing.count() > 0:
             open_issue = existing.first()
         else:
             open_issue = OpenIssue(
@@ -275,7 +299,7 @@ def update_repo(token: str, owner: str, name: str) -> None:
     """Update all information of a repository for RecGFI training"""
     fetcher = RepoFetcher(token, owner, name)
 
-    repo = update_repo_stat(fetcher)
+    repo = update_repo_info(fetcher)
     if repo.updated_at is None:
         since = repo.repo_created_at
     else:
@@ -287,22 +311,16 @@ def update_repo(token: str, owner: str, name: str) -> None:
     commits = update_commits(fetcher, since)
     issues = update_issues(fetcher, since)
 
-    repo.monthly_stars = count_by_month(
-        RepoStar.objects(owner=owner, name=name).scalar("starred_at")
-    )
-    repo.monthly_commits = count_by_month(
-        RepoCommit.objects(owner=owner, name=name).scalar("committed_at")
-    )
-    repo.monthly_issues = count_by_month(
-        RepoIssue.objects(owner=owner, name=name, is_pull=False).scalar("created_at")
-    )
-    repo.monthly_pulls = count_by_month(
-        RepoIssue.objects(owner=owner, name=name, is_pull=True).scalar("created_at")
-    )
+    update_repo_stats(repo)
+
     repo.save()
 
     resolved_issues = update_resolved_issues(fetcher, since)
-    update_open_issues(fetcher, since)
+
+    open_issue_nums = [
+        i["number"] for i in issues if i["state"] == "open" and not i["is_pull"]
+    ]
+    update_open_issues(fetcher, open_issue_nums, since)
 
     all_users = set([owner])
     for commit in commits:

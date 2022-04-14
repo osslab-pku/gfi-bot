@@ -278,7 +278,30 @@ class OpenIssue(Document):
 
 
 class Repo(Document):
-    """Repository statistics for RecGFI training"""
+    """
+    Repository statistics for both RecGFI training and web app.
+
+    Attributes:
+        created_at: The time when the repository was created in database
+        updated_at: The time when the repository was last updated in database
+        repo_created_at: The time when this repository is created in GitHub
+        owner, name: Uniquely identifies a GitHub repository
+
+        topics: A list of topics associated with the repository
+        language: Main programming language (as returned by GitHub), can be None
+        languages: All programming languages and their lines of code
+        description: Repository description
+        readme: Repostiory README content
+
+        median_issue_close_time: The median time it takes to close an issue (in seconds)
+        monthly_stars, monthly_commits, monthly_issues, monthly_pulls:
+            Four time series describing number of new stars, commits, issues, and pulls
+                in each month since repository creation
+    """
+
+    class LanguageCount(EmbeddedDocument):
+        language: str = StringField(required=True)
+        count: int = IntField(required=True)
 
     class MonthCount(EmbeddedDocument):
         month: datetime = DateTimeField(required=True)
@@ -286,17 +309,19 @@ class Repo(Document):
 
     created_at: datetime = DateTimeField(required=True)
     updated_at: datetime = DateTimeField(required=True)
+    repo_created_at: datetime = DateTimeField(required=True)
     owner: str = StringField(required=True)
     name: str = StringField(required=True)
 
-    # Main programming language (as returned by GitHub), can be None
+    topics: List[str] = ListField(StringField(), default=[])
     language: str = StringField(null=True)
+    languages: List[LanguageCount] = EmbeddedDocumentListField(
+        LanguageCount, default=[]
+    )
+    description: str = StringField(null=True)
+    readme: str = StringField(null=True)
 
-    # The time when this repository is created in GitHub
-    repo_created_at: datetime = DateTimeField(required=True)
-
-    # Four time series describing number of new stars, commits, issues, and pulls
-    #     in each month since repository creation
+    median_issue_close_time: float = FloatField(null=True)
     monthly_stars: List[MonthCount] = EmbeddedDocumentListField(MonthCount, default=[])
     monthly_commits: List[MonthCount] = EmbeddedDocumentListField(
         MonthCount, default=[]

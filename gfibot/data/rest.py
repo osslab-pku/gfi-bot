@@ -83,7 +83,13 @@ class RepoFetcher(object):
                 "owner": self.repo.owner.login,
                 "name": self.repo.name,
                 "language": self.repo.language,
+                "languages": self.repo.get_languages(),
                 "repo_created_at": self.repo.created_at.astimezone(timezone.utc),
+                "description": self.repo.description,
+                "topics": self.repo.get_topics(),
+                "readme": self.repo.get_readme().decoded_content.decode(
+                    "utf-8", "ignore"
+                ),
             },
         )
 
