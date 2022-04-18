@@ -2,10 +2,12 @@ import re
 import nltk
 import logging
 import textstat
+import argparse
 import numpy as np
 
 from typing import Union
 from collections import Counter
+from dateutil.parser import parse as parse_date
 from gfibot.collections import *
 from mongoengine.queryset.visitor import Q
 
@@ -330,12 +332,23 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
     return data
 
 
-def get_dataset_all():
-    for i in ResolvedIssue.objects():
+def get_dataset_all(since: datetime = None):
+    """Update the Dataset collection with latest resolved and open issues.
+
+    Args:
+        since (datetime, optional): Only consider issues updated after this time.
+              Defaults to None, which means to consider all issues.
+    """
+    if since is None:
+        q_resolved, q_open = Q(), Q()
+    else:
+        q_resolved, q_open = Q(resolved_at__gte=since), Q(created_at__gte=since)
+
+    for i in ResolvedIssue.objects(q_resolved):
         get_dataset(i, i.created_at)
         get_dataset(i, i.resolved_at)
 
-    for i in OpenIssue.objects():
+    for i in OpenIssue.objects(q_open):
         # determine whether this issue needs to be updated
         if len(i.events) > 0:
             last_updated = max(e.time for e in i.events)
@@ -355,6 +368,10 @@ if __name__ == "__main__":
         level=logging.INFO,
     )
 
-    get_dataset_all()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--since")
+    since = parse_date(parser.parse_args().since)
+
+    get_dataset_all(since)
 
     logger.info("Finish!")
