@@ -19,7 +19,7 @@ class Prediction(Document):
 
     owner: str = StringField(required=True)
     name: str = StringField(required=True)
-    number: str = StringField(required=True)
+    number: int = IntField(required=True)
     threshold: int = IntField(required=True, min_value=1, max_value=5)
     probability: float = FloatField(required=True)
     last_updated: datetime = DateTimeField(required=True)
@@ -49,8 +49,11 @@ class TrainingSummary(Document):
 
     owner: str = StringField(required=True)
     name: str = StringField(required=True)
+    issues_train: List[list] = ListField(ListField(), default=[])
+    issues_test: List[list] = ListField(ListField(), default=[])
     threshold: int = IntField(required=True, min_value=1, max_value=5)
-    model_file: str = StringField(required=True)
+    model_90_file: str = StringField(required=True)
+    model_full_file: str = StringField(required=True)
     n_resolved_issues: int = IntField(required=True)
     n_newcomer_resolved: int = IntField(required=True)
     accuracy: float = FloatField(required=True)
@@ -111,8 +114,8 @@ class Dataset(Document):
 
         comments: All issue comments
         events: All issue events, excluding comments
-        comment_users: Features for all involved users
-        event_users: Features for all involved commenters
+        comment_users: Features for all involved commenters
+        event_users: Features for all involved users
     """
 
     class LabelCategory(EmbeddedDocument):

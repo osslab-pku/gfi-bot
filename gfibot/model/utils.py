@@ -4,9 +4,12 @@ from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import roc_curve
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import auc
 import os
 import sys
+import math
+import xgboost as xgb
+from mongoengine.queryset.visitor import Q
 
 current_work_dir = os.path.dirname(__file__)
 utpath = os.path.join(current_work_dir, "../..")
@@ -21,47 +24,36 @@ def cat_comment(comment: list) -> str:
         return "".join(comment)
 
 
-def get_TFIDF(text: list) -> np.array:
-    text_TFIDF = (
-        TfidfVectorizer(
-            analyzer="word", input="content", stop_words="english", max_features=50
-        )
-        .fit_transform(text)
-        .toarray()
-    )
-    return text_TFIDF
-
-
-def user_new(cmt_num: int, new_threshold: int) -> int:
-    if cmt_num < new_threshold:
+def user_new(cmt_num: int, threshold: int) -> int:
+    if cmt_num < threshold:
         return 1
     return 0
 
 
-def get_ratio(lst: list, new_threshold: int) -> float:
+def get_ratio(lst: list, threshold: int) -> float:
     if lst is None:
         return 0
     else:
         lst = [d for d in lst if d is not None]
         if lst == []:
             return 0
-        pnum = sum(d < new_threshold for d in lst)
+        pnum = sum(d < threshold for d in lst)
         nnum = len(lst) - pnum
         return pnum / (pnum + nnum)
 
 
-def get_num(lst: list, new_threshold: int) -> int:
+def get_num(lst: list, threshold: int) -> int:
     if lst is None:
         return 0
     else:
         lst = [d for d in lst if d is not None]
         if lst == []:
             return 0
-        pnum = sum(d < new_threshold for d in lst)
+        pnum = sum(d < threshold for d in lst)
         return pnum
 
 
-def get_user_average(user_list: List[Dataset.UserFeature], new_threshold: int):
+def get_user_average(user_list: List[Dataset.UserFeature], threshold: int):
     user_num = len(user_list)
     commits_num, issues_num, pulls_num, user_gfi_ratio, user_gfi_num = 0, 0, 0, 0, 0
     if user_num != 0:
@@ -69,8 +61,8 @@ def get_user_average(user_list: List[Dataset.UserFeature], new_threshold: int):
             commits_num += user.n_commits
             issues_num += user.n_issues
             pulls_num += user.n_pulls
-            user_gfi_ratio += get_ratio(user.resolver_commits, new_threshold)
-            user_gfi_num += get_num(user.resolver_commits, new_threshold)
+            user_gfi_ratio += get_ratio(user.resolver_commits, threshold)
+            user_gfi_num += get_num(user.resolver_commits, threshold)
         commits_num, issues_num, pulls_num, user_gfi_ratio, user_gfi_num = (
             commits_num / user_num,
             issues_num / user_num,
@@ -81,42 +73,25 @@ def get_user_average(user_list: List[Dataset.UserFeature], new_threshold: int):
     return commits_num, issues_num, pulls_num, user_gfi_ratio, user_gfi_num
 
 
-def load_data(new_threshold: int, owner=None, name=None) -> pd.DataFrame:
-    """Retrieve data frome gfibot.dataset for each issue to further build training data set and test data set with def(load_train_test_data) or training data set with def(load_train_data)"""
+def load_data(threshold: int, batch: List[list]) -> pd.DataFrame:
     issue_list = []
-    if owner is None:
-        for issue in Dataset.objects():
-            issue_list.append(get_issue_data(issue, new_threshold))
-    else:
-        for issue in Dataset.objects(owner=owner, name=name):
-            issue_list.append(get_issue_data(issue, new_threshold))
+    for issue in batch:
+        query = Q(owner=issue[1], name=issue[0], number=issue[2][0], before=issue[2][1])
+        one_issue = Dataset.objects(query).first()
+        issue_list.append(get_issue_data(one_issue, threshold))
     issue_df = pd.DataFrame(issue_list)
-
-    # ---------- TFIDF of issue title, body and comments ----------
-    title_TFIDF = pd.DataFrame(get_TFIDF(issue_df["title"].values))
-    body_TFIDF = pd.DataFrame(get_TFIDF(issue_df["body"].values))
-    comments_TFIDF = pd.DataFrame(get_TFIDF(issue_df["comments"].values))
-    del issue_df["title"]
-    del issue_df["body"]
-    del issue_df["comments"]
-    column_name = list(issue_df.columns)
-    issue_df = pd.concat([issue_df, title_TFIDF, body_TFIDF, comments_TFIDF], axis=1)
-    column_name.extend(["TFIDF" + str(i) for i in range(150)])
-    issue_df.columns = column_name
     return issue_df
 
 
-def get_issue_data(issue: Dataset, new_threshold: int) -> dict:
-    is_gfi = user_new(issue.resolver_commit_num, new_threshold)
+def get_issue_data(issue: list, threshold: int) -> dict:
+    is_gfi = user_new(issue.resolver_commit_num, threshold)
 
-    comments = cat_comment(issue.comments)
-
-    rpt_is_new = user_new(issue.reporter_feat.n_commits, new_threshold)
-    rpt_gfi_ratio = get_ratio(issue.reporter_feat.resolver_commits, new_threshold)
-    owner_gfi_ratio = get_ratio(issue.owner_feat.resolver_commits, new_threshold)
-    owner_gfi_num = get_num(issue.owner_feat.resolver_commits, new_threshold)
-    pro_gfi_ratio = get_ratio(issue.prev_resolver_commits, new_threshold)
-    pro_gfi_num = get_num(issue.prev_resolver_commits, new_threshold)
+    rpt_is_new = user_new(issue.reporter_feat.n_commits, threshold)
+    rpt_gfi_ratio = get_ratio(issue.reporter_feat.resolver_commits, threshold)
+    owner_gfi_ratio = get_ratio(issue.owner_feat.resolver_commits, threshold)
+    owner_gfi_num = get_num(issue.owner_feat.resolver_commits, threshold)
+    pro_gfi_ratio = get_ratio(issue.prev_resolver_commits, threshold)
+    pro_gfi_num = get_num(issue.prev_resolver_commits, threshold)
 
     (
         commenter_commits_num,
@@ -124,18 +99,14 @@ def get_issue_data(issue: Dataset, new_threshold: int) -> dict:
         commenter_pulls_num,
         commenter_gfi_ratio,
         commenter_gfi_num,
-    ) = get_user_average(
-        issue.comment_users, new_threshold
-    )  # 原commentuser
+    ) = get_user_average(issue.comment_users, threshold)
     (
         eventer_commits_num,
         eventer_issues_num,
         eventer_pulls_num,
         eventer_gfi_ratio,
         eventer_gfi_num,
-    ) = get_user_average(
-        issue.event_users, new_threshold
-    )  # eventer
+    ) = get_user_average(issue.event_users, threshold)
     comment_num = len(issue.comments)
     event_num = len(issue.events)
 
@@ -145,8 +116,8 @@ def get_issue_data(issue: Dataset, new_threshold: int) -> dict:
         "number": issue.number,
         "is_gfi": is_gfi,
         # ---------- Content ----------
-        "title": issue.title,
-        "body": issue.body,
+        # "title": issue.title,
+        # "body": issue.body,
         "len_title": issue.len_title,
         "len_body": issue.len_body,
         "n_code_snips": issue.n_code_snips,
@@ -184,7 +155,7 @@ def get_issue_data(issue: Dataset, new_threshold: int) -> dict:
         "r_open_issues": issue.r_open_issues,
         "issue_close_time": issue.issue_close_time,
         # ---------- Dynamics ----------
-        "comments": comments,
+        # "comments": comments,
         "commenter_commits_num": commenter_commits_num,
         "commenter_issues_num": commenter_issues_num,
         "commenter_pulls_num": commenter_pulls_num,
@@ -202,82 +173,74 @@ def get_issue_data(issue: Dataset, new_threshold: int) -> dict:
     return one_issue
 
 
-def load_train_data(data: pd.DataFrame, settype: str, owner: str, name: str):
-    if settype == "one4one":
-        train_data = data.loc[(data["owner"] == owner) & (data["name"] == name)]
-        test_data = data.loc[(data["owner"] == owner) & (data["name"] == name)]
-    else:
-        train_data = data
-        test_data = data.loc[(data["owner"] == owner) & (data["name"] == name)]
+def update_model(
+    model_path: str, threshold: int, train_add: list, batch_size: int
+) -> xgb.core.Booster:
+    ith_batch = 0
+    while ith_batch < math.ceil(len(train_add) / batch_size):
+        train_batch = train_add[ith_batch * batch_size : (ith_batch + 1) * batch_size]
+        model_path = train_incremental(threshold, model_path, train_batch)
+        ith_batch += 1
+    model = model_path
+    if ith_batch == 0:
+        model = xgb.Booster()
+        model.load_model(model_path)
+    return model
 
-    p_train = train_data[train_data.is_gfi == 1]
-    n_train = train_data[train_data.is_gfi == 0]
+
+def train_incremental(
+    threshold: int, model_path: str, train_batch: list
+) -> xgb.core.Booster:
+    params = {"objective": "binary:logistic"}
+    data = load_data(threshold, train_batch)
+    X_train, y_train = load_train_data(data)
+    if len(X_train) == 0:
+        return model_path
+    else:
+        xg_train = xgb.DMatrix(X_train, label=y_train)
+        return xgb.train(params, xg_train, xgb_model=model_path)
+
+
+def load_train_data(data: pd.DataFrame):
+    p_train = data[data["is_gfi"] == 1]
+    n_train = data[data["is_gfi"] == 0]
     n_train = n_train.sample(
         frac=p_train.shape[0] / n_train.shape[0], replace=True, random_state=0
     )
-
-    train_data = pd.concat([p_train, n_train], ignore_index=True)
-    train_data = train_data.sample(frac=1, random_state=0)
-    y_train = train_data["is_gfi"]
-
-    train_data.drop(["is_gfi", "owner", "name", "number"], axis=1, inplace=True)
-    test_data.drop(["is_gfi", "owner", "name"], axis=1, inplace=True)
-
-    X_train = train_data
-    X_test = test_data
-    return X_train, X_test, y_train
+    data = pd.concat([p_train, n_train], ignore_index=True)
+    y_train = data["is_gfi"]
+    X_train = data.drop(["is_gfi", "owner", "name", "number"], axis=1)
+    return X_train, y_train
 
 
-def load_train_test_data(data: pd.DataFrame, settype: str, owner: str, name: str):
-    if settype == "one4one":
-        pro_data = data.loc[(data["owner"] == owner) & (data["name"] == name)]
-        p_train_split = int(0.9 * pro_data.shape[0])
-        train_data = pro_data.iloc[:p_train_split]
-        test_data = pro_data.iloc[p_train_split + 1 :]
-    elif settype == "all4one":
-        pro_data = data.loc[(data["owner"] == owner) & (data["name"] == name)]
-        pro_data = pro_data.reset_index(drop=True)
-        data = data.reset_index(drop=True)
-
-        p_train_split = int(0.9 * pro_data.shape[0])
-        test_data = pro_data.iloc[p_train_split + 1 :]
-        test_data = test_data.reset_index(drop=True)
-        owner = test_data.loc[0, "owner"]
-        name = test_data.loc[0, "name"]
-        number = test_data.loc[0, "number"]
-        ind = data[
-            (data["owner"] == owner)
-            & (data["name"] == name)
-            & (data["number"] == number)
-        ].index.tolist()[0]
-        train_data = data.iloc[:ind]
-    else:
-        p_train_split = int(0.9 * data.shape[0])
-        train_data = data.iloc[:p_train_split]
-        test_data = data.iloc[p_train_split + 1 :]
-
-    p_train = train_data[train_data.is_gfi == 1]
-    n_train = train_data[train_data.is_gfi == 0]
-    n_train = n_train.sample(
-        frac=p_train.shape[0] / n_train.shape[0], replace=True, random_state=0
-    )
-
-    train_data = pd.concat([p_train, n_train], ignore_index=True)
-    train_data = train_data.sample(frac=1, random_state=0)
-    y_train = train_data["is_gfi"]
-    y_test = test_data["is_gfi"]
-
-    train_data = train_data.drop(["is_gfi", "owner", "name", "number"], axis=1)
-    test_data = test_data.drop(["is_gfi", "owner", "name", "number"], axis=1)
-    X_train = train_data
-    X_test = test_data
-    return X_train, X_test, y_train, y_test
+def load_test_incremental(test_set: List[int], threshold: int):
+    data = load_data(threshold, test_set)
+    y_test = data["is_gfi"]
+    X_test = data.drop(["is_gfi", "owner", "name"], axis=1)
+    return X_test, y_test
 
 
-def get_all_metrics(y_test: pd.Series, pred_labels: np.array, y_prob: np.array):
+def predict_issues(
+    test_set: List[int], threshold: int, batch_size: int, model: xgb.core.Booster
+):
+    ith_batch = 0
+    y_test_all, y_prob_all = [], []
+    while ith_batch < math.ceil(len(test_set) / batch_size):
+        test_batch = test_set[ith_batch * batch_size : (ith_batch + 1) * batch_size]
+        X_test, y_test = load_test_incremental(test_batch, threshold)
+        del X_test["number"]
+        xg_test = xgb.DMatrix(X_test, label=y_test)
+        y_prob = model.predict(xg_test)
+        y_test_all += list(y_test)
+        y_prob_all += list(y_prob)
+        ith_batch += 1
+    return y_test_all, y_prob_all
+
+
+def get_all_metrics(y_test: List[int], pred_labels: List[int], y_prob: List[float]):
     fpr, tpr, thresholds_keras = roc_curve(y_test, y_prob)
-    auc = auc(fpr, tpr)
+    auc_ = auc(fpr, tpr)
     precision = precision_score(y_test, pred_labels)
     recall = recall_score(y_test, pred_labels)
     f1 = f1_score(y_test, pred_labels)
-    return auc, precision, recall, f1
+    return auc_, precision, recall, f1
