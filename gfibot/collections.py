@@ -3,20 +3,82 @@ from datetime import datetime
 from mongoengine import *
 
 
+class Prediction(Document):
+    """
+    The GFI prediction result for an open issue.
+    This collection will be updated periodically and used by backend and bot for GFI recommendation.
+
+    Attributes:
+        owner, name, number: uniquely identifies a GitHub issue.
+        threshold: the number of in-repository commits that disqualify one as a newcomer,
+            can be one to five. For more details please check the ICSE'22 paper.
+        probability: the modeled probability that the issue is a GFI.
+        last_updated: the last time this prediction result was updated,
+            necessary for incremental update.
+    """
+
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    number: int = IntField(required=True)
+    threshold: int = IntField(required=True, min_value=1, max_value=5)
+    probability: float = FloatField(required=True)
+    last_updated: datetime = DateTimeField(required=True)
+    meta = {
+        "indexes": [
+            {"fields": ["owner", "name", "number", "threshold"], "unique": True},
+            {"fields": ["probability"]},
+        ]
+    }
+
+
+class TrainingSummary(Document):
+    """
+    Describes model training result for a specific repository and threshold.
+    This collection will be used to communicate the effectiveness of our model to users.
+
+    Attributes:
+        owner, name, threshold: uniquely identifies a GitHub repository and a training setting.
+            If owner="", name="", then this is a global summary result.
+        model_file: relative path to the model file, with repository as root.
+        n_resolved_issues: total number of resolved issues in this repository.
+        n_newcomer_resolved: the number of issues resolved by newcomers in this repository.
+        accuracy: the accuracy of the model on the training data.
+        auc: the area under the ROC curve.
+        last_updated: the last time this training summary was updated.
+    """
+
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    issues_train: List[list] = ListField(ListField(), default=[])
+    issues_test: List[list] = ListField(ListField(), default=[])
+    threshold: int = IntField(required=True, min_value=1, max_value=5)
+    model_90_file: str = StringField(required=True)
+    model_full_file: str = StringField(required=True)
+    n_resolved_issues: int = IntField(required=True)
+    n_newcomer_resolved: int = IntField(required=True)
+    accuracy: float = FloatField(required=True)
+    auc: float = FloatField(required=True)
+    last_updated: datetime = DateTimeField(required=True)
+    meta = {
+        "indexes": [
+            {"fields": ["owner", "name", "threshold"], "unique": True},
+        ]
+    }
+
+
 class Dataset(Document):
     """
     The final dataset involved for RecGFI training
     All attributes are restored at a given time
 
     Attributes:
-        owner: The user who owns the dataset
-        name: The name of the dataset
-        number: Issue number in GitHub
+        owner, name, number: uniquely identifies a GitHub issue
         created_at: The time when the issue is created
         closed_at: The time when the issue is closed
         before: The time when all features in this document is computed
 
         resolver_commit_num: Issue resolver's commits to this repo, before the issue is resolved
+                                if -1, means that the issue is still open
 
         ---------- Content ----------
 
@@ -52,8 +114,8 @@ class Dataset(Document):
 
         comments: All issue comments
         events: All issue events, excluding comments
-        comment_users: Features for all involved users
-        event_users: Features for all involved commenters
+        comment_users: Features for all involved commenters
+        event_users: Features for all involved users
     """
 
     class LabelCategory(EmbeddedDocument):
@@ -98,7 +160,7 @@ class Dataset(Document):
     name: str = StringField(required=True)
     number: int = IntField(required=True)
     created_at: datetime = DateTimeField(required=True)
-    closed_at: datetime = DateTimeField(required=True)
+    closed_at: datetime = DateTimeField(null=True)
     before: datetime = DateTimeField(required=True)
 
     resolver_commit_num: int = IntField(required=True)
@@ -203,8 +265,46 @@ class ResolvedIssue(Document):
     meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
 
 
+class OpenIssue(Document):
+    """
+    Additional issue information for currently open issues.
+    These issues will be used as the testing dataset for RecGFI training.
+    """
+
+    owner: str = StringField(required=True)
+    name: str = StringField(required=True)
+    number: int = IntField(required=True)
+    created_at: datetime = DateTimeField(required=True)
+    updated_at: datetime = DateTimeField(required=True)
+    events: List[IssueEvent] = ListField(EmbeddedDocumentField(IssueEvent))
+    meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
+
+
 class Repo(Document):
-    """Repository statistics for RecGFI training"""
+    """
+    Repository statistics for both RecGFI training and web app.
+
+    Attributes:
+        created_at: The time when the repository was created in database
+        updated_at: The time when the repository was last updated in database
+        repo_created_at: The time when this repository is created in GitHub
+        owner, name: Uniquely identifies a GitHub repository
+
+        topics: A list of topics associated with the repository
+        language: Main programming language (as returned by GitHub), can be None
+        languages: All programming languages and their lines of code
+        description: Repository description
+        readme: Repostiory README content
+
+        median_issue_close_time: The median time it takes to close an issue (in seconds)
+        monthly_stars, monthly_commits, monthly_issues, monthly_pulls:
+            Four time series describing number of new stars, commits, issues, and pulls
+                in each month since repository creation
+    """
+
+    class LanguageCount(EmbeddedDocument):
+        language: str = StringField(required=True)
+        count: int = IntField(required=True)
 
     class MonthCount(EmbeddedDocument):
         month: datetime = DateTimeField(required=True)
@@ -212,17 +312,19 @@ class Repo(Document):
 
     created_at: datetime = DateTimeField(required=True)
     updated_at: datetime = DateTimeField(required=True)
+    repo_created_at: datetime = DateTimeField(required=True)
     owner: str = StringField(required=True)
     name: str = StringField(required=True)
 
-    # Main programming language (as returned by GitHub), can be None
+    topics: List[str] = ListField(StringField(), default=[])
     language: str = StringField(null=True)
+    languages: List[LanguageCount] = EmbeddedDocumentListField(
+        LanguageCount, default=[]
+    )
+    description: str = StringField(null=True)
+    readme: str = StringField(null=True)
 
-    # The time when this repository is created in GitHub
-    repo_created_at: datetime = DateTimeField(required=True)
-
-    # Four time series describing number of new stars, commits, issues, and pulls
-    #     in each month since repository creation
+    median_issue_close_time: float = FloatField(null=True)
     monthly_stars: List[MonthCount] = EmbeddedDocumentListField(MonthCount, default=[])
     monthly_commits: List[MonthCount] = EmbeddedDocumentListField(
         MonthCount, default=[]

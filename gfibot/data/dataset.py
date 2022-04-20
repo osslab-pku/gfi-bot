@@ -2,9 +2,12 @@ import re
 import nltk
 import logging
 import textstat
+import argparse
 import numpy as np
 
+from typing import Union
 from collections import Counter
+from dateutil.parser import parse as parse_date
 from gfibot.collections import *
 from mongoengine.queryset.visitor import Q
 
@@ -242,9 +245,12 @@ def get_dynamics_data(owner: str, name: str, events: List[IssueEvent], t: dateti
     return labels, comments, comment_users, event_users
 
 
-def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
-    """For a resolved issue, get the corresponding data for RecGFI training."""
+def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dataset:
+    """For a resolved or open issue, get the corresponding data for RecGFI training."""
     query = Q(owner=issue.owner, name=issue.name, number=issue.number)
+
+    if isinstance(issue, ResolvedIssue):
+        Dataset.objects(query & Q(resolver_commit_num=-1)).delete()
 
     existing = Dataset.objects(query & Q(before=before))
     if existing.count() > 0:
@@ -254,8 +260,8 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
         return existing.first()
 
     repo_issue: RepoIssue = RepoIssue.objects(query).first()
-    if repo_issue.is_pull == True or repo_issue.state == "open":
-        logger.error(f"{issue.owner}/{issue.name}#{issue.number}: Open or Pull Request")
+    if repo_issue.is_pull == True:
+        logger.error(f"{issue.owner}/{issue.name}#{issue.number}: Pull Request")
         return
 
     logger.info(f"{issue.owner}/{issue.name}#{issue.number} (before {before}) start")
@@ -283,7 +289,9 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
     data.created_at = repo_issue.created_at
     data.closed_at = repo_issue.closed_at
     data.before = before
-    data.resolver_commit_num = issue.resolver_commit_num
+    data.resolver_commit_num = (
+        issue.resolver_commit_num if isinstance(issue, ResolvedIssue) else -1
+    )
 
     # ---------- Content ----------
     data.title = repo_issue.title
@@ -311,7 +319,7 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
     data.n_closed_issues = n_closed
     data.n_open_issues = n_open
     data.r_open_issues = n_open / (n_open + n_closed) if n_open + n_closed > 0 else 0
-    data.issue_close_time = np.median(close_times)
+    data.issue_close_time = np.median(close_times) if len(close_times) > 0 else 0
 
     # ---------- Dynamics ----------
     data.comments = comments
@@ -324,14 +332,46 @@ def get_dataset(issue: ResolvedIssue, before: datetime) -> Dataset:
     return data
 
 
+def get_dataset_all(since: datetime = None):
+    """Update the Dataset collection with latest resolved and open issues.
+
+    Args:
+        since (datetime, optional): Only consider issues updated after this time.
+              Defaults to None, which means to consider all issues.
+    """
+    if since is None:
+        q_resolved, q_open = Q(), Q()
+    else:
+        q_resolved, q_open = Q(resolved_at__gte=since), Q(created_at__gte=since)
+
+    for i in ResolvedIssue.objects(q_resolved):
+        get_dataset(i, i.created_at)
+        get_dataset(i, i.resolved_at)
+
+    for i in OpenIssue.objects(q_open):
+        # determine whether this issue needs to be updated
+        if len(i.events) > 0:
+            last_updated = max(e.time for e in i.events)
+        else:
+            last_updated = i.created_at
+        existing = Dataset.objects(name=i.name, owner=i.owner, number=i.number)
+        if existing.count() > 0 and existing.first().before >= last_updated:
+            logger.info(f"{i.owner}/{i.name}#{i.number}): no need to update")
+            continue
+
+        get_dataset(i, i.updated_at)
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         format="%(asctime)s (Process %(process)d) [%(levelname)s] %(filename)s:%(lineno)d %(message)s",
         level=logging.INFO,
     )
 
-    for resolved_issue in ResolvedIssue.objects():
-        get_dataset(resolved_issue, resolved_issue.created_at)
-        get_dataset(resolved_issue, resolved_issue.resolved_at)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--since")
+    since = parse_date(parser.parse_args().since)
+
+    get_dataset_all(since)
 
     logger.info("Finish!")

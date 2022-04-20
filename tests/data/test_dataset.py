@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from bson.json_util import DEFAULT_JSON_OPTIONS
 from gfibot.collections import *
 from gfibot.data.dataset import *
 
@@ -615,13 +616,18 @@ def test_get_background_data(mock_mongodb):
     )
     assert contribs == {"a1"}
     assert n_closed == 2
-    assert n_open == 0
+    assert n_open == 1
     assert cls_time == [86400.0, 86400.0]
+
+    contribs, n_closed, n_open, cls_time = get_background_data(
+        "owner", "name", datetime(2022, 1, 3, tzinfo=timezone.utc)
+    )
+    assert n_closed == 1 and n_open == 1
 
 
 def test_get_dynamics_data(mock_mongodb):
     issue = ResolvedIssue.objects(name="name", owner="owner", number=2).first()
-    print(issue.to_json(indent=2))
+    print(issue.to_json(indent=2, json_options=DEFAULT_JSON_OPTIONS))
     labels, comments, comment_users, event_users = get_dynamics_data(
         "owner", "name", issue.events, datetime.now(timezone.utc)
     )
@@ -636,5 +642,5 @@ def test_get_dataset(mock_mongodb):
     for resolved_issue in ResolvedIssue.objects():
         d1 = get_dataset(resolved_issue, resolved_issue.resolved_at)
         d2 = get_dataset(resolved_issue, resolved_issue.created_at)
-        print(d1.to_json(indent=2))
-        print(d2.to_json(indent=2))
+        print(d1.to_json(indent=2, json_options=DEFAULT_JSON_OPTIONS))
+        print(d2.to_json(indent=2, json_options=DEFAULT_JSON_OPTIONS))
