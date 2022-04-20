@@ -245,6 +245,132 @@ def mock_mongodb():
             ],
         )
     ]
+    datasets = [
+        Dataset(
+            owner="owner",
+            name="name",
+            number=5,
+            created_at=datetime(1970, 1, 2, tzinfo=timezone.utc),
+            closed_at=datetime(1970, 1, 3, tzinfo=timezone.utc),
+            before=datetime(1970, 1, 3, tzinfo=timezone.utc),
+            resolver_commit_num=1,
+            title="title",
+            body="body",
+            len_title=1,
+            len_body=1,
+            n_code_snips=0,
+            n_urls=0,
+            n_imgs=0,
+            coleman_liau_index=0.1,
+            flesch_reading_ease=0.1,
+            flesch_kincaid_grade=0.1,
+            automated_readability_index=0.1,
+            labels=["good first issue"],
+            label_category=Dataset.LabelCategory(gfi=1),
+            reporter_feat=Dataset.UserFeature(
+                name="a1",
+                n_commits=3,
+                n_issues=1,
+                n_pulls=2,
+                resolver_commits=[4, 5, 6],
+            ),
+            owner_feat=Dataset.UserFeature(
+                name="a2",
+                n_commits=5,
+                n_issues=1,
+                n_pulls=2,
+                resolver_commits=[1, 2, 3],
+            ),
+            n_stars=0,
+            n_pulls=1,
+            n_commits=5,
+            n_contributors=2,
+            n_closed_issues=1,
+            n_open_issues=1,
+            r_open_issues=1,
+            issue_close_time=1.0,
+            comment_users=[
+                (
+                    Dataset.UserFeature(
+                        name="a3",
+                        n_commits=5,
+                        n_issues=1,
+                        n_pulls=2,
+                        resolver_commits=[1, 2],
+                    )
+                ),
+                Dataset.UserFeature(
+                    name="a4",
+                    n_commits=3,
+                    n_issues=1,
+                    n_pulls=1,
+                    resolver_commits=[4, 5],
+                ),
+            ],
+        ),
+        Dataset(
+            owner="owner",
+            name="name",
+            number=6,
+            created_at=datetime(1971, 1, 2, tzinfo=timezone.utc),
+            closed_at=datetime(1971, 1, 3, tzinfo=timezone.utc),
+            before=datetime(1971, 1, 3, tzinfo=timezone.utc),
+            resolver_commit_num=3,
+            title="title",
+            body="body",
+            len_title=1,
+            len_body=1,
+            n_code_snips=0,
+            n_urls=0,
+            n_imgs=0,
+            coleman_liau_index=0.1,
+            flesch_reading_ease=0.1,
+            flesch_kincaid_grade=0.1,
+            automated_readability_index=0.1,
+            labels=[],
+            label_category=Dataset.LabelCategory(gfi=1),
+            reporter_feat=Dataset.UserFeature(
+                name="a1",
+                n_commits=3,
+                n_issues=1,
+                n_pulls=2,
+                resolver_commits=[4, 5, 6],
+            ),
+            owner_feat=Dataset.UserFeature(
+                name="a2",
+                n_commits=5,
+                n_issues=1,
+                n_pulls=2,
+                resolver_commits=[1, 2, 3],
+            ),
+            n_stars=0,
+            n_pulls=1,
+            n_commits=5,
+            n_contributors=2,
+            n_closed_issues=1,
+            n_open_issues=1,
+            r_open_issues=1,
+            issue_close_time=1.0,
+            comment_users=[
+                (
+                    Dataset.UserFeature(
+                        name="a3",
+                        n_commits=5,
+                        n_issues=1,
+                        n_pulls=2,
+                        resolver_commits=[1, 2],
+                    )
+                ),
+                Dataset.UserFeature(
+                    name="a4",
+                    n_commits=3,
+                    n_issues=1,
+                    n_pulls=1,
+                    resolver_commits=[4, 5],
+                ),
+            ],
+        ),
+    ]
 
     for repo in repos:
         repo.save()
@@ -261,6 +387,8 @@ def mock_mongodb():
     for open_issue in open_issues:
         open_issue.save()
         get_dataset(open_issue, open_issue.updated_at)
+    for dataset in datasets:
+        dataset.save()
 
     yield
 
