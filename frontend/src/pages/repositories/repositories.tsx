@@ -1,5 +1,4 @@
 import React, {useEffect, useState} from 'react';
-import PropTypes from 'prop-types';
 import {Alert, Badge, Col, Container, ListGroup, Row} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 
@@ -8,18 +7,19 @@ import {GFISearchBar, GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} fro
 import {RepoGraphContainer} from './repoDataDemonstrator';
 
 import {getRepoNum, getRepoDetailedInfo} from '../../api/api';
+// @ts-ignore
 import Fade from 'react-reveal/Fade'
 
-export const Repositories = (props) => {
+export const Repositories = () => {
 
     const repoListCapacity = 5
 
-    let [pageIdx, setPageIdx] = useState(1)
+    let [pageIdx, setPageIdx] = useState<number>(1)
 
-    let [totalRepos, setTotalRepos] = useState(0)
-    let [showAlarm, setShowAlarm] = useState(false)
-    let [progress, setProgress] = useState('0%')
-    let [showProgressBar, setShowProgressBar] = useState(false)
+    let [totalRepos, setTotalRepos] = useState<number>(0)
+    let [showAlarm, setShowAlarm] = useState<boolean>(false)
+    let [progress, setProgress] = useState<string>('0%')
+    let [showProgressBar, setShowProgressBar] = useState<boolean>(false)
 
     useEffect(() => {
         setShowProgressBar(true)
@@ -34,7 +34,7 @@ export const Repositories = (props) => {
         })
     }, [pageIdx])
 
-    let [infoList, setInfoList] = useState([])
+    let [infoList, setInfoList] = useState<any[]>([])
     useEffect(() => {
         let beginIdx = (pageIdx - 1) * repoListCapacity
         setProgress('60%')
@@ -50,14 +50,14 @@ export const Repositories = (props) => {
         })
     }, [pageIdx])
 
-    let [activeCardIdx, setActiveCardIdx] = useState(0)
-    let [pageFormInput, setPageFormInput] = useState(0)
+    let [activeCardIdx, setActiveCardIdx] = useState<number>(0)
+    let [pageFormInput, setPageFormInput] = useState<string>('0')
 
-    const projectCardOnClick = (idx) => {
+    const projectCardOnClick = (idx: number) => {
         setActiveCardIdx(idx)
     }
 
-    const projectsInfos = (info, index) => {
+    const projectsInfos = (info: any, index: number) => {
         return (
             <RepoInfoCard
                 key={'infoCard' + index}
@@ -69,7 +69,7 @@ export const Repositories = (props) => {
         )
     }
 
-    const renderProjectsInfos = (infoArray) => {
+    const renderProjectsInfos = (infoArray?: any[]) => {
         if (infoArray && Array.isArray(infoArray)) {
             return (infoArray.map((info, idx) => {
                 return projectsInfos(JSON.parse(info), idx)
@@ -85,22 +85,23 @@ export const Repositories = (props) => {
         }
     }
 
-    const toPage = (i) => {
+    const toPage = (i: number) => {
         if (1 <= i && i <= pageNums()) {
             setProgress('0%')
             setPageIdx(i)
         }
     }
 
-    const onFormInput = (target) => {
-        setPageFormInput(target.value)
+    const onFormInput = (target: EventTarget) => {
+        const t = target as HTMLTextAreaElement
+        setPageFormInput(t.value)
     }
 
     const onPageBtnClicked = () => {
         if (checkIsNumber(pageFormInput)) {
-            pageFormInput = Number(pageFormInput)
-            if (pageFormInput > 0 && pageFormInput <= pageNums()) {
-                toPage(pageFormInput)
+            const pageInput = parseInt(pageFormInput)
+            if (pageInput > 0 && pageInput <= pageNums()) {
+                toPage(pageInput)
             } else {
                 window.alert('Out of page index, max page number is ' + pageNums())
             }
@@ -110,14 +111,21 @@ export const Repositories = (props) => {
     }
 
     // a little trick
-    let [showCards, setShowCards] = useState(false)
-    let [cardInfoList, setCardInfoList] = useState([])
-    let [cardInfoListToDisplay, setCardInfoListToDisplay] = useState([])
+
+    type CardInfoList = {
+        monthly_stars?: any[],
+        monthly_issues?: any[],
+        monthly_commits?: any[],
+    }
+
+    let [showCards, setShowCards] = useState<boolean>(false)
+    let [cardInfoList, setCardInfoList] = useState<CardInfoList>({})
+    let [cardInfoListToDisplay, setCardInfoListToDisplay] = useState<CardInfoList>({})
 
     useEffect(() => {
         if (infoList.length && activeCardIdx < infoList.length) {
             setShowCards(false)
-            setCardInfoListToDisplay([])
+            setCardInfoListToDisplay({})
             let parsedInfoList = JSON.parse(infoList[activeCardIdx])
             if (parsedInfoList) {
                 setCardInfoList(parsedInfoList)
@@ -126,10 +134,10 @@ export const Repositories = (props) => {
                 }
                 setProgress('100%')
             } else {
-                setCardInfoList([])
+                setCardInfoList({})
             }
         } else {
-            setCardInfoList([])
+            setCardInfoList({})
         }
     }, [activeCardIdx, infoList])
 
@@ -178,7 +186,7 @@ export const Repositories = (props) => {
             <Container className={'single-page'}>
                 {renderAlarmInfo()}
                 <Row>
-                    <GFISearchBar description={'Search for your project'} title={'search'} />
+                    <GFISearchBar description={'Search for your project'} title={'search'}/>
                 </Row>
                 <Row>
                     <Col sm={4} style={{
@@ -241,7 +249,19 @@ export const Repositories = (props) => {
     )
 }
 
-const RepoInfoCard = (props) => {
+interface RepoInfoCardProps {
+    initInfo: {
+        language?: string,
+        name?: string,
+        owner?: string,
+        monthly_stars: any[],
+    }
+    nowActive: number,
+    index: number,
+    callback: (idx: number) => void,
+}
+
+const RepoInfoCard = (props: RepoInfoCardProps) => {
 
     let [isActive, setIsActive] = useState(false)
     const [idx] = useState(props.index)
@@ -250,7 +270,7 @@ const RepoInfoCard = (props) => {
         setIsActive(props.nowActive === idx)
     }, [props.nowActive, idx])
 
-    const getStars = (monthly_stars: Array) => {
+    const getStars = (monthly_stars: any[]) => {
         let counter = 0
         monthly_stars.forEach((value => {
             if (value.count && checkIsNumber(value.count)) {
@@ -276,15 +296,4 @@ const RepoInfoCard = (props) => {
             </Row>
         </ListGroup.Item>
     )
-}
-
-RepoInfoCard.propTypes = {
-    language: PropTypes.string,
-    owner: PropTypes.string,
-    initInfo: PropTypes.shape({
-        name: PropTypes.string,
-        monthly_stars: PropTypes.array,
-    }),
-    nowActive: PropTypes.number,
-    index: PropTypes.number,
 }
