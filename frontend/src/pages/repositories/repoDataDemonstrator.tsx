@@ -2,21 +2,26 @@ import React from 'react';
 import {Col, Container, Row} from 'react-bootstrap';
 import ReactECharts from 'echarts-for-react';
 
-export const RepoGraphContainer = ({info, title}) => {
+export interface RepoGraphContainerProps {
+    info?: any[],
+    title?: string,
+}
 
-    const dataMonthParser = (info) => {
+export const RepoGraphContainer = (props: RepoGraphContainerProps) => {
+
+    const dataMonthParser = (info: any[]) => {
         return info.map((item, _) => {
             return item.month
         })
     }
 
-    const dataCountParser = (info) => {
+    const dataCountParser = (info: any[]) => {
         return info.map((item, _) => {
             return item.count
         })
     }
 
-    const issueDataParser = (info) => {
+    const issueDataParser = (info: any[] | undefined) => {
         if (typeof info !== 'undefined') {
             return info.map((tempInfo, i) => {
                 return {
@@ -27,8 +32,8 @@ export const RepoGraphContainer = ({info, title}) => {
         } else return []
     }
 
-    const renderData = (info) => {
-        if (info.length) {
+    const renderData = (info: any[] | undefined) => {
+        if (info && info.length) {
             let detailedInfo = issueDataParser(info)
             let xData = dataMonthParser(detailedInfo)
             let yData = dataCountParser(detailedInfo)
@@ -39,7 +44,7 @@ export const RepoGraphContainer = ({info, title}) => {
     }
 
     const render = () => {
-        if (info && info.length) {
+        if (props.info && props.info.length) {
             return (
                 <Container>
                     <Row>
@@ -50,12 +55,12 @@ export const RepoGraphContainer = ({info, title}) => {
                             marginBottom: '10px',
                             marginLeft: '40px',
                         }}>
-                            {title}
+                            {props.title}
                         </Col>
                     </Row>
                     <Row>
                         <Col>
-                            {renderData(info)}
+                            {renderData(props.info)}
                         </Col>
                     </Row>
                 </Container>
@@ -68,19 +73,24 @@ export const RepoGraphContainer = ({info, title}) => {
     return render()
 }
 
-const RepoDataGraph = ({xData, yData}) => {
+interface RepoDataGraphProps {
+    xData: any[],
+    yData: any[],
+}
+
+const RepoDataGraph = (props: RepoDataGraphProps) => {
 
     let options = {
         grid: { top: 10, right: 10, bottom: 50, left: 40 },
         xAxis: {
             type: 'category',
-            data: xData,
+            data: props.xData,
         },
         yAxis: {
             type: 'value',
         },
         series: [{
-            data: yData,
+            data: props.yData,
             type: 'line',
             smooth: 'true',
             animation: false,
