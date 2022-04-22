@@ -11,7 +11,7 @@ import {gsap} from 'gsap';
 import {useIsMobile} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
 import {gitHubLogin} from '../api/githubApi';
-import {createLogoutAction} from '../module/storage/reducers';
+import {createLogoutAction, LoginState} from '../module/storage/reducers';
 import '../style/gfiStyle.css'
 
 import navLogo from '../assets/favicon-thumbnail.png';
@@ -36,12 +36,12 @@ export const GFIHeader = () => {
         checkLogin()
     }, [])
 
-    const hasLogin = useSelector(state => {
+    const hasLogin = useSelector((state: LoginState) => {
         if ('hasLogin' in state) return state.hasLogin
         return undefined
     })
 
-    const userName = useSelector(state => {
+    const userName = useSelector((state: LoginState) => {
         if ('name' in state) return state.name
         return undefined
     })
@@ -50,12 +50,12 @@ export const GFIHeader = () => {
 
     const [popOverToggled, setPopOverToggled] = useState(false)
     const [showPopOver, setShowPopOver] = useState(false)
-    const popOverRef = useRef(null)
-    const loginBtnRef = useRef(null)
+    const popOverRef = useRef<HTMLDivElement>(null)
+    const loginBtnRef = useRef<HTMLDivElement>(null)
 
     const checkIfClosePopOver = (e: MouseEvent) => {
-        const ele = e.target
-        if (popOverRef.current && !popOverRef.current.contains(ele) && !loginBtnRef.current.contains(ele)) {
+        const ele = e.target as Node
+        if (popOverRef.current && !popOverRef.current.contains(ele) && loginBtnRef.current && !loginBtnRef.current.contains(ele)) {
             e.preventDefault()
             e.stopPropagation()
             setShowPopOver(false)
@@ -63,7 +63,7 @@ export const GFIHeader = () => {
     }
 
     useEffect(() => {
-        if (popOverToggled === true) {
+        if (popOverToggled) {
             window.addEventListener('mousedown', (e) => checkIfClosePopOver(e))
         }
         return () => {
@@ -128,6 +128,12 @@ export const GFIHeader = () => {
                             setPopOverToggled(true)
                         }}
                         show={showPopOver}
+                        defaultShow={false}
+                        delay={0}
+                        flip={false}
+                        onHide={undefined}
+                        popperConfig={{}}
+                        target={undefined}
                     >
                         <Button
                             variant={'outline-secondary'}
@@ -174,7 +180,7 @@ export const GFIHeader = () => {
                     <div style={{
                         display: 'inline-block',
                         width: '80%',
-                        textAlign: isMobile ? '': 'right',
+                        textAlign: isMobile ? undefined: 'right',
                     }}>
                         {signInLink()}
                     </div>
@@ -277,15 +283,15 @@ export const GFIHeader = () => {
     const renderDesktopNavbar = () => {
         return (
             <Navbar bg={'light'} sticky={'top'}>
-                {renderNavItem(false)}
+                {renderNavItem()}
             </Navbar>
         )
     }
 
     const renderMobileNavbar = () => {
         return (
-            <Navbar bg={'light'} sticky={'top'} expand={'false'}>
-                {renderNavItem(true)}
+            <Navbar bg={'light'} sticky={'top'} expanded={false}>
+                {renderNavItem()}
             </Navbar>
         )
     }
