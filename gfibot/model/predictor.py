@@ -1,22 +1,15 @@
-import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import accuracy_score
 import os
-import sys
-from pathlib import Path
-import toml
 import math
 import logging
 from datetime import datetime
-
-current_work_dir = os.path.dirname(__file__)
-utpath = os.path.join(current_work_dir, "..")
-sys.path.append(utpath)
-from model import utils
+from gfibot.model import utils
 from gfibot.collections import *
 
 logger = logging.getLogger(__name__)
+current_work_dir = os.path.dirname(__file__)
 
 
 def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
@@ -58,7 +51,7 @@ def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
     return update_set
 
 
-def update_basic_TrainingSummary(
+def update_basic_training_summary(
     update_set: list, min_test_size: int, threshold: int
 ) -> list:
     train_90_add = []
@@ -112,7 +105,7 @@ def update_models(
     else:
         model_90_path = current_work_dir + model_90_path
     model_90 = utils.update_model(model_90_path, threshold, train_90_add, batch_size)
-
+    print(model_90, model_90_path, threshold, train_90_add, batch_size)
     model_full_path = TrainingSummary.objects(threshold=threshold)[0].model_full_file
     if model_full_path == "":
         model_full_path = None
@@ -120,12 +113,16 @@ def update_models(
         model_full_path = current_work_dir + model_full_path
     model_full = utils.update_model(model_full_path, threshold, update_set, batch_size)
 
-    model_90.save_model(current_work_dir + "/model_90_" + str(threshold) + ".model")
-    model_full.save_model(current_work_dir + "/model_full_" + str(threshold) + ".model")
+    model_90.save_model(
+        current_work_dir + "/../../model/model_90_" + str(threshold) + ".model"
+    )
+    model_full.save_model(
+        current_work_dir + "/../../model/model_full_" + str(threshold) + ".model"
+    )
     return model_90
 
 
-def update_peformance_TrainingSummary(
+def update_peformance_training_summary(
     model_90: xgb.core.Booster, batch_size: int, prob_thres: float, threshold: int
 ):
     for i in TrainingSummary.objects(threshold=threshold):
@@ -139,17 +136,17 @@ def update_peformance_TrainingSummary(
         if math.isnan(auc):
             auc = 0.0
 
-        i.model_90_file = "/model_90_" + str(threshold) + ".model"
-        i.model_full_file = "/model_full_" + str(threshold) + ".model"
+        i.model_90_file = "/../../model/model_90_" + str(threshold) + ".model"
+        i.model_full_file = "/../../model/model_full_" + str(threshold) + ".model"
         i.accuracy = accuracy_score(y_test, y_pred)
         i.auc = auc
         i.last_updated = datetime.now()
         i.save()
 
 
-def update_TrainingSummary(
+def update_training_summary(
     threshold: int,
-    min_test_size=100,
+    min_test_size=5,
     dataset_size=20000,
     batch_size=10000,
     prob_thres=0.5,
@@ -174,7 +171,7 @@ def update_TrainingSummary(
             + " issues in Dataset have been checked."
         )
         if update_set != []:
-            train_90_add = update_basic_TrainingSummary(
+            train_90_add = update_basic_training_summary(
                 update_set, min_test_size, threshold
             )
             model_90 = update_models(update_set, train_90_add, batch_size, threshold)
@@ -182,13 +179,13 @@ def update_TrainingSummary(
         ith_batch += 1
         logger.info("Model updated.")
     if need_update == 1:
-        update_peformance_TrainingSummary(model_90, batch_size, prob_thres, threshold)
+        update_peformance_training_summary(model_90, batch_size, prob_thres, threshold)
         logger.info("Performance on each project is updated.")
     else:
         logger.info("No need to update performance.")
 
 
-def update_Prediction(threshold: int):
+def update_prediction(threshold: int):
     model_full_path = (
         current_work_dir
         + TrainingSummary.objects(threshold=threshold)[0].model_full_file
@@ -222,20 +219,6 @@ def update_Prediction(threshold: int):
 
 
 if __name__ == "__main__":
-    BASE_DIR = Path(__file__).parent.parent.absolute()
-    with open(BASE_DIR / "../pyproject.toml", "r") as f:
-        CONFIG = toml.load(f)
-    CONFIG["mongodb"]["db"] = "gfibot-test"
-    """
-    mongoengine.disconnect()
-    mongoengine.connect(
-        CONFIG["mongodb"]["db"],
-        host=CONFIG["mongodb"]["url"],
-        tz_aware=True,
-        uuidRepresentation="standard",
-    )
-    """
-    # TrainingSummary.objects().delete()
     Prediction.objects().delete()
     for threshold in [1, 2, 3, 4, 5]:
         logger.info(
@@ -243,6 +226,6 @@ if __name__ == "__main__":
             + str(threshold)
             + "."
         )
-        update_TrainingSummary(threshold)
-        update_Prediction(threshold)
+        update_training_summary(threshold)
+        update_prediction(threshold)
     logger.info("Done!")

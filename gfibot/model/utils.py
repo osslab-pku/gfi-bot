@@ -1,19 +1,12 @@
 import pandas as pd
-import numpy as np
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import roc_curve
 from sklearn.metrics import auc
-import os
-import sys
 import math
 import xgboost as xgb
 from mongoengine.queryset.visitor import Q
-
-current_work_dir = os.path.dirname(__file__)
-utpath = os.path.join(current_work_dir, "../..")
-sys.path.append(utpath)
 from gfibot.collections import *
 
 
@@ -169,7 +162,6 @@ def get_issue_data(issue: list, threshold: int) -> dict:
         "comment_num": comment_num,
         "event_num": event_num,
     }
-
     return one_issue
 
 
