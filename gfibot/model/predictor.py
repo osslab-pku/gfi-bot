@@ -9,7 +9,6 @@ from gfibot.model import utils
 from gfibot.collections import *
 
 logger = logging.getLogger(__name__)
-current_work_dir = os.path.dirname(__file__)
 
 
 def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
@@ -102,23 +101,19 @@ def update_models(
     model_90_path = TrainingSummary.objects(threshold=threshold)[0].model_90_file
     if model_90_path == "":
         model_90_path = None
-    else:
-        model_90_path = current_work_dir + model_90_path
     model_90 = utils.update_model(model_90_path, threshold, train_90_add, batch_size)
-    print(model_90, model_90_path, threshold, train_90_add, batch_size)
     model_full_path = TrainingSummary.objects(threshold=threshold)[0].model_full_file
     if model_full_path == "":
         model_full_path = None
-    else:
-        model_full_path = current_work_dir + model_full_path
     model_full = utils.update_model(model_full_path, threshold, update_set, batch_size)
-
-    model_90.save_model(
-        current_work_dir + "/../../model/model_90_" + str(threshold) + ".model"
-    )
-    model_full.save_model(
-        current_work_dir + "/../../model/model_full_" + str(threshold) + ".model"
-    )
+    if model_90 is not None:
+        if 1 - os.path.exists("gfi-bot/model"):
+            os.makedirs("gfi-bot/model")
+        model_90.save_model("gfi-bot/model/model_90_" + str(threshold) + ".model")
+    if model_full is not None:
+        if 1 - os.path.exists("gfi-bot/model"):
+            os.makedirs("gfi-bot/model")
+        model_full.save_model("gfi-bot/model/model_full_" + str(threshold) + ".model")
     return model_90
 
 
@@ -136,8 +131,8 @@ def update_peformance_training_summary(
         if math.isnan(auc):
             auc = 0.0
 
-        i.model_90_file = "/../../model/model_90_" + str(threshold) + ".model"
-        i.model_full_file = "/../../model/model_full_" + str(threshold) + ".model"
+        i.model_90_file = "gfi-bot/model/model_90_" + str(threshold) + ".model"
+        i.model_full_file = "gfi-bot/model/model_full_" + str(threshold) + ".model"
         i.accuracy = accuracy_score(y_test, y_pred)
         i.auc = auc
         i.last_updated = datetime.now()
@@ -146,7 +141,7 @@ def update_peformance_training_summary(
 
 def update_training_summary(
     threshold: int,
-    min_test_size=5,
+    min_test_size=1,
     dataset_size=20000,
     batch_size=10000,
     prob_thres=0.5,
@@ -178,7 +173,7 @@ def update_training_summary(
             need_update = 1
         ith_batch += 1
         logger.info("Model updated.")
-    if need_update == 1:
+    if need_update == 1 and model_90 is not None:
         update_peformance_training_summary(model_90, batch_size, prob_thres, threshold)
         logger.info("Performance on each project is updated.")
     else:
@@ -186,10 +181,8 @@ def update_training_summary(
 
 
 def update_prediction(threshold: int):
-    model_full_path = (
-        current_work_dir
-        + TrainingSummary.objects(threshold=threshold)[0].model_full_file
-    )
+    Prediction.objects().delete()
+    model_full_path = TrainingSummary.objects(threshold=threshold)[0].model_full_file
     model_full = xgb.Booster()
     model_full.load_model(model_full_path)
     for i in OpenIssue.objects():
@@ -219,7 +212,6 @@ def update_prediction(threshold: int):
 
 
 if __name__ == "__main__":
-    Prediction.objects().delete()
     for threshold in [1, 2, 3, 4, 5]:
         logger.info(
             "Update TrainingSummary and Prediction for threshold "
