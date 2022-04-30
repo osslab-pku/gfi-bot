@@ -360,6 +360,14 @@ def _update_user_meta(user: User, res: Dict[str, Any]) -> None:
     user.name = res["name"]
 
 
+def _update_user_query(rate_state: dict, res: Dict[str, Any]) -> None:
+    rate_state["remaining"] = res["rateLimit"]["remaining"]
+    rate_state["resetAt"] = res["rateLimit"]["resetAt"]
+    if "cost" not in res:
+        rate_state["cost"] = 0
+    rate_state["cost"] += res["rateLimit"]["cost"]
+
+
 def update_user(token: str, login: str) -> None:
     """Fetch data for a user"""
     # does the user exist?
@@ -373,11 +381,14 @@ def update_user(token: str, login: str) -> None:
 
     user._updated_at = time_now
 
+    rate_state = {}
+
     fetcher = UserFetcher(
         token=token,
         login=login,
         since=since,
         callbacks={
+            "query": lambda res: _update_user_query(rate_state, res),
             "user": lambda res: _update_user_meta(user, res),
             "issues": lambda res: _update_user_issues(user, res),
             "pullRequestContributions": lambda res: _update_user_pulls(user, res),
@@ -392,7 +403,14 @@ def update_user(token: str, login: str) -> None:
     try:
         fetcher.fetch()
         user.save()
-        logger.info("User %s updated since %s", login, since)
+        logger.info(
+            "User %s updated from %s to %s, ratelimit cost=%d remaining=%d",
+            login,
+            since.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            user._updated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            rate_state["cost"],
+            rate_state["remaining"],
+        )
     except Exception as e:
         logger.error("Failed to update user %s", login)
         logger.exception(e)
@@ -440,8 +458,8 @@ def update_repo(token: str, owner: str, name: str) -> None:
                 all_users.add(event["commenter"])
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
 
-    # for user in all_users:
-    # update_user(token, user)
+    for user in all_users:
+        update_user(token, user)
 
 
 if __name__ == "__main__":

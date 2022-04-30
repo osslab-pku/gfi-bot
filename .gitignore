@@ -1,6 +1,9 @@
 # Ignore IDEA related files
 *.idea/
 
+# Ignore VSCode related files
+.vscode/
+
 # Ignore tokens.txt as it is very sensitive
 tokens.txt
 
