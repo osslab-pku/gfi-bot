@@ -3,12 +3,13 @@ import logging
 import argparse
 import numpy as np
 
-from typing import List, Dict, Any, Iterable
+from typing import List, Dict, Any, Iterable, Tuple
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 from gfibot import CONFIG, TOKENS
 from gfibot.collections import *
+from gfibot.data.graphql import UserFetcher
 from gfibot.data.rest import RepoFetcher, logger as rest_logger
 
 
@@ -289,10 +290,112 @@ def update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
     OpenIssue.objects(query & Q(number__in=closed_issue_nums)).delete()
 
 
-def update_user(user: str, since: datetime) -> None:
-    # TODO: We need an efficient approach to fetch user profile from GitHub,
-    #   we may use the GraphQL API with more user-related features than the REST API
-    raise NotImplementedError()
+def _update_user_issues(user: User, res: Dict[str, Any]) -> None:
+    """Update issues for a user."""
+    user.issues = [
+        User.Issue(
+            owner=issue["repository"]["nameWithOwner"].split("/")[0],
+            name=issue["repository"]["nameWithOwner"].split("/")[1],
+            repo_stars=issue["repository"]["stargazerCount"],
+            state=issue["state"],
+            number=issue["number"],
+            created_at=issue["createdAt"],
+        )
+        for issue in res["nodes"]
+    ]
+
+
+def _update_user_pulls(user: User, res: Dict[str, Any]) -> None:
+    """Update pull request contributions for a user."""
+    user.pulls = [
+        User.Pull(
+            owner=pr["pullRequest"]["repository"]["nameWithOwner"].split("/")[0],
+            name=pr["pullRequest"]["repository"]["nameWithOwner"].split("/")[1],
+            repo_stars=pr["pullRequest"]["repository"]["stargazerCount"],
+            state=pr["pullRequest"]["state"],
+            created_at=pr["pullRequest"]["createdAt"],
+            number=pr["pullRequest"]["number"],
+        )
+        for pr in res["nodes"]
+    ]
+
+
+def _update_user_commits(user: User, res: Dict[str, Any]) -> None:
+    """Update commits for a user."""
+    user.commits = []
+    for commit_contrib in res:
+        owner = commit_contrib["repository"]["nameWithOwner"].split("/")[0]
+        name = commit_contrib["repository"]["nameWithOwner"].split("/")[1]
+        repo_stars = commit_contrib["repository"]["stargazerCount"]
+
+        for contrib in commit_contrib["contributions"]["nodes"]:
+            user.commit_contributions.append(
+                User.CommitContribution(
+                    owner=owner,
+                    name=name,
+                    repo_stars=repo_stars,
+                    commit_count=contrib["commitCount"],
+                    created_at=contrib["occurredAt"],
+                )
+            )
+
+
+def _update_user_reviews(user: User, res: Dict[str, Any]) -> None:
+    """Update reviews for a user."""
+    user.pull_reviews = [
+        User.Review(
+            owner=review["repository"]["nameWithOwner"].split("/")[0],
+            name=review["repository"]["nameWithOwner"].split("/")[1],
+            repo_stars=review["repository"]["stargazerCount"],
+            created_at=review["pullRequestReview"]["createdAt"],
+            state=review["pullRequestReview"]["state"],
+            number=review["pullRequestReview"]["pullRequest"]["number"],
+        )
+        for review in res["nodes"]
+    ]
+
+
+def _update_user_meta(user: User, res: Dict[str, Any]) -> None:
+    """Update meta data for a user."""
+    user.name = res["name"]
+
+
+def update_user(token: str, login: str) -> None:
+    """Fetch data for a user"""
+    # does the user exist?
+    user = User.objects(login=login).first()
+    time_now = datetime.utcnow()
+    if user is None:
+        user = User(login=login, _created_at=time_now)
+        since = datetime(2008, 1, 1)  # GitHub was launched in 2008
+    else:
+        since = user._updated_at
+
+    user._updated_at = time_now
+
+    fetcher = UserFetcher(
+        token=token,
+        login=login,
+        since=since,
+        callbacks={
+            "user": lambda res: _update_user_meta(user, res),
+            "issues": lambda res: _update_user_issues(user, res),
+            "pullRequestContributions": lambda res: _update_user_pulls(user, res),
+            "commitContributionsByRepository": lambda res: _update_user_commits(
+                user, res
+            ),
+            "pullRequestReviewContributions": lambda res: _update_user_reviews(
+                user, res
+            ),
+        },
+    )
+    try:
+        fetcher.fetch()
+        user.save()
+        logger.info("User %s updated since %s", login, since)
+    except Exception as e:
+        logger.error("Failed to update user %s", login)
+        logger.exception(e)
 
 
 def update_repo(token: str, owner: str, name: str) -> None:
@@ -338,7 +441,7 @@ def update_repo(token: str, owner: str, name: str) -> None:
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
 
     # for user in all_users:
-    # update_user(user, since)
+    # update_user(token, user)
 
 
 if __name__ == "__main__":
