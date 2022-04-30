@@ -14,6 +14,9 @@ from gql.transport.requests import log as requests_logger
 
 requests_logger.setLevel(logging.WARNING)
 
+# load the graphql schema
+from gfibot import CONFIG
+
 
 class GitHubGraphQLClient(object):
     def __init__(
@@ -28,6 +31,13 @@ class GitHubGraphQLClient(object):
         self._token = github_token
         self._num_retries = num_retries
 
+        try:
+            with open(CONFIG["gfibot"]["github_graphql_schema_path"], "r") as f:
+                self._schema = f.read()
+        except (FileNotFoundError, KeyError) as e:
+            self._logger.info("Could not load schema: %s, fallback to introspection", e)
+            self._schema = None
+
         self._client = Client(
             transport=RequestsHTTPTransport(
                 url="https://api.github.com/graphql",
@@ -35,7 +45,8 @@ class GitHubGraphQLClient(object):
                 verify=True,
                 retries=num_retries,
             ),
-            fetch_schema_from_transport=True,
+            fetch_schema_from_transport=(self._schema is None),
+            schema=self._schema,
         )
 
         self._retry_interval = retry_interval

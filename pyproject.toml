@@ -7,6 +7,7 @@ projects = [
     "pandas-dev/pandas",
     "mui-org/material-ui",
 ]
+github_graphql_schema_path = "gfibot/data/github_graphql_schema.graphql"
 
 [mongodb]
 url = "mongodb://localhost:27017"
