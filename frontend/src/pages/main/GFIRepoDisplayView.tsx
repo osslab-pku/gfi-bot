@@ -1,4 +1,13 @@
-import React, {forwardRef, MouseEventHandler, ReactElement, ReactNode, useEffect, useRef, useState} from 'react';
+import React, {
+	createContext,
+	forwardRef,
+	MouseEventHandler,
+	ReactElement,
+	useContext,
+	useEffect,
+	useRef,
+	useState
+} from 'react';
 import {Row, Col} from 'react-bootstrap';
 
 import '../../style/gfiStyle.css'
@@ -12,10 +21,12 @@ import {useDispatch, useSelector} from 'react-redux';
 import {GFIRootReducers} from '../../module/storage/configureStorage';
 import {createPopoverAction} from '../../module/storage/reducers';
 import {getGFIByRepoName} from '../../api/api';
+import {useIsMobile} from '../app/windowContext';
 
 export interface RepoShouldDisplayPopoverState {
 	shouldDisplayPopover?: boolean,
 	popoverComponent?: ReactElement,
+	popoverID?: string,
 }
 type RepoDisplayChildClickedCallback = (p?: RepoShouldDisplayPopoverState) => void
 type RepoDisplayPanelBasicProp = {panelCallback?: RepoDisplayChildClickedCallback}
@@ -25,6 +36,20 @@ export interface GFIRepoDisplayView {
 	tags?: string[],
 	panels?: ReactElement<RepoDisplayPanelBasicProp>[],
 	style?: any,
+}
+
+const RepoDisplayOverlayIDContext = createContext<string>({} as any)
+
+const RepoDisplayOverlayIDProvider: React.FC<{children: React.ReactNode, id: string}> = ({children, id}) => {
+	return (
+		<RepoDisplayOverlayIDContext.Provider value={id}>
+			{children}
+		</RepoDisplayOverlayIDContext.Provider>
+	)
+}
+
+const useOverlayID = () => {
+	return useContext(RepoDisplayOverlayIDContext)
 }
 
 export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) => {
@@ -41,6 +66,9 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 	})
 	const overlayRef = useRef<HTMLDivElement>(null)
 	const dispatch = useDispatch()
+	const overlayID = `main-overlay-${repoInfo.name}-${repoInfo.owner}`
+
+	const isMobile = useIsMobile()
 
 	useEffect(() => {
 		if (tags) {
@@ -60,7 +88,9 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 							className={'flex-col'}
 							style={i === selectedTag ? {} : {display: 'none'}}
 						>
-							{node}
+							<RepoDisplayOverlayIDProvider id={overlayID}>
+								{node}
+							</RepoDisplayOverlayIDProvider>
 						</div>
 					)
 				})
@@ -121,11 +151,14 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 
 	const renderOverlay = () => {
 		let hidden = !(overlayItem && overlayItem.shouldDisplayPopover)
+		if (overlayItem?.popoverID !== overlayID) {
+			hidden = true
+		}
 	    return (
 		    <GFIOverlay
-			    id={'main-overlay'}
+			    id={overlayID}
 			    direction={'right'}
-			    width={'60%'}
+			    width={isMobile ? '85%': '60%'}
 			    hidden={hidden}
 			    ref={overlayRef}
 			    callback={() => {
@@ -185,10 +218,8 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 	const [displayIssueList, setDisplayIssueList] = useState<number[] | undefined>(issueList)
 
 	useEffect(() => {
-		console.log(displayIssueList, repoInfo)
 		if (!displayIssueList) {
 			getGFIByRepoName(repoInfo.name).then((res) => {
-				console.log(res)
 				if (Array.isArray(res) && res.length) {
 					setDisplayIssueList(res)
 				} else {
@@ -226,7 +257,7 @@ export interface GFIIssueListItem extends RepoDisplayPanelBasicProp {
 const GFIIssueListItem = (props: GFIIssueListItem) => {
 
 	const dispatch = useDispatch()
-
+	const overlayID = useOverlayID()
 	const {repoInfo, issue} = props
 	type IssueState = 'closed' | 'open' | 'resolved'
 	type IssueDisplayData = {
@@ -239,7 +270,6 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 	const [displayData, setDisplayData] = useState<IssueDisplayData>()
 
 	useEffect(() => {
-
 		getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue).then((res) => {
 			if (res.code === 200) {
 				if ('number' in res.result && 'title' in res.result && 'state' in res.result
@@ -312,7 +342,8 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 	const onDetailShow: MouseEventHandler<HTMLDivElement> = (e) => {
 		const callbackProp: RepoShouldDisplayPopoverState = {
 			shouldDisplayPopover: true,
-			popoverComponent: overlayItem()
+			popoverComponent: overlayItem(),
+			popoverID: overlayID,
 		}
 		dispatch(createPopoverAction(callbackProp))
 	}
