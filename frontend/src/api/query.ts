@@ -10,6 +10,7 @@ type RequestParams = {
 	headers?: any,
 	baseURL?: string,
 	onError?: ErrorFunc,
+	customReq?: boolean,
 }
 
 export const asyncRequest = async (params: RequestParams) => {
@@ -17,6 +18,9 @@ export const asyncRequest = async (params: RequestParams) => {
 		let method: HTTPMethods = 'GET'
 		if (params.method !== undefined) {
 			method = params.method
+		}
+		if (params.customReq === undefined) {
+			params.customReq = true
 		}
 
 		const res = await axios({
@@ -27,18 +31,21 @@ export const asyncRequest = async (params: RequestParams) => {
 			headers: params.headers,
 		})
 
-		if (res?.status === 200) {
-			if (res.data.code === 200) {
-				return res.data.result
-			} else if (typeof params.onError === 'function') {
-				return params.onError(res.data)
+		if (params.customReq) {
+			if (res?.status === 200) {
+				if (res.data.code === 200) {
+					return res.data.result
+				} else if (typeof params.onError === 'function') {
+					return params.onError(res.data)
+				} else {
+					return ''
+				}
 			} else {
-				return ''
+				throw new Error('server response failed')
 			}
 		} else {
-			throw new Error('server response failed')
+			return res
 		}
-
 	} catch (error) {
 		if (typeof params.onError === 'function' && error instanceof Error) {
 			params.onError(error)

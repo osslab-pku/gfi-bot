@@ -1,7 +1,13 @@
 import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from 'react-bootstrap';
-import React, {ChangeEvent, createRef, ForwardedRef, forwardRef} from 'react';
+import React, {ChangeEvent, createRef, ForwardedRef, forwardRef, MutableRefObject, useEffect, useRef} from 'react';
 import {checkIsNumber, defaultFontFamily} from '../utils';
 import {gsap} from 'gsap';
+
+import '../style/gfiStyle.css'
+import {useDispatch} from 'react-redux';
+import {createPopoverAction} from '../module/storage/reducers';
+import {store} from '../module/storage/configureStorage';
+import {callback} from 'chart.js/helpers';
 
 export const GFICopyright = () => {
 
@@ -267,7 +273,6 @@ interface GFIProgressBarStates {
 export class GFIProgressBar extends React.Component<GFIProgressBarProps, GFIProgressBarStates> {
 	private readonly barRef: React.RefObject<any>;
 
-
 	constructor(props: GFIProgressBarProps) {
 		super(props)
 		this.barRef = React.createRef()
@@ -330,4 +335,87 @@ export class GFIProgressBar extends React.Component<GFIProgressBarProps, GFIProg
 			}} ref={this.barRef} />
 		)
 	}
+}
+
+export interface GFIOverlay {
+	width?: string,
+	height?: string,
+	direction: 'left' | 'right' | 'top' | 'bottom',
+	children?: React.ReactNode,
+	hidden?: boolean,
+	id: string,
+	callback?: () => void,
+}
+
+export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOverlay, ref) => {
+
+	const selfRef = useRef<HTMLDivElement>(null)
+
+	const {id, width, height, direction, children, hidden, callback} = props
+	const hide = hidden ? 'hidden': ''
+
+	useEffect(() => {
+		const currentRef = (ref as MutableRefObject<HTMLDivElement>).current
+		if (currentRef && !hidden) {
+			document.getElementsByTagName('html')[0].classList.add('scrollbar-hidden')
+			currentRef.style.display = 'block'
+		} else {
+			if (currentRef) {
+				currentRef.style.display = 'none'
+			}
+			document.getElementsByTagName('html')[0].classList.remove('scrollbar-hidden')
+		}
+	}, [hidden, children])
+
+	return (
+		<div id={id} className={`full-overlay ${hide}`} ref={ref} onClick={(e) => {
+			e.stopPropagation()
+			if (ref) {
+				document.getElementsByTagName('html')[0].classList.remove('scrollbar-hidden')
+				const currentRef = (ref as MutableRefObject<HTMLDivElement>).current
+				if (currentRef) {
+					currentRef.style.display = 'none'
+				}
+				if (callback) {
+					callback()
+				}
+			}
+		}}>
+			<div
+				className={`full-overlay-${direction}`}
+				style={{
+					width: width ? width : '100%',
+					height: height ? height : '100%',
+				}}
+				onClick={(e) => e.stopPropagation()}
+			>
+				{children}
+			</div>
+		</div>
+	)
+})
+
+export const GFISimplePagination = (props: {nums: number, onClick: (idx: number) => void}) => {
+
+	const {nums, onClick} = props
+
+	const render = () => {
+		const List = []
+		for (let i = 0; i < nums; i++) {
+			List.push(i)
+		}
+		return List.map((i, idx) => {
+			return (
+				<div onClick={() => {
+					onClick(i)
+				}}/>
+			)
+		})
+	}
+
+	return (
+		<div>
+			{render()}
+		</div>
+	)
 }

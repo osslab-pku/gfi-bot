@@ -1,0 +1,33 @@
+.main-header-container {
+    height: 7rem;
+    background-color: white;
+}
+
+.main-header-form {
+
+}
+
+#main-header-input {
+    flex-grow: 1;
+
+}
+
+#main-header-search {
+    margin-left: auto;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+#main-header-input-text {
+    border-bottom-right-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.main-header-dropdown {
+    font-size: small;
+}
+
+.main-dropdown-tags {
+    font-size: small;
+    margin-right: 0.3rem;
+}
