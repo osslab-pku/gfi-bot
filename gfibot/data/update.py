@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 from gfibot import CONFIG, TOKENS
+from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
 from gfibot.data.graphql import UserFetcher
 from gfibot.data.rest import RepoFetcher, logger as rest_logger
@@ -363,7 +364,7 @@ def _update_user_meta(user: User, res: Dict[str, Any]) -> None:
 def _update_user_query(rate_state: dict, res: Dict[str, Any]) -> None:
     rate_state["remaining"] = res["rateLimit"]["remaining"]
     rate_state["resetAt"] = res["rateLimit"]["resetAt"]
-    if "cost" not in res:
+    if "cost" not in rate_state:
         rate_state["cost"] = 0
     rate_state["cost"] += res["rateLimit"]["cost"]
 
@@ -470,8 +471,12 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
         rest_logger.setLevel(logging.DEBUG)
 
+    # run check_tokens before update
+    failed_tokens = check_tokens()
+    valid_tokens = list(set(TOKENS) - failed_tokens)
+
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         owner, name = project.split("/")
-        update_repo(TOKENS[i % len(TOKENS)], owner, name)
+        update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
 
     logger.info("Done!")

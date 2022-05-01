@@ -120,7 +120,7 @@ class GitHubGraphQLClient(object):
             # token invalid
             except TransportServerError as e:
                 if e.code == 401:
-                    self._logger.error("Unauthenticated: Invalid token %s", self._token)
+                    self._logger.error("Unauthenticated: Invalid token %s", '*' * (len(self._token) - 5) + self._token[-5:])
                     break
                 else:
                     self._logger.error("Unexpected HTTP error: %d", e.code)
