@@ -1,3 +1,6 @@
+// TODO:MSKYurina
+// Refactor using TypeScript
+
 import React, {useEffect, useRef, useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
 
@@ -11,7 +14,7 @@ import {gsap} from 'gsap';
 import {useIsMobile} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
 import {gitHubLogin} from '../api/githubApi';
-import {createLogoutAction, LoginState} from '../module/storage/reducers';
+import {createLogoutAction} from '../module/storage/reducers';
 import '../style/gfiStyle.css'
 
 import navLogo from '../assets/favicon-thumbnail.png';
@@ -26,23 +29,13 @@ export const GFIHeader = () => {
         dispatch(createLogoutAction())
     }
 
-    const checkLogin = () => {
-        // TODO: MSKYurina
-        // currently for debugging
-        logout()
-    }
-
-    useEffect(() => {
-        checkLogin()
-    }, [])
-
-    const hasLogin = useSelector((state: LoginState) => {
-        if ('hasLogin' in state) return state.hasLogin
+    const hasLogin = useSelector(state => {
+        if ('loginReducer' in state && 'hasLogin' in state.loginReducer) return state.loginReducer.hasLogin
         return undefined
     })
 
-    const userName = useSelector((state: LoginState) => {
-        if ('name' in state) return state.name
+    const userName = useSelector(state => {
+        if ('loginReducer' in state && 'name' in state.loginReducer) return state.loginReducer.name
         return undefined
     })
 
@@ -50,12 +43,12 @@ export const GFIHeader = () => {
 
     const [popOverToggled, setPopOverToggled] = useState(false)
     const [showPopOver, setShowPopOver] = useState(false)
-    const popOverRef = useRef<HTMLDivElement>(null)
-    const loginBtnRef = useRef<HTMLDivElement>(null)
+    const popOverRef = useRef(null)
+    const loginBtnRef = useRef(null)
 
-    const checkIfClosePopOver = (e: MouseEvent) => {
-        const ele = e.target as Node
-        if (popOverRef.current && !popOverRef.current.contains(ele) && loginBtnRef.current && !loginBtnRef.current.contains(ele)) {
+    const checkIfClosePopOver = (e) => {
+        const ele = e.target
+        if (popOverRef.current && !popOverRef.current.contains(ele) && !loginBtnRef.current.contains(ele)) {
             e.preventDefault()
             e.stopPropagation()
             setShowPopOver(false)
@@ -63,7 +56,7 @@ export const GFIHeader = () => {
     }
 
     useEffect(() => {
-        if (popOverToggled) {
+        if (popOverToggled === true) {
             window.addEventListener('mousedown', (e) => checkIfClosePopOver(e))
         }
         return () => {
@@ -128,12 +121,6 @@ export const GFIHeader = () => {
                             setPopOverToggled(true)
                         }}
                         show={showPopOver}
-                        defaultShow={false}
-                        delay={0}
-                        flip={false}
-                        onHide={undefined}
-                        popperConfig={{}}
-                        target={undefined}
                     >
                         <Button
                             variant={'outline-secondary'}
@@ -180,7 +167,7 @@ export const GFIHeader = () => {
                     <div style={{
                         display: 'inline-block',
                         width: '80%',
-                        textAlign: isMobile ? undefined: 'right',
+                        textAlign: isMobile ? '': 'right',
                     }}>
                         {signInLink()}
                     </div>
@@ -283,15 +270,15 @@ export const GFIHeader = () => {
     const renderDesktopNavbar = () => {
         return (
             <Navbar bg={'light'} sticky={'top'}>
-                {renderNavItem()}
+                {renderNavItem(false)}
             </Navbar>
         )
     }
 
     const renderMobileNavbar = () => {
         return (
-            <Navbar bg={'light'} sticky={'top'} expanded={false}>
-                {renderNavItem()}
+            <Navbar bg={'light'} sticky={'top'} expand={'false'}>
+                {renderNavItem(true)}
             </Navbar>
         )
     }

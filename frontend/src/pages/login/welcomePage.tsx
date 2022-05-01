@@ -16,12 +16,13 @@ export const LoginRedirect = (props: any) => {
 
 	useEffect(() => {
 		const params = new URLSearchParams(props.location.search)
+		const loginName = params.get('github_login')
 		const userName = params.get('github_name')
 		const userUrl = params.get('github_avatar_url')
 		const userId = params.get('github_id')
 		const userToken = params.get('github_token')
-		if (userId && userName && userToken && userUrl) {
-			dispatch(createLoginAction(userId, userName, userToken, userUrl))
+		if (userId && loginName && userName && userToken && userUrl) {
+			dispatch(createLoginAction(userId, loginName, userName, userToken, userUrl))
 			history.push('/', {justLogin: true})
 		}
 	}, [])

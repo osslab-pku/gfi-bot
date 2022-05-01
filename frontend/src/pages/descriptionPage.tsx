@@ -4,7 +4,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../style/gfiStyle.css';
 import {defaultFontFamily} from '../utils';
 
-import {GFICopyright} from './gfiComponents';
+import {GFICopyright, GFIOverlay} from './gfiComponents';
+import {GFIMainPageHeader} from './main/mainHeader';
+import {GFIRepoDisplayView} from './main/GFIRepoDisplayView';
+import {MockedDisplayViewProp} from '../module/data/mockedData';
 
 // TODO: @MSKYurina
 //       Design and Animation
@@ -33,49 +36,50 @@ export const DescriptionPage: React.FC = () => {
 	const description = 'ML-powered 🤖 for finding and labeling Good First Issues in your GitHub project!'
 
 	return (
-		<Container style={{
-			justifyContent: 'center',
-			alignItems: 'center',
-			marginTop: '7%',
-
-		}}>
-			<Row style={{height: '25%', flexDirection: 'column-reverse'}}>
-				<Col sm={12}>
-					<Row style={{marginTop: 'auto'}}>
-						<Col style={{textAlign: 'center', fontWeight: 'bolder', fontSize: 'xx-large'}}>
-							{welcomeMsg}
-						</Col>
-					</Row>
-				</Col>
-			</Row>
-			<Row style={{marginTop: '20px'}}>
-				<Col sm={4} />
-				<Col sm={4} style={{textAlign: 'center'}}>
-					{description}
-				</Col>
-				<Col sm={4} />
-			</Row>
-			<Row style={{marginTop: '60px'}}>
-				<Col sm={4} style={{minWidth: '300px'}}> <Description title={desFirstTitle} content={desFirstContent}/> </Col>
-				<Col sm={4} style={{minWidth: '300px'}}> <Description title={desSecondTitle} content={desSecondContent}/> </Col>
-				<Col sm={4} style={{minWidth: '300px'}}> <Description title={desThirdTitle} content={desThirdContent}/> </Col>
-			</Row>
-			<Row style={{margin: '60px'}}>
-				<Col style={{
-					textAlign: 'center',
-				}}>
-					<Button variant={'outline-primary'}> Get Started </Button>
-				</Col>
-			</Row>
-			<Row style={{
-				float: 'inline-end',
-				bottom: '0',
+		<div className={'scrollbar-hidden'}>
+			<Container style={{
+				justifyContent: 'center',
+				alignItems: 'center',
+				marginTop: '7%',
 			}}>
-				<Col>
-					<GFICopyright/>
-				</Col>
-			</Row>
-		</Container>
+				<Row style={{height: '25%', flexDirection: 'column-reverse'}}>
+					<Col sm={12}>
+						<Row style={{marginTop: 'auto'}}>
+							<Col style={{textAlign: 'center', fontWeight: 'bolder', fontSize: 'xx-large'}}>
+								{welcomeMsg}
+							</Col>
+						</Row>
+					</Col>
+				</Row>
+				<Row style={{marginTop: '20px'}}>
+					<Col sm={4} />
+					<Col sm={4} style={{textAlign: 'center'}}>
+						{description}
+					</Col>
+					<Col sm={4} />
+				</Row>
+				<Row style={{marginTop: '60px'}}>
+					<Col sm={4} style={{minWidth: '300px'}}> <Description title={desFirstTitle} content={desFirstContent}/> </Col>
+					<Col sm={4} style={{minWidth: '300px'}}> <Description title={desSecondTitle} content={desSecondContent}/> </Col>
+					<Col sm={4} style={{minWidth: '300px'}}> <Description title={desThirdTitle} content={desThirdContent}/> </Col>
+				</Row>
+				<Row style={{margin: '60px'}}>
+					<Col style={{
+						textAlign: 'center',
+					}}>
+						<Button variant={'outline-primary'}> Get Started </Button>
+					</Col>
+				</Row>
+				<Row style={{
+					float: 'inline-end',
+					bottom: '0',
+				}}>
+					<Col>
+						<GFICopyright/>
+					</Col>
+				</Row>
+			</Container>
+		</div>
 	)
 }
 

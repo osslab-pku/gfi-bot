@@ -9,15 +9,16 @@ import {persistor, store} from './module/storage/configureStorage';
 import {PersistGate} from "redux-persist/integration/react";
 import {BrowserRouter, Route} from 'react-router-dom';
 import {CacheRoute, CacheSwitch} from 'react-router-cache-route';
+import {AliveScope} from 'react-activation';
 
 import {DescriptionPage} from './pages/descriptionPage';
 import {GFIHeader} from './pages/gfiHeader';
 import {Repositories} from './pages/repositories/repositories';
 
 import {Container} from 'react-bootstrap';
-import {MainPage} from './pages/mainPage';
+import {MainPage} from './pages/main/mainPage';
 import {LoginRedirect} from './pages/login/welcomePage';
-import {WindowContextProvider} from './pages/app/windowContext';
+import {GlobalRefProvider, WindowContextProvider} from './pages/app/windowContext';
 import {GFIQueryProcessContextProvider} from './pages/app/processStatusProvider';
 
 ReactDOM.render(
@@ -29,18 +30,22 @@ ReactDOM.render(
 			<Provider store={store}>
 				<PersistGate loading={null} persistor={persistor}>
 					<WindowContextProvider>
-						<BrowserRouter>
-							<Container fluid className={'no-gutters mx-0 px-0'}>
-								<GFIHeader />
-								<CacheSwitch>
-									<CacheRoute exact path={'/'} component={MainPage} />
-									<Route path={'/home'} component={DescriptionPage} />
-									<CacheRoute path={'/repos'} component={Repositories} />
-									<Route path={'/login/redirect'} component={LoginRedirect} />
-									<CacheRoute path={'*'} component={MainPage} />
-								</CacheSwitch>
-							</Container>
-						</BrowserRouter>
+						<GlobalRefProvider>
+							<BrowserRouter>
+								<AliveScope>
+									<Container fluid className={'no-gutters mx-0 px-0'}>
+										<GFIHeader />
+										<CacheSwitch>
+											<CacheRoute exact path={'/'} component={MainPage} />
+											<CacheRoute path={'/home'} component={DescriptionPage} />
+											<CacheRoute path={'/repos'} component={Repositories} />
+											<Route path={'/login/redirect'} component={LoginRedirect} />
+											<CacheRoute path={'*'} component={MainPage} />
+										</CacheSwitch>
+									</Container>
+								</AliveScope>
+							</BrowserRouter>
+						</GlobalRefProvider>
 					</WindowContextProvider>
 				</PersistGate>
 			</Provider>
