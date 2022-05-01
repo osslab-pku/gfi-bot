@@ -67,6 +67,7 @@ def mock_mongodb():
         OpenIssue,
         ResolvedIssue,
         Dataset,
+        User,
     ]
     for cls in collections:
         cls.drop_collection()

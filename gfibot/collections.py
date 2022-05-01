@@ -401,26 +401,69 @@ class RepoStar(Document):
 class User(Document):
     """User statistics for RecGFI training (TODO: This documentation is not finalized yet)"""
 
-    class Repo(EmbeddedDocument):
-        name: str = StringField(required=True)
-        created_at: datetime = DateTimeField(required=True)
-
     class Issue(EmbeddedDocument):
+        # repo info
         owner: str = StringField(required=True)
         name: str = StringField(required=True)
-        number: int = IntField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # issue number (state can not be updated incrementally)
+        state: str = StringField(required=True)
+        number: int = IntField(required=True, min_value=0)
         created_at: datetime = DateTimeField(required=True)
 
     class Pull(EmbeddedDocument):
+        # repo info
         owner: str = StringField(required=True)
         name: str = StringField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # pull request number  (state can not be updated incrementally)
+        state: str = StringField(required=True)
         number: int = IntField(required=True)
         created_at: datetime = DateTimeField(required=True)
 
-    created_at: datetime = DateTimeField(required=True)
-    updated_at: datetime = DateTimeField(required=True)
-    username: str = StringField(required=True, unique=True)
-    repos: Repo = EmbeddedDocumentListField(Repo)
+    class Review(EmbeddedDocument):
+        # repo info
+        owner: str = StringField(required=True)
+        name: str = StringField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # review number & state
+        number: int = IntField(required=True)
+        state: str = StringField(required=True)
+        created_at: datetime = DateTimeField(required=True)
+
+    class CommitContribution(EmbeddedDocument):
+        # repo info
+        owner: str = StringField(required=True)
+        name: str = StringField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # commit count
+        commit_count: int = IntField(required=True, min_value=0)
+        created_at: datetime = DateTimeField(required=True)
+
+    _created_at: datetime = DateTimeField(required=True)  # created in the database
+    _updated_at: datetime = DateTimeField(required=True)  # updated in the database
+
+    name: str = StringField(null=True)
+    login: str = StringField(required=True)
+    # issues, issueComments, pulls (use end cursor to paginate)
     issues: Issue = EmbeddedDocumentListField(Issue)
     pulls: Pull = EmbeddedDocumentListField(Pull)
-    meta = {"indexes": [{"fields": ["username"], "unique": True}]}
+    # reviews, commits (use date to paginate)
+    pull_reviews: Review = EmbeddedDocumentListField(Review)
+    commit_contributions: CommitContribution = EmbeddedDocumentListField(
+        CommitContribution
+    )
+
+    meta = {
+        "indexes": [
+            {"fields": ["login"], "unique": True},
+            {"fields": ["issues.owner", "issues.name"]},
+            {"fields": ["issues.created_at"]},
+            {"fields": ["pulls.owner", "pulls.name"]},
+            {"fields": ["pulls.created_at"]},
+            {"fields": ["pull_reviews.owner", "pull_reviews.name"]},
+            {"fields": ["pull_reviews.created_at"]},
+            {"fields": ["commit_contributions.owner", "commit_contributions.name"]},
+            {"fields": ["commit_contributions.created_at"]},
+        ]
+    }

@@ -1,14 +1,17 @@
+import os
 import re
 import logging
 import argparse
 import numpy as np
 
-from typing import List, Dict, Any, Iterable
+from typing import List, Dict, Any, Iterable, Tuple
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 from gfibot import CONFIG, TOKENS
+from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
+from gfibot.data.graphql import UserFetcher
 from gfibot.data.rest import RepoFetcher, logger as rest_logger
 
 
@@ -289,10 +292,136 @@ def update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
     OpenIssue.objects(query & Q(number__in=closed_issue_nums)).delete()
 
 
-def update_user(user: str, since: datetime) -> None:
-    # TODO: We need an efficient approach to fetch user profile from GitHub,
-    #   we may use the GraphQL API with more user-related features than the REST API
-    raise NotImplementedError()
+def _update_user_issues(user: User, res: Dict[str, Any]) -> None:
+    """Update issues for a user."""
+    user.issues = [
+        User.Issue(
+            owner=issue["repository"]["nameWithOwner"].split("/")[0],
+            name=issue["repository"]["nameWithOwner"].split("/")[1],
+            repo_stars=issue["repository"]["stargazerCount"],
+            state=issue["state"],
+            number=issue["number"],
+            created_at=issue["createdAt"],
+        )
+        for issue in res["nodes"]
+    ]
+
+
+def _update_user_pulls(user: User, res: Dict[str, Any]) -> None:
+    """Update pull request contributions for a user."""
+    user.pulls = [
+        User.Pull(
+            owner=pr["pullRequest"]["repository"]["nameWithOwner"].split("/")[0],
+            name=pr["pullRequest"]["repository"]["nameWithOwner"].split("/")[1],
+            repo_stars=pr["pullRequest"]["repository"]["stargazerCount"],
+            state=pr["pullRequest"]["state"],
+            created_at=pr["pullRequest"]["createdAt"],
+            number=pr["pullRequest"]["number"],
+        )
+        for pr in res["nodes"]
+    ]
+
+
+def _update_user_commits(user: User, res: Dict[str, Any]) -> None:
+    """Update commits for a user."""
+    user.commits = []
+    for commit_contrib in res:
+        owner = commit_contrib["repository"]["nameWithOwner"].split("/")[0]
+        name = commit_contrib["repository"]["nameWithOwner"].split("/")[1]
+        repo_stars = commit_contrib["repository"]["stargazerCount"]
+
+        for contrib in commit_contrib["contributions"]["nodes"]:
+            user.commit_contributions.append(
+                User.CommitContribution(
+                    owner=owner,
+                    name=name,
+                    repo_stars=repo_stars,
+                    commit_count=contrib["commitCount"],
+                    created_at=contrib["occurredAt"],
+                )
+            )
+
+
+def _update_user_reviews(user: User, res: Dict[str, Any]) -> None:
+    """Update reviews for a user."""
+    user.pull_reviews = [
+        User.Review(
+            owner=review["repository"]["nameWithOwner"].split("/")[0],
+            name=review["repository"]["nameWithOwner"].split("/")[1],
+            repo_stars=review["repository"]["stargazerCount"],
+            created_at=review["pullRequestReview"]["createdAt"],
+            state=review["pullRequestReview"]["state"],
+            number=review["pullRequestReview"]["pullRequest"]["number"],
+        )
+        for review in res["nodes"]
+    ]
+
+
+def _update_user_meta(user: User, res: Dict[str, Any]) -> None:
+    """Update meta data for a user."""
+    user.name = res["name"]
+
+
+def _update_user_query(rate_state: dict, res: Dict[str, Any]) -> None:
+    rate_state["remaining"] = res["rateLimit"]["remaining"]
+    rate_state["resetAt"] = res["rateLimit"]["resetAt"]
+    if "cost" not in rate_state:
+        rate_state["cost"] = 0
+    rate_state["cost"] += res["rateLimit"]["cost"]
+
+
+def update_user(token: str, login: str) -> None:
+    """Fetch data for a user"""
+    # does the user exist?
+    user = User.objects(login=login).first()
+    time_now = datetime.utcnow()
+    if user is None:
+        user = User(login=login, _created_at=time_now)
+        since = datetime(2008, 1, 1)  # GitHub was launched in 2008
+    else:
+        since = user._updated_at
+
+    user._updated_at = time_now
+
+    # Fix 'rate limit exceed' in CI environment
+    _is_ci = os.environ.get("CI", "")
+    if _is_ci:
+        logger.info("Running in CI environment, overriding 'since' date")
+        since = time_now - timedelta(days=7)
+
+    rate_state = {}
+
+    fetcher = UserFetcher(
+        token=token,
+        login=login,
+        since=since,
+        callbacks={
+            "query": lambda res: _update_user_query(rate_state, res),
+            "user": lambda res: _update_user_meta(user, res),
+            "issues": lambda res: _update_user_issues(user, res),
+            "pullRequestContributions": lambda res: _update_user_pulls(user, res),
+            "commitContributionsByRepository": lambda res: _update_user_commits(
+                user, res
+            ),
+            "pullRequestReviewContributions": lambda res: _update_user_reviews(
+                user, res
+            ),
+        },
+    )
+    try:
+        fetcher.fetch()
+        user.save()
+        logger.info(
+            "User %s updated from %s to %s, ratelimit cost=%d remaining=%d",
+            login,
+            since.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            user._updated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            rate_state["cost"],
+            rate_state["remaining"],
+        )
+    except Exception as e:
+        logger.error("Failed to update user %s", login)
+        logger.exception(e)
 
 
 def update_repo(token: str, owner: str, name: str) -> None:
@@ -337,8 +466,8 @@ def update_repo(token: str, owner: str, name: str) -> None:
                 all_users.add(event["commenter"])
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
 
-    # for user in all_users:
-    # update_user(user, since)
+    for user in all_users:
+        update_user(token, user)
 
 
 if __name__ == "__main__":
@@ -349,8 +478,12 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
         rest_logger.setLevel(logging.DEBUG)
 
+    # run check_tokens before update
+    failed_tokens = check_tokens()
+    valid_tokens = list(set(TOKENS) - failed_tokens)
+
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         owner, name = project.split("/")
-        update_repo(TOKENS[i % len(TOKENS)], owner, name)
+        update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
 
     logger.info("Done!")
