@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 import argparse
@@ -381,6 +382,12 @@ def update_user(token: str, login: str) -> None:
         since = user._updated_at
 
     user._updated_at = time_now
+
+    # Fix 'rate limit exceed' in CI environment
+    _is_ci = os.environ.get("CI", "")
+    if _is_ci:
+        logger.info("Running in CI environment, overriding 'since' date")
+        since = time_now - timedelta(days=7)
 
     rate_state = {}
 

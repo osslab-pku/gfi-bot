@@ -92,7 +92,9 @@ def check_tokens() -> Set[str]:
             logging.error("  Rate limit exceeded!")
 
     if len(failed_tokens) > 0:
-        logging.info("Failed tokens: %s", pformat([_mask_token(x) for x in failed_tokens]))
+        logging.info(
+            "Failed tokens: %s", pformat([_mask_token(x) for x in failed_tokens])
+        )
 
     logging.info("Done!")
 
