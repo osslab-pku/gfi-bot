@@ -5,9 +5,6 @@ import '../style/gfiStyle.css';
 import {defaultFontFamily} from '../utils';
 
 import {GFICopyright, GFIOverlay} from './gfiComponents';
-import {GFIMainPageHeader} from './main/mainHeader';
-import {GFIRepoDisplayView} from './main/GFIRepoDisplayView';
-import {MockedDisplayViewProp} from '../module/data/mockedData';
 
 // TODO: @MSKYurina
 //       Design and Animation
