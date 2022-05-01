@@ -1,6 +1,4 @@
-import React, {createContext, ForwardedRef, RefObject, useContext, useEffect, useRef, useState} from 'react';
-import ReactMarkdown from 'react-markdown';
-import {createAxisLabels} from 'echarts/types/src/coord/axisTickLabelBuilder';
+import React, {createContext, RefObject, useContext, useEffect, useRef, useState} from 'react';
 
 const windowContext = createContext<{width: number, height: number}>({} as any)
 

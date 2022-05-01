@@ -164,6 +164,7 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 			    callback={() => {
 					dispatch(createPopoverAction())
 			    }}
+			    animation={true}
 		    >
 			    {overlayItem?.popoverComponent}
 		    </GFIOverlay>

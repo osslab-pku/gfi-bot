@@ -271,6 +271,7 @@ export const MainPage = () => {
 			return displayRepoInfo.map((item, _) => {
 				return (
 					<GFIRepoDisplayView
+						key={`repo-display-main-${item.name}-${item.owner}`}
 						repoInfo={item}
 						tags={['GFI']}
 						panels={[<GFIIssueMonitor repoInfo={item} />]}

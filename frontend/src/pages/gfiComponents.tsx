@@ -1,6 +1,6 @@
 import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from 'react-bootstrap';
 import React, {ChangeEvent, createRef, ForwardedRef, forwardRef, MutableRefObject, useEffect, useRef} from 'react';
-import {checkIsNumber, defaultFontFamily} from '../utils';
+import {checkIsNumber, checkIsPercentage, defaultFontFamily} from '../utils';
 import {gsap} from 'gsap';
 
 import '../style/gfiStyle.css'
@@ -345,13 +345,14 @@ export interface GFIOverlay {
 	hidden?: boolean,
 	id: string,
 	callback?: () => void,
+	animation?: boolean,
 }
 
 export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOverlay, ref) => {
 
 	const selfRef = useRef<HTMLDivElement>(null)
 
-	const {id, width, height, direction, children, hidden, callback} = props
+	const {id, width, height, direction, children, hidden, callback, animation} = props
 	const hide = hidden ? 'hidden': ''
 
 	useEffect(() => {
@@ -359,11 +360,21 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOver
 		if (currentRef && !hidden) {
 			document.getElementsByTagName('html')[0].classList.add('scrollbar-hidden')
 			currentRef.style.display = 'block'
-		} else {
-			if (currentRef) {
-				currentRef.style.display = 'none'
+
+			// animation
+			if (animation && selfRef.current && direction === 'right' && width && checkIsPercentage(width)) {
+				selfRef.current.style.left = '100%'
+				currentRef.style.overflowX = 'hidden'
+				gsap
+					.to(selfRef.current, {
+						duration: 0.45,
+						left: `${100 - parseFloat(width)}%`,
+						ease: 'power3.out',
+					})
+					.play()
 			}
-			document.getElementsByTagName('html')[0].classList.remove('scrollbar-hidden')
+		} else if (currentRef) {
+			currentRef.style.display = 'none'
 		}
 	}, [hidden, children])
 
@@ -388,6 +399,7 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOver
 					height: height ? height : '100%',
 				}}
 				onClick={(e) => e.stopPropagation()}
+				ref={selfRef}
 			>
 				{children}
 			</div>
