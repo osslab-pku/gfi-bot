@@ -1,6 +1,5 @@
 import {Reducer} from 'redux';
 import {RepoShouldDisplayPopoverState} from '../../pages/main/GFIRepoDisplayView';
-import {ReactElement} from 'react';
 
 export type LoginState = {
 	hasLogin: boolean,
@@ -76,6 +75,7 @@ export const createPopoverAction: (p?: RepoShouldDisplayPopoverState) => Popover
 		type: 'POPOVER',
 		shouldDisplayPopover: p? p.shouldDisplayPopover: false,
 		popoverComponent: p? p.popoverComponent: undefined,
+		popoverID: p? p.popoverID: undefined,
 	}
 }
 
@@ -87,5 +87,6 @@ export const showMainPagePopoverReducer: Reducer<RepoShouldDisplayPopoverState, 
 	return {
 		shouldDisplayPopover: action.shouldDisplayPopover,
 		popoverComponent: action.popoverComponent,
+		popoverID: action.popoverID
 	}
 }
