@@ -7,6 +7,9 @@
 # Ignore tokens.txt as it is very sensitive
 tokens.txt
 
+# Ignore cached graphql schema
+*schema*.graphql
+
 # ---------- The following are Python specific ignore patterns ----------
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -16,9 +16,32 @@ requests_logger.setLevel(logging.WARNING)
 
 # load the graphql schema
 from gfibot import CONFIG
+import requests
 
 
 class GitHubGraphQLClient(object):
+    @staticmethod
+    def _load_graphql_schema(schema_path: str) -> str or None:
+        schema_url = "https://docs.github.com/public/schema.docs.graphql"
+        try:
+            with open(schema_path, "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            logging.info("Could not load schema: %s, getting from GitHub", schema_path)
+            try:
+                r = requests.get(schema_url)
+                if r.status_code == 200:
+                    with open(schema_path, "w") as f:
+                        f.write(r.text)
+                    return r.text
+                else:
+                    raise Exception(
+                        "Could not load schema from GitHub: HTTP %s" % r.status_code
+                    )
+            except Exception as e:
+                logging.error("Could not load schema from GitHub: %s", e)
+                return None
+
     def __init__(
         self,
         github_token: str,
@@ -31,12 +54,15 @@ class GitHubGraphQLClient(object):
         self._token = github_token
         self._num_retries = num_retries
 
+        self._schema = None
         try:
-            with open(CONFIG["gfibot"]["github_graphql_schema_path"], "r") as f:
-                self._schema = f.read()
-        except (FileNotFoundError, KeyError) as e:
-            self._logger.info("Could not load schema: %s, fallback to introspection", e)
-            self._schema = None
+            self._schema = self._load_graphql_schema(
+                CONFIG["gfibot"]["github_graphql_schema_path"]
+            )
+        except KeyError as e:
+            self._logger.error("Schema path not found in config: %s", e)
+        if not self._schema:
+            self._logger.info("Fallback to introspection")
 
         self._client = Client(
             transport=RequestsHTTPTransport(
