@@ -355,6 +355,19 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOver
 	const {id, width, height, direction, children, hidden, callback, animation} = props
 	const hide = hidden ? 'hidden': ''
 
+	const resizeHandler = () => {
+		if (animation && selfRef.current && direction === 'right') {
+			selfRef.current.style.left = ''
+		}
+	}
+
+	useEffect(() => {
+		window.addEventListener('resize', resizeHandler)
+		return () => {
+			window.removeEventListener('resize', resizeHandler)
+		}
+	}, [])
+
 	useEffect(() => {
 		const currentRef = (ref as MutableRefObject<HTMLDivElement>).current
 		if (currentRef && !hidden) {
