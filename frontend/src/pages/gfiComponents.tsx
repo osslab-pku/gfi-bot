@@ -1,5 +1,14 @@
 import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from 'react-bootstrap';
-import React, {ChangeEvent, createRef, ForwardedRef, forwardRef, MutableRefObject, useEffect, useRef} from 'react';
+import React, {
+	ChangeEvent,
+	createRef,
+	ForwardedRef,
+	forwardRef,
+	MutableRefObject,
+	useEffect,
+	useRef,
+	useState
+} from 'react';
 import {checkIsNumber, checkIsPercentage, defaultFontFamily} from '../utils';
 import {gsap} from 'gsap';
 
@@ -375,12 +384,13 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOver
 			currentRef.style.display = 'block'
 
 			// animation
+			// currently only for direction = right
 			if (animation && selfRef.current && direction === 'right' && width && checkIsPercentage(width)) {
 				selfRef.current.style.left = '100%'
 				currentRef.style.overflowX = 'hidden'
 				gsap
 					.to(selfRef.current, {
-						duration: 0.45,
+						duration: 0.4,
 						left: `${100 - parseFloat(width)}%`,
 						ease: 'power3.out',
 					})
@@ -420,9 +430,16 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOver
 	)
 })
 
-export const GFISimplePagination = (props: {nums: number, onClick: (idx: number) => void}) => {
+export const GFISimplePagination = (props: {nums: number, onClick: (idx: number) => void, title?: string[]}) => {
 
-	const {nums, onClick} = props
+	const {nums, onClick, title} = props
+	const [selectedIdx, setSelectedIdx] = useState<number>(0)
+	let showTitle = ''
+	let shouldShowTitle = false
+	if (title && title.length === nums) {
+		showTitle = '-title'
+		shouldShowTitle = true
+	}
 
 	const render = () => {
 		const List = []
@@ -430,16 +447,22 @@ export const GFISimplePagination = (props: {nums: number, onClick: (idx: number)
 			List.push(i)
 		}
 		return List.map((i, idx) => {
+			const isSelected = (idx === selectedIdx) ? 'page-selected': ''
 			return (
-				<div onClick={() => {
-					onClick(i)
-				}}/>
+				<div className={`simple-pagination-item${showTitle} ${isSelected} hoverable`} onClick={() => {
+					if (idx !== selectedIdx) {
+						setSelectedIdx(idx)
+						onClick(idx)
+					}
+				}}>
+					{shouldShowTitle && title && title[idx]}
+				</div>
 			)
 		})
 	}
 
 	return (
-		<div>
+		<div className={'simple-pagination flex-row align-center justify-content-between'}>
 			{render()}
 		</div>
 	)

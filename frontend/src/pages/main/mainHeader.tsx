@@ -83,9 +83,9 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
 	}
 
 	return (
-		<Container className={'main-header-container'}>
-			<Row className={'flex-row align-center full warp'} id={'main-header-container-wrapper'}>
-				<Col className={'flex-row'} sm={5}>
+		<Container className={'main-header-container flex-wrap flex-col'}>
+			<div className={'flex-row align-center full warp'} id={'main-header-container-wrapper'}>
+				<Col className={'flex-row'} style={{ padding: '0' }}>
 					<div className={'flex-col full wrap'}>
 						<div className={'flex-row'}>
 							<Form id={'main-header-input'}>
@@ -159,7 +159,7 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
 						</div>
 					</div>
 				</Col>
-			</Row>
+			</div>
 		</Container>
 	)
 })

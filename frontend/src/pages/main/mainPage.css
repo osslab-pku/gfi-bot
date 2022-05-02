@@ -1,6 +1,8 @@
 .main-header-container {
     height: 7rem;
     background-color: white;
+    padding: 0;
+    margin: 0;
 }
 
 .main-header-form {

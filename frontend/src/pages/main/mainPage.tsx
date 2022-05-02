@@ -1,16 +1,9 @@
-import React, {forwardRef, Key, useEffect, useRef, useState} from 'react';
+import React, {forwardRef, useEffect, useState} from 'react';
 import {useLocation} from 'react-router-dom';
 import {useIsMobile, useWindowSize} from '../app/windowContext';
 import {useDispatch, useSelector} from 'react-redux';
 
-import {Container, Col, Row, Form, InputGroup, Button} from 'react-bootstrap';
-import {gsap} from 'gsap';
-import {ReloadOutlined, UpOutlined, DownOutlined} from '@ant-design/icons';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkGemoji from 'remark-gemoji';
-
-import gfiLogo from '../../assets/gfi-logo.png';
+import {Container, Col, Row} from 'react-bootstrap';
 
 import '../../style/gfiStyle.css'
 import {checkIsNumber, defaultFontFamily} from '../../utils';
@@ -18,23 +11,17 @@ import {checkIsNumber, defaultFontFamily} from '../../utils';
 import {GFINotiToast} from '../login/welcomePage';
 import {GFIAlarm, GFICopyright, GFIPagination} from '../gfiComponents';
 import {
-	getRecommendedRepoInfo,
-	getGFIByRepoName,
-	getRepoNum,
-	getIssueNum,
-	getLanguageTags,
+	getRepoNum, getIssueNum, getLanguageTags,
 	getRepoInfoByNameOrURL, getRepoDetailedInfo, getProcessingSearches
 } from '../../api/api';
-import {checkGithubLogin, getIssueByRepoInfo, userInfo} from '../../api/githubApi';
-import type {LoginState} from '../../module/storage/reducers';
+import {checkGithubLogin, userInfo} from '../../api/githubApi';
 
 import {checkIsGitRepoURL} from '../../utils';
 import {useSucceedQuery} from '../app/processStatusProvider';
 import {createLogoutAction, createPopoverAction} from '../../module/storage/reducers';
 import {GFIMainPageHeader} from './mainHeader';
 
-import {GFIIssueDisplayView} from './GFIIssueDisplayView';
-import {GFIIssueMonitor, GFIRepoDisplayView} from './GFIRepoDisplayView';
+import {GFIIssueMonitor, GFIRepoDisplayView, GFIRepoStaticsDemonstrator} from './GFIRepoDisplayView';
 import {GFIRepoInfo} from '../../module/data/dataModel';
 import {GFIRootReducers, store} from '../../module/storage/configureStorage';
 
@@ -273,8 +260,11 @@ export const MainPage = () => {
 					<GFIRepoDisplayView
 						key={`repo-display-main-${item.name}-${item.owner}`}
 						repoInfo={item}
-						tags={['GFI']}
-						panels={[<GFIIssueMonitor repoInfo={item} />]}
+						tags={['GFI', 'Repo Data']}
+						panels={[
+							<GFIIssueMonitor repoInfo={item} />,
+							<GFIRepoStaticsDemonstrator repoInfo={item} />
+						]}
 						style={{
 							border: '1px solid var(--color-border-default)',
 							borderRadius: '7px',
@@ -283,11 +273,8 @@ export const MainPage = () => {
 					/>
 				)
 			})
-		} else {
-			return (
-				<></>
-			)
 		}
+		return <></>
 	}
 
 	const renderMainArea = () => {
@@ -327,7 +314,6 @@ export const MainPage = () => {
 
 	return (
 		<>
-			<GFIMainPageHeader />
 			<Container className={'single-page'}>
 				<Row style={{
 					marginBottom: alarmConfig.show? '-25px': '0',
@@ -338,6 +324,17 @@ export const MainPage = () => {
 							title={alarmConfig.msg}
 							onClose={() => {setAlarmConfig({show: false, msg: alarmConfig.msg})}}
 						/> : <></>}
+				</Row>
+				<Row>
+					<Col>
+						<Container style={{
+							padding: '0px',
+							marginLeft: '0px',
+							maxWidth: isMobile ? '100%' : '60%',
+						}}>
+							<GFIMainPageHeader />
+						</Container>
+					</Col>
 				</Row>
 				<Row>
 					<GFINotiToast
