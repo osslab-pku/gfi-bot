@@ -28,14 +28,15 @@ if app.debug:
 
 MONGO_URI: Final = "mongodb://localhost:27017/"
 db_client = pymongo.MongoClient(MONGO_URI)
-gfi_db = db_client["gfi-bot"]
+gfi_db = db_client["gfibot"]
 
-db_issue_dataset: Final = "issuedataset"
+db_issue_dataset: Final = "dataset"
 db_issues: Final = "issues"
-db_repos: Final = "repos"
-db_repos_commits: Final = "repos.commits"
-db_repos_issues: Final = "repos.issues"
-db_repos_stars: Final = "repos.stars"
+db_open_issue: Final = "open_issue"
+db_repos: Final = "repo"
+db_repos_commits: Final = "repo_commit"
+db_repos_issues: Final = "repos_issue"
+db_repos_stars: Final = "repos_star"
 db_gfi_users: Final = "gfi-users"
 db_github_tokens: Final = "github-tokens"
 db_gfi_email: Final = "gmail-email"
@@ -67,6 +68,24 @@ def get_repo_num():
     if language != None and language != "":
         res = repos.count_documents({"language": language})
     return {"code": 200, "result": res}
+
+
+@app.route("/api/repos/detail_info_name")
+def get_repo_detail_info_by_name():
+    repo_name = request.args.get("name")
+    repo = gfi_db.get_collection(db_repos).find_one({"name": repo_name})
+    if repo != None:
+        return {"code": 200, "result": {
+            "name": repo["name"],
+            "description": repo["description"],
+            "language": repo["language"],
+            "monthly_stars": repo["monthly_stars"],
+            "monthly_commits": repo["monthly_commits"],
+            "monthly_issues": repo["monthly_issues"],
+            "monthly_pulls": repo["monthly_pulls"],
+        }}
+    else:
+        return {"code": 404, "result": "repo not found"}
 
 
 @app.route("/api/repos/detailed_info")
@@ -126,6 +145,8 @@ def get_repo_info_by_name_or_url():
                 "result": {
                     "name": repo["name"],
                     "owner": repo["owner"],
+                    "description": repo["description"],
+                    "topics": repo["topics"],
                 },
             }
         elif repo_url == "":
@@ -197,19 +218,19 @@ def get_recommend_repo():
     repos = gfi_db.get_collection(db_repos).find({})
     res_list = []
     for repo in repos:
-        res_list.append(
-            {
-                "name": repo["name"],
-                "owner": repo["owner"],
-            }
-        )
+        res_list.append({
+            "name": repo["name"],
+            "owner": repo["owner"],
+            "description": repo["description"],
+            "topics": repo["topics"],
+        })
     res = np.random.choice(res_list, size=1).tolist()[0]
     return {"code": 200, "result": res}
 
 
 @app.route("/api/issue/num")
 def get_issue_num():
-    issues = gfi_db.get_collection(db_issue_dataset)
+    issues = gfi_db.get_collection(db_open_issue)
     return {"code": 200, "result": issues.count_documents({})}
 
 
@@ -289,7 +310,8 @@ def github_login_redirect():
                     ):
                         user_collection.insert_one(user_data)
                     return redirect(
-                        "/login/redirect?github_name={}&github_id={}&github_token={}&github_avatar_url={}".format(
+                        "/login/redirect?github_login={}&github_name={}&github_id={}&github_token={}&github_avatar_url={}".format(
+                            user_res["login"],
                             user_res["name"],
                             user_res["id"],
                             access_token,
@@ -317,12 +339,13 @@ def github_login_redirect():
 
 def get_gfi_by_repo_name(repo_name):
     if repo_name != None:
-        issues = gfi_db.get_collection(db_issue_dataset)
+        issues = gfi_db.get_collection(db_open_issue)
         res = []
         if issues.count_documents({"name": repo_name}) > 0:
             for temp in issues.find({"name": repo_name}):
                 res.append(temp["number"])
-            res = np.random.choice(res, size=5).tolist()
+            res = np.random.choice(res, size=4).tolist()
+            app.logger.info('get_gfi_by_repo_name: {}'.format(res))
             return res
     return []
 
