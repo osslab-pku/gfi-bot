@@ -9,32 +9,36 @@ import React, {
 	useState
 } from 'react';
 import {Row, Col} from 'react-bootstrap';
+import {useDispatch, useSelector} from 'react-redux';
 
-import '../../style/gfiStyle.css'
-import {GFIRepoInfo} from '../../module/data/dataModel';
-import {getIssueByRepoInfo} from '../../api/githubApi';
 import remarkGfm from 'remark-gfm';
 import remarkGemoji from 'remark-gemoji';
 import ReactMarkdown from 'react-markdown';
-import {GFIOverlay} from '../gfiComponents';
-import {useDispatch, useSelector} from 'react-redux';
+
+import '../../style/gfiStyle.css'
+import {GFIOverlay, GFISimplePagination} from '../gfiComponents';
+import {GFIRepoInfo} from '../../module/data/dataModel';
+import {getIssueByRepoInfo} from '../../api/githubApi';
 import {GFIRootReducers} from '../../module/storage/configureStorage';
 import {createPopoverAction} from '../../module/storage/reducers';
-import {getGFIByRepoName} from '../../api/api';
+import {getGFIByRepoName, getRepoDetailedInfoByName} from '../../api/api';
 import {useIsMobile} from '../app/windowContext';
+import {RepoGraphContainer} from '../repositories/repoDataDemonstrator';
+import {GetRepoDetailedInfo} from '../../module/data/dataModel';
 
 export interface RepoShouldDisplayPopoverState {
 	shouldDisplayPopover?: boolean,
 	popoverComponent?: ReactElement,
 	popoverID?: string,
 }
-type RepoDisplayChildClickedCallback = (p?: RepoShouldDisplayPopoverState) => void
-type RepoDisplayPanelBasicProp = {panelCallback?: RepoDisplayChildClickedCallback}
 
-export interface GFIRepoDisplayView {
+export interface GFIRepoBasicProp {
 	repoInfo: GFIRepoInfo,
+}
+
+export interface GFIRepoDisplayView extends GFIRepoBasicProp {
 	tags?: string[],
-	panels?: ReactElement<RepoDisplayPanelBasicProp>[],
+	panels?: ReactElement[],
 	style?: any,
 }
 
@@ -158,7 +162,7 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 		    <GFIOverlay
 			    id={overlayID}
 			    direction={'right'}
-			    width={isMobile ? '85%': '60%'}
+			    width={isMobile ? '90%': '60%'}
 			    hidden={hidden}
 			    ref={overlayRef}
 			    callback={() => {
@@ -208,14 +212,13 @@ const PanelTag = (props: {name: string, id: number, selected: boolean, onClick: 
 	)
 }
 
-export interface GFIIssueMonitor extends RepoDisplayPanelBasicProp {
-	repoInfo: GFIRepoInfo,
+export interface GFIIssueMonitor extends GFIRepoBasicProp {
 	issueList?: number[],
 }
 
 export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 
-	const {repoInfo, issueList, panelCallback} = props
+	const {repoInfo, issueList} = props
 	const [displayIssueList, setDisplayIssueList] = useState<number[] | undefined>(issueList)
 
 	useEffect(() => {
@@ -237,7 +240,6 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 					repoInfo={repoInfo}
 					issue={issue}
 					key={`gfi-issue-${repoInfo.name}-${issue}-${i}`}
-					panelCallback={panelCallback}
 				/>
 			)
 		})
@@ -250,9 +252,17 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 	)
 })
 
-export interface GFIIssueListItem extends RepoDisplayPanelBasicProp {
-	repoInfo: GFIRepoInfo,
+export interface GFIIssueListItem extends GFIRepoBasicProp {
 	issue: number,
+}
+
+type IssueState = 'closed' | 'open' | 'resolved'
+interface IssueDisplayData {
+	issueId: number,
+	title: string,
+	body: string,
+	state: IssueState,
+	url: string,
 }
 
 const GFIIssueListItem = (props: GFIIssueListItem) => {
@@ -260,14 +270,6 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 	const dispatch = useDispatch()
 	const overlayID = useOverlayID()
 	const {repoInfo, issue} = props
-	type IssueState = 'closed' | 'open' | 'resolved'
-	type IssueDisplayData = {
-		issueId: number,
-		title: string,
-		body: string,
-		state: IssueState,
-		url: string,
-	}
 	const [displayData, setDisplayData] = useState<IssueDisplayData>()
 
 	useEffect(() => {
@@ -308,42 +310,10 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 		)
 	}
 
-	const overlayItem = () => {
-		return (
-			<div className={'flex-col repo-overlay-item'} style={{
-				margin: '1rem 1.5rem',
-			}}>
-				<div className={'repo-display-info-title flex-row'}>
-					<p> {repoInfo.owner} </p>
-					<p> {' / '} </p>
-					<p> {repoInfo.name} </p>
-				</div>
-				<div> {repoInfo?.description} </div>
-				<div className={'flex-row align-center'} style={{
-					fontWeight: 'bold',
-					fontSize: 'larger',
-					margin: '1rem 0',
-				}}>
-					{issueBtn()}
-					<div style={{
-						marginLeft: '0.7rem',
-					}}>
-						{displayData?.title}
-					</div>
-				</div>
-				<ReactMarkdown
-					children={displayData ? displayData.body : ''}
-					remarkPlugins={[remarkGfm, remarkGemoji]}
-					className={'markdown'}
-				/>
-			</div>
-		)
-	}
-
 	const onDetailShow: MouseEventHandler<HTMLDivElement> = (e) => {
 		const callbackProp: RepoShouldDisplayPopoverState = {
 			shouldDisplayPopover: true,
-			popoverComponent: overlayItem(),
+			popoverComponent: <IssueOverlayItem repoInfo={repoInfo}  issueBtn={issueBtn} displayData={displayData} />,
 			popoverID: overlayID,
 		}
 		dispatch(createPopoverAction(callbackProp))
@@ -369,3 +339,116 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 		</>
 	)
 }
+
+interface IssueOverlayItem extends GFIRepoBasicProp {
+	issueBtn: () => ReactElement,
+	displayData?: IssueDisplayData,
+}
+
+const IssueOverlayItem = (props: IssueOverlayItem) => {
+
+	const {repoInfo, issueBtn, displayData} = props
+	const isMobile = useIsMobile()
+	const flexDirection = isMobile ? 'col': 'row'
+
+	return (
+		<div className={'flex-col repo-overlay-item'} style={{
+			margin: '1rem 1.5rem',
+		}}>
+			<div className={`repo-display-info-title flex-${flexDirection}`}>
+				<p> {repoInfo.owner} </p>
+				{ !isMobile && <p> {' / '} </p> }
+				<p style={{ margin: '0' }}> {repoInfo.name} </p>
+			</div>
+			<div style={{ fontFamily: 'var(--default-font-family)' }}>
+				{repoInfo?.description}
+			</div>
+			<div className={'flex-row align-center'} style={{
+				fontWeight: 'bold',
+				fontSize: 'larger',
+				margin: '1rem 0',
+			}}>
+				{issueBtn()}
+				<div style={{
+					marginLeft: '0.7rem',
+				}}>
+					{displayData?.title}
+				</div>
+			</div>
+			<ReactMarkdown
+				children={displayData ? displayData.body : ''}
+				remarkPlugins={[remarkGfm, remarkGemoji]}
+				className={'markdown'}
+			/>
+		</div>
+	)
+}
+
+export interface GFIRepoStaticsDemonstrator extends GFIRepoBasicProp {}
+
+export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemonstrator, ref) => {
+
+	const {repoInfo} = props
+	const [displayInfo, setDisplayInfo] = useState<GetRepoDetailedInfo>()
+
+	type DataTag = 'monthly_stars' | 'monthly_commits' | 'monthly_issues' | 'monthly_pulls'
+	type DisplayData = {[key in DataTag]?: any[]}
+	const [displayData, setDisplayData] = useState<DisplayData>()
+	const dataCategories = ['monthly_stars', 'monthly_commits', 'monthly_issues', 'monthly_pulls']
+	const dataTitle = ['Monthly Stars', 'Monthly Commits', 'Monthly Issues', 'Monthly Pulls']
+
+	const [selectedIdx, setSelectedIdx] = useState(0)
+
+	useEffect(() => {
+		getRepoDetailedInfoByName(repoInfo.name).then((res) => {
+			const result = res as GetRepoDetailedInfo
+			setDisplayInfo(result)
+		})
+	}, [])
+
+	useEffect(() => {
+		if (displayInfo) {
+			let info: DisplayData = {}
+			let key: keyof typeof displayInfo
+			for (key in displayInfo) {
+				if (dataCategories.includes(key)) {
+					info[key as DataTag] = displayInfo[key] as any[]
+				}
+			}
+			setDisplayData(info)
+		}
+	}, [displayInfo])
+
+	const RenderGraphs = () => {
+	    return dataCategories.map((item, idx) => {
+		    if (displayData && Object.keys(displayData).includes(item)) {
+			    return (
+					<div style={idx === selectedIdx ? {}: {display: 'none'}}>
+						<RepoGraphContainer
+							title={dataTitle[idx]}
+							info={displayData[item as DataTag]}
+						/>
+					</div>
+			    )
+		    } else {
+				return <></>
+		    }
+	    })
+	}
+
+	return (
+		<div className={'issue-demo-container'}>
+			{RenderGraphs()}
+			<div className={'flex-row page-footer-container'}>
+				<GFISimplePagination
+					nums={displayData ? Object.keys(displayData).length: 1}
+					onClick={(idx) => {
+						setSelectedIdx(idx)
+					}}
+					title={dataTitle}
+				/>
+			</div>
+
+		</div>
+	)
+})

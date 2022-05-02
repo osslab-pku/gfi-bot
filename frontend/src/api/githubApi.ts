@@ -26,7 +26,7 @@ export const checkGithubLogin = async () => {
 	const userToken = store.getState().loginReducer.token
 	const userLoginName = store.getState().loginReducer.loginName
 	if (userToken) {
-		const res = await asyncRequest({
+		const res = await asyncRequest<any>({
 			url: `https://api.github.com/users/${userLoginName}`,
 			headers: {
 				'Authorization': `token ${userToken}`,
@@ -41,7 +41,7 @@ export const checkGithubLogin = async () => {
 }
 
 const gitHubOAuthLogin = async () => {
-	return await asyncRequest({
+	return await asyncRequest<string>({
 		url: '/api/user/github/login',
 		baseURL: DEV_URL
 	})

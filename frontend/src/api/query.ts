@@ -13,7 +13,9 @@ type RequestParams = {
 	customReq?: boolean,
 }
 
-export const asyncRequest = async (params: RequestParams) => {
+export type GFIReqFunc = <T>(params: RequestParams) => Promise<T>
+
+export const asyncRequest: GFIReqFunc = async <T>(params: RequestParams) => {
 	try {
 		let method: HTTPMethods = 'GET'
 		if (params.method !== undefined) {

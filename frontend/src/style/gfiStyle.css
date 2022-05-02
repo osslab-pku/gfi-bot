@@ -7,6 +7,7 @@
     --color-default-closed: #d46868;
     --color-default-resolved: #a0d468;
     --color-default-open: #1A7F37;
+    --color-simple-page-bg: #afb8c1;
     --default-font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,'Helvetica Neue',sans-serif;
 }
 
@@ -107,38 +108,38 @@ code {
 }
 
 .markdown > h6 {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: bold;
     color: var(--color-fg-default);
 }
 
 .markdown > h5 {
-    font-size: 0.9rem;
-    font-weight: bold;
-}
-
-.markdown > h4 {
     font-size: 1rem;
     font-weight: bold;
 }
 
-.markdown > h3 {
+.markdown > h4 {
     font-size: 1.1rem;
     font-weight: bold;
 }
 
-.markdown > h2 {
+.markdown > h3 {
     font-size: 1.2rem;
     font-weight: bold;
 }
 
-.markdown > h1 {
+.markdown > h2 {
     font-size: 1.3rem;
     font-weight: bold;
 }
 
+.markdown > h1 {
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
 .markdown > p {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-family: var(--default-font-family);
 }
 
@@ -148,7 +149,7 @@ code {
 }
 
 .markdown pre {
-    background-color: var(--color-canvas-subtle);
+    background-color: var(--color-border-default);
     color: var(--color-fg-default);
     padding: 10px;
     border-radius: 5px;
@@ -348,6 +349,7 @@ button.gfi-rounded:active {
 .repo-display {
     box-sizing: border-box;
     overflow: hidden;
+    font-family: var(--default-font-family);
 }
 
 .repo-display-info {
@@ -485,7 +487,7 @@ button.gfi-rounded:active {
 div.full-overlay {
     position: fixed;
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.3);
     top: 0;
     left: 0;
     z-index: 999999;
@@ -496,6 +498,7 @@ div.full-overlay {
 div.full-overlay > div {
     position: absolute;
     background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -530,4 +533,42 @@ div.full-overlay-bottom {
 .scrollbar-hidden {
     -ms-overflow-style: none;   /* IE and Edge */
     scrollbar-width: none;      /* Firefox */
+}
+
+.simple-pagination-item {
+    background-color: var(--color-simple-page-bg);
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin-right: 5px;
+}
+
+.simple-pagination-item.page-selected {
+    background-color: var(--color-fg-default);
+}
+
+.page-footer-container {
+    background-color: var(--color-canvas-subtle);
+    padding: 0.6rem 16px 0;
+}
+
+.simple-pagination-item-title {
+    background-color: var(--color-canvas-subtle);
+    color: #8c9196;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    font-family: var(--default-font-family);
+    margin-right: 0.3rem;
+    padding: 0 0.7rem 0.4rem;
+}
+
+.simple-pagination-item-title.page-selected {
+    border: 1px solid var(--color-border-default);
+    background-color: white;
+}
+
+.issue-demo-container {
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border-default);
+    margin-bottom: -3px;
 }
