@@ -8,6 +8,10 @@
     --color-default-resolved: #a0d468;
     --color-default-open: #1A7F37;
     --color-simple-page-bg: #afb8c1;
+    --color-bg-succeed: #d1e7dd;
+    --color-fg-succeed: #0f5132;
+    --color-bg-pending: #bacbe6;
+    --color-fg-pending: #084298;
     --default-font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,'Helvetica Neue',sans-serif;
 }
 
@@ -571,4 +575,192 @@ div.full-overlay-bottom {
     padding-top: 1rem;
     border-top: 1px solid var(--color-border-default);
     margin-bottom: -3px;
+}
+
+.transition-01 {
+    transition: 0.1s;
+}
+
+.progress-bar-thin {
+    border-radius: 0;
+    height: 4px;
+    width: 100%;
+}
+
+.gfi-hidden-with-space {
+    opacity: 0;
+}
+
+a.account-nav {
+    padding: 0.3rem 0.7rem;
+}
+
+.account-nav {
+    color: #8d9196;
+    font-size: 1rem;
+}
+
+.account-nav-container {
+    padding: 0.3rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.account-page-sub-container {
+    margin-top: 25px;
+}
+
+#account-page-nav {
+    margin-top: 10px;
+}
+
+#portal-side-bar-userinfo {
+    border: 1px solid var(--color-border-default);
+    padding: 0.7rem;
+    border-radius: 7px;
+    background-color: var(--color-canvas-subtle);
+    margin-bottom: 1rem;
+}
+
+#portal-side-bar-userinfo > img {
+    border-radius: 999px;
+    width: 4.5rem;
+    height: 4.5rem;
+    margin-left: auto;
+}
+
+#portal-side-bar-userinfo-name > div:first-child {
+    font-size: 1.1rem;
+    font-weight: lighter;
+}
+
+#portal-side-bar-userinfo-name > div:last-child {
+    font-size: 1.3rem;
+}
+
+.account-page-panel-title {
+    font-size: 1.7rem;
+    font-family: var(--default-font-family);
+    color: var(--color-fg-default);
+}
+
+#project-add-comp-tips > p {
+    margin: 0;
+}
+
+#project-add-comp-tips {
+    background-color: var(--color-bg-succeed);
+    color: var(--color-fg-succeed);
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 5px;
+    font-size: 1.1rem;
+    margin-top: 0.7rem;
+}
+
+#project-adder {
+    padding: 0.3rem 0.7rem;
+    border: 2px solid var(--color-border-default);
+    border-radius: 5px;
+    margin-top: 1rem;
+}
+
+#project-adder-label {
+    color: #7a7d81;
+    font-weight: bold;
+}
+
+#project-adder-form {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+#project-add-comp-added {
+    margin-top: 1rem;
+}
+
+#project-add-comp-tutorial {
+    margin-top: 0.3rem;
+}
+
+#project-add-alarm {
+    font-size: 0.9rem;
+    color: var(--color-default-closed);
+    text-decoration: underline;
+}
+
+#project-add-overlay-warn-tip {
+    height: 7rem;
+}
+
+.fit {
+    width: fit-content;
+    height: fit-content;
+}
+
+.popover {
+    max-width: 1000px;
+}
+
+@media screen and (max-width: 1000px) {
+    .account-page-sub-container {
+        margin-left: 0;
+        margin-bottom: 0;
+        max-width: 100vw;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .account-page-sub-container-row {
+        flex-direction: column;
+    }
+    #project-add-comp-title {
+        margin-top: 1rem;
+    }
+}
+
+.repo-history-tag {
+    border: 2px solid var(--color-border-default);
+    border-radius: 7px;
+    padding: 0.4rem 0.7rem;
+    margin-right: 1rem;
+    margin-bottom: 0.7rem;
+    background-color: var(--color-canvas-subtle);
+}
+
+.repo-history-tag > div:first-child {
+    color: #7a7d81;
+}
+
+.repo-history-tag > div:last-child {
+    font-size: larger;
+}
+
+.repo-history-tag.query-pending {
+    color: var(--color-fg-pending);
+    border-color: var(--color-fg-pending);
+    background-color: var(--color-bg-pending);
+}
+
+.repo-history-tag.query-pending > div:first-child {
+    color: var(--color-fg-pending);
+}
+
+.repo-history-tag.query-succeed {
+    color: var(--color-fg-succeed);
+    background-color: var(--color-bg-succeed);
+    border-color: var(--color-fg-succeed);
+}
+
+.repo-history-tag.query-succeed > div:first-child {
+    color: var(--color-fg-succeed);
+}
+
+#account-page-panel-tutorial {
+    margin-top: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+#account-page-panel-tutorial > p {
+    margin: 0;
 }

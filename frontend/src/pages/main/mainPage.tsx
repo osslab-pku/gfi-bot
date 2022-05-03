@@ -8,25 +8,18 @@ import {Container, Col, Row} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 import {checkIsNumber, defaultFontFamily} from '../../utils';
 
-import {GFINotiToast} from '../login/welcomePage';
-import {GFIAlarm, GFICopyright, GFIPagination} from '../gfiComponents';
-import {
-	getRepoNum, getIssueNum, getLanguageTags,
-	getRepoInfoByNameOrURL, getRepoDetailedInfo, getProcessingSearches
-} from '../../api/api';
-import {checkGithubLogin, userInfo} from '../../api/githubApi';
+import {GFINotiToast} from '../login/GFILoginComponents';
+import {GFIAlarm, GFICopyright, GFIPagination} from '../GFIComponents';
+import {getRepoNum, getIssueNum, getLanguageTags, getRepoInfoByNameOrURL, getRepoDetailedInfo} from '../../api/api';
+import {checkGithubLogin} from '../../api/githubApi';
 
 import {checkIsGitRepoURL} from '../../utils';
-import {useSucceedQuery} from '../app/processStatusProvider';
-import {createLogoutAction, createPopoverAction} from '../../module/storage/reducers';
-import {GFIMainPageHeader} from './mainHeader';
+import {createGlobalProgressBarAction, createLogoutAction, createPopoverAction} from '../../module/storage/reducers';
+import {GFI_REPO_FILTER_NONE, GFIMainPageHeader} from './mainHeader';
 
 import {GFIIssueMonitor, GFIRepoDisplayView, GFIRepoStaticsDemonstrator} from './GFIRepoDisplayView';
 import {GFIRepoInfo} from '../../module/data/dataModel';
-import {GFIRootReducers, store} from '../../module/storage/configureStorage';
-
-// TODO: MSKYurina
-// Animation & Searching History
+import {GFIRootReducers} from '../../module/storage/configureStorage';
 
 export const MainPage = () => {
 
@@ -42,13 +35,6 @@ export const MainPage = () => {
 
 	let [showLoginMsg, setShowLoginMsg] = useState(false)
 	let [showSearchMsg, setShowSearchMsg] = useState(false)
-
-	const succeedQuery = useSucceedQuery()
-	useEffect(() => {
-		checkGithubLogin().then((res) => {
-
-		})
-	}, [succeedQuery])
 
 	const isMobile = useIsMobile()
 	const {width, height} = useWindowSize()
@@ -68,19 +54,11 @@ export const MainPage = () => {
 		url: '',
 		topics: [],
 	}
-
 	let [displayRepoInfo, setDisplayRepoInfo] = useState<GFIRepoInfo[] | undefined>([emptyRepoInfo])
-
-	let [alarmConfig, setAlarmConfig] = useState({
-		show: false,
-		msg: ''
-	})
+	let [alarmConfig, setAlarmConfig] = useState({ show: false, msg: '' })
 
 	const showAlarm = (msg: string) => {
-		setAlarmConfig({
-			show: true,
-			msg: msg,
-		})
+		setAlarmConfig({ show: true, msg: msg })
 	}
 
 	interface LocationStateLoginType {
@@ -93,7 +71,7 @@ export const MainPage = () => {
 
 	useEffect(() => {
 		fetchRepoInfoList(1)
-		getRepoNum().then((res) => {
+		getRepoNum(selectedTag).then((res) => {
 			if (res && Number.isInteger(res)) {
 				setTotalRepos(res)
 			}
@@ -104,10 +82,11 @@ export const MainPage = () => {
 		}
 	}, [])
 
-	const repoCapacity = 4
+	const repoCapacity = 5
 	let [pageIdx, setPageIdx] = useState(1)
 	let [totalRepos, setTotalRepos] = useState(0)
-	let [repoTag, setRepoTag] = useState('')
+	let [selectedTag, setSelectedTag] = useState<string>()
+	let [selectedFilter, setSelectedFilter] = useState<string>()
 	let [pageFormInput, setPageFormInput] = useState<string | number | undefined>(0)
 
 	const pageNums = () => {
@@ -124,33 +103,23 @@ export const MainPage = () => {
 		}
 	}
 
-	const onKanbanClicked: React.MouseEventHandler<HTMLButtonElement> = (e) => {
-		const element = e.target as HTMLElement
-		const tag = element.innerText
-		setDisplayRepoInfo([])
-		getRepoNum(tag)
-			.then((res) => {
-				if (res && Number.isInteger(res)) {
-					setTotalRepos(res)
-					setRepoTag(tag)
-				} else {
-					setTotalRepos(0)
-				}
-				setPageIdx(1)
-			})
-	}
+	useEffect(() => {
+		fetchRepoInfoList(1, selectedTag, selectedFilter)
+	}, [selectedTag, selectedFilter])
 
 	useEffect(() => {
-		fetchRepoInfoList(1, repoTag)
-	}, [repoTag])
-
-	useEffect(() => {
-		fetchRepoInfoList(pageIdx, repoTag)
+		fetchRepoInfoList(pageIdx, selectedTag, selectedFilter)
 	}, [pageIdx])
 
-	const fetchRepoInfoList = (pageNum: number, tag?: string) => {
+	const fetchRepoInfoList = (pageNum: number, tag?: string, filter?: string) => {
 		let beginIdx = (pageNum - 1) * repoCapacity
-		getRepoDetailedInfo(beginIdx, repoCapacity, tag).then((repoList) => {
+		dispatch(createGlobalProgressBarAction({hidden: false}))
+		getRepoNum(selectedTag).then((res) => {
+			if (res && Number.isInteger(res)) {
+				setTotalRepos(res)
+			}
+		})
+		getRepoDetailedInfo(beginIdx, repoCapacity, tag, filter).then((repoList) => {
 			if (repoList && Array.isArray(repoList)) {
 				const repoInfoList = repoList.map((repo, i) => {
 					const parsedRepo = JSON.parse(repo)
@@ -167,6 +136,7 @@ export const MainPage = () => {
 					}
 				})
 				setDisplayRepoInfo(repoInfoList)
+				dispatch(createGlobalProgressBarAction({hidden: true}))
 			}
 		})
 	}
@@ -180,77 +150,24 @@ export const MainPage = () => {
 		}
 	}
 
-	let [searchURL, setSearchURL] = useState('')
-	let [queryNums, setQueryNums] = useState(0)
-	let [succeedQueries, setSucceedQueries] = useState([])
-	let [searchStarted, setSearchStarted] = useState(false)
-	let [intervalId, setIntervalId] = useState<ReturnType<typeof setTimeout>>()
-
-	const showSearchResult = () => {
-		if (succeedQueries.length && searchStarted) {
-			const repoInfo = succeedQueries.map((item, _) => {
-				return {
-					name: item,
-					owner: '',
-					url: '',
-				}
-			})
-			// if (repoInfo !== searchedRepoInfo) {
-			// 	setSearchedRepoInfo(repoInfo)
-			// }
-			setSearchStarted(false)
-			setShowSearchMsg(false)
+	const handleSearchBtn = (s: string) => {
+		let repoURL: string | undefined = s
+		let repoName
+		if (checkIsGitRepoURL(s)) {
+			repoURL = undefined
+			repoName = s
 		}
-	}
-
-	useEffect(() => {
-		if (queryNums === 0 && searchStarted) {
-			clearInterval(intervalId as ReturnType<typeof setTimeout>)
-			getProcessingSearches(true).then(() => {})
-			setShowSearchMsg(true)
-		}
-	}, [queryNums])
-
-	const handleSearchBtn = () => {
-		if (checkIsGitRepoURL(searchURL)) {
-			getRepoInfoByNameOrURL('', searchURL).then((res) => {
-				if (res && 'name' in res && 'owner' in res) {
-
-				} else {
-					const [hasLogin, userName] = userInfo()
-					if (!hasLogin) {
-						setAlarmConfig({
-							show: true,
-							msg: 'You Need to Login For Data Retrieving',
-						})
-					} else {
-						if (!searchStarted) {
-							setSearchStarted(true)
-							const id = setInterval(() => {
-								getProcessingSearches(false).then((res) => {
-									if ('user_query_num' in res) {
-										if (res.user_query_num !== 0) {
-											setAlarmConfig({
-												show: true,
-												msg: `${res.user_query_num} Requests Under Processing`,
-											})
-										}
-										setQueryNums(res.user_query_num)
-										if (queryNums === 0) {
-											clearInterval(intervalId as ReturnType<typeof setTimeout>)
-										}
-									}
-									if ('user_succeed_queries' in res) {
-										setSucceedQueries(res.user_succeed_queries)
-									}
-								})
-							}, 500)
-							setIntervalId(id)
-						}
-					}
-				}
-			})
-		}
+		dispatch(createGlobalProgressBarAction({hidden: false}))
+		getRepoInfoByNameOrURL(repoName, repoURL).then((res) => {
+			if (res) {
+				setTotalRepos(1)
+				setDisplayRepoInfo([res])
+				setShowSearchMsg(true)
+			} else {
+				showAlarm('This repository hasn\'t been added to our database yet. Please connect with its maintainers.')
+			}
+			dispatch(createGlobalProgressBarAction({hidden: true}))
+		})
 	}
 
 	const renderInfoComponent = () => {
@@ -290,21 +207,24 @@ export const MainPage = () => {
 							{renderInfoComponent()}
 							<GFIPagination
 								pageIdx={pageIdx}
-								toPage={(pageNum) => {toPage(pageNum)}}
+								toPage={(pageNum) => {
+									toPage(pageNum)
+								}}
 								pageNums={pageNums()}
 								onFormInput={(target) => {
 									const t = target as HTMLTextAreaElement
 									setPageFormInput(t.value)
 								}}
-								onPageBtnClicked={() => {onPageBtnClicked()}}
+								onPageBtnClicked={() => {
+									onPageBtnClicked()
+								}}
 								maxPagingCount={3}
 								needPadding={false}
 							/>
 						</Container>
-						{(width > 1000) ? <Container style={{
+						{isMobile ? <Container style={{
 							maxWidth: '30%',
 						}}>
-							{/*<GFIDadaKanban onTagClicked={onKanbanClicked} />*/}
 						</Container> : <></>}
 					</Col>
 				</Row>
@@ -316,8 +236,8 @@ export const MainPage = () => {
 		<>
 			<Container className={'single-page'}>
 				<Row style={{
-					marginBottom: alarmConfig.show? '-25px': '0',
-					marginTop: alarmConfig.show? '25px': '0',
+					marginBottom: alarmConfig.show? '-15px': '0',
+					marginTop: alarmConfig.show? '15px': '0',
 				}}>
 					{alarmConfig.show ?
 						<GFIAlarm
@@ -332,7 +252,22 @@ export const MainPage = () => {
 							marginLeft: '0px',
 							maxWidth: isMobile ? '100%' : '60%',
 						}}>
-							<GFIMainPageHeader />
+							<GFIMainPageHeader
+								onSearch={(s) => {
+									handleSearchBtn(s)
+								}}
+								onTagSelected={(s) => {
+									if (s !== selectedTag) {
+										setSelectedTag(s !== GFI_REPO_FILTER_NONE ? s: undefined)
+									}
+								}}
+								onFilterSelect={(s) => {
+									if (s !== selectedFilter) {
+										let str = s as string
+										setSelectedFilter(str !== GFI_REPO_FILTER_NONE ? s: undefined)
+									}
+								}}
+							/>
 						</Container>
 					</Col>
 				</Row>
@@ -353,8 +288,6 @@ export const MainPage = () => {
 							setShowSearchMsg(false)
 						}}
 						context={'Searching Completed!'}
-						buttonContext={'Display'}
-						onClick={showSearchResult}
 					/>
 				</Row>
 				{renderMainArea()}

@@ -16,7 +16,7 @@ import remarkGemoji from 'remark-gemoji';
 import ReactMarkdown from 'react-markdown';
 
 import '../../style/gfiStyle.css'
-import {GFIOverlay, GFISimplePagination} from '../gfiComponents';
+import {GFIOverlay, GFISimplePagination} from '../GFIComponents';
 import {GFIRepoInfo} from '../../module/data/dataModel';
 import {getIssueByRepoInfo} from '../../api/githubApi';
 import {GFIRootReducers} from '../../module/storage/configureStorage';
@@ -79,9 +79,8 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 			setSelectedTagList(tags.map((_, i) => {
 				return !i;
 			}))
-			setSelectedTag(0)
 		}
-	}, [tags])
+	}, [])
 
 	const Info = () => {
 		if (panels && tags && panels.length === tags.length) {
@@ -448,7 +447,6 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 					title={dataTitle}
 				/>
 			</div>
-
 		</div>
 	)
 })

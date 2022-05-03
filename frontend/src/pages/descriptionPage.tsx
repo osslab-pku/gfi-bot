@@ -4,7 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../style/gfiStyle.css';
 import {defaultFontFamily} from '../utils';
 
-import {GFICopyright, GFIOverlay} from './gfiComponents';
+import {GFICopyright, GFIOverlay} from './GFIComponents';
 
 // TODO: @MSKYurina
 //       Design and Animation

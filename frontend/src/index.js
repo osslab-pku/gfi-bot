@@ -12,14 +12,14 @@ import {CacheRoute, CacheSwitch} from 'react-router-cache-route';
 import {AliveScope} from 'react-activation';
 
 import {DescriptionPage} from './pages/descriptionPage';
-import {GFIHeader} from './pages/gfiHeader';
+import {GFIHeader} from './pages/GFIHeader';
 import {Repositories} from './pages/repositories/repositories';
 
 import {Container} from 'react-bootstrap';
 import {MainPage} from './pages/main/mainPage';
-import {LoginRedirect} from './pages/login/welcomePage';
+import {LoginRedirect} from './pages/login/GFILoginComponents';
 import {GlobalRefProvider, WindowContextProvider} from './pages/app/windowContext';
-import {GFIQueryProcessContextProvider} from './pages/app/processStatusProvider';
+import {GFIPortal} from './pages/portal/GFIPortal';
 
 ReactDOM.render(
 	<React.StrictMode>
@@ -39,6 +39,7 @@ ReactDOM.render(
 											<CacheRoute exact path={'/'} component={MainPage} />
 											<CacheRoute path={'/home'} component={DescriptionPage} />
 											<CacheRoute path={'/repos'} component={Repositories} />
+											<CacheRoute path={'/portal'} component={GFIPortal} />
 											<Route path={'/login/redirect'} component={LoginRedirect} />
 											<CacheRoute path={'*'} component={MainPage} />
 										</CacheSwitch>

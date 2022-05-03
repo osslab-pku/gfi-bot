@@ -1,5 +1,5 @@
 import React, {forwardRef, MouseEventHandler, useEffect, useState} from 'react';
-import {Container, Col, Row, Form, Button, Dropdown} from 'react-bootstrap';
+import {Container, Col, Form, Button, Dropdown} from 'react-bootstrap';
 import {SearchOutlined} from '@ant-design/icons';
 
 import './mainPage.css'
@@ -7,6 +7,7 @@ import '../../style/gfiStyle.css'
 import {getLanguageTags} from '../../api/api';
 
 export type GFIMainHeaderFilterType = 'None' | 'Popularity' | 'Activity' | 'Recommended'
+export const GFI_REPO_FILTER_NONE: GFIMainHeaderFilterType & string = 'None'
 
 export interface GFIMainPageHeader {
 	onSearch?: (s: string) => void,

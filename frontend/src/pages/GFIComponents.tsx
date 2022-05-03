@@ -1,8 +1,7 @@
-import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from 'react-bootstrap';
+import {Container, Col, Row, Form, Pagination, Alert} from 'react-bootstrap';
 import React, {
 	ChangeEvent,
 	createRef,
-	ForwardedRef,
 	forwardRef,
 	MutableRefObject,
 	useEffect,
@@ -13,10 +12,7 @@ import {checkIsNumber, checkIsPercentage, defaultFontFamily} from '../utils';
 import {gsap} from 'gsap';
 
 import '../style/gfiStyle.css'
-import {useDispatch} from 'react-redux';
-import {createPopoverAction} from '../module/storage/reducers';
-import {store} from '../module/storage/configureStorage';
-import {callback} from 'chart.js/helpers';
+import {Variant as AlarmPanelVariants} from 'react-bootstrap/types';
 
 export const GFICopyright = () => {
 
@@ -38,56 +34,6 @@ export const GFICopyright = () => {
 		</Container>
 	)
 }
-
-export interface GFISearchBarProps {
-	fieldStyle?: 'large' | '' ,
-	search?: () => void,
-	title: string,
-	description: string
-}
-
-export const GFISearchBar = forwardRef((props: GFISearchBarProps, ref: ForwardedRef<HTMLDivElement>) => {
-	const calStyle = (fieldStyle: 'large' | any, isBtn: boolean) => {
-		if (isBtn) {
-			if (fieldStyle === 'large') {
-				return 2
-			} else {
-				return 1
-			}
-		} else {
-			if (fieldStyle === 'large') {
-				return 10
-			} else {
-				return 4
-			}
-		}
-	}
-
-	return (
-		<Container>
-			<Row style={{marginTop: '20px', marginBottom: '20px'}}>
-				<Form.Group>
-					<InputGroup>
-						<Col sm={calStyle(props.fieldStyle, false)}>
-							<Form.Control placeholder={props.description} />
-						</Col>
-						<Col/>
-						<Col sm={calStyle(props.fieldStyle, true)}>
-							<Button
-								style={{float: 'right'}}
-								onClick={() => {
-									if (props.search) {
-										props.search()
-									}
-								}}
-							> {props.title} </Button>
-						</Col>
-					</InputGroup>
-				</Form.Group>
-			</Row>
-		</Container>
-	)
-})
 
 export interface GFIPaginationProps {
 	maxPagingCount: number,
@@ -211,9 +157,11 @@ export const GFIPagination = (props: GFIPaginationProps) => {
 	)
 }
 
+export type GFIAlarmPanelVariants = AlarmPanelVariants
 export interface GFIAlarmProps {
 	onClose?: () => void,
 	title?: string,
+	variant?: AlarmPanelVariants,
 }
 
 export class GFIAlarm extends React.Component<GFIAlarmProps> {
@@ -255,7 +203,7 @@ export class GFIAlarm extends React.Component<GFIAlarmProps> {
 		const {title} = this.props
 		return (
 			<Alert
-				variant={'danger'}
+				variant={this.props.variant ? this.props.variant: 'danger'}
 				dismissible={true}
 				ref={this.selfRef}
 				onClick={this.alarmOnClose}

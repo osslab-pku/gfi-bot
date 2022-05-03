@@ -3,12 +3,14 @@ import {Alert, Badge, Col, Container, ListGroup, Row} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 
 import {checkIsNumber} from '../../utils';
-import {GFISearchBar, GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} from '../gfiComponents';
+import {GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} from '../GFIComponents';
 import {RepoGraphContainer} from './repoDataDemonstrator';
 
 import {getRepoNum, getRepoDetailedInfo} from '../../api/api';
 // @ts-ignore
 import Fade from 'react-reveal/Fade'
+import {useDispatch} from 'react-redux';
+import {createAccountNavStateAction, createGlobalProgressBarAction} from '../../module/storage/reducers';
 
 export const Repositories = () => {
 
@@ -18,14 +20,15 @@ export const Repositories = () => {
 
     let [totalRepos, setTotalRepos] = useState<number>(0)
     let [showAlarm, setShowAlarm] = useState<boolean>(false)
-    let [progress, setProgress] = useState<string>('0%')
-    let [showProgressBar, setShowProgressBar] = useState<boolean>(false)
+
+    const dispatch = useDispatch()
+    useEffect(() => {
+        dispatch(createAccountNavStateAction({ show: true }))
+    }, [])
 
     useEffect(() => {
-        setShowProgressBar(true)
         getRepoNum().then((num) => {
             if (num && Number.isInteger(num)) {
-                setProgress('20%')
                 setTotalRepos(num)
             } else {
                 setTotalRepos(0)
@@ -37,8 +40,9 @@ export const Repositories = () => {
     let [infoList, setInfoList] = useState<any[]>([])
     useEffect(() => {
         let beginIdx = (pageIdx - 1) * repoListCapacity
-        setProgress('60%')
-        getRepoDetailedInfo(beginIdx, repoListCapacity, '').then((repoList) => {
+        dispatch(createGlobalProgressBarAction({ hidden: false }))
+        dispatch(createAccountNavStateAction({ show: true }))
+        getRepoDetailedInfo(beginIdx, repoListCapacity).then((repoList) => {
             if (repoList && Array.isArray(repoList)) {
                 setInfoList(repoList)
             } else {
@@ -47,6 +51,7 @@ export const Repositories = () => {
             }
         }).then(() => {
             setActiveCardIdx(0)
+            dispatch(createGlobalProgressBarAction({ hidden: true }))
         })
     }, [pageIdx])
 
@@ -87,7 +92,6 @@ export const Repositories = () => {
 
     const toPage = (i: number) => {
         if (1 <= i && i <= pageNums()) {
-            setProgress('0%')
             setPageIdx(i)
         }
     }
@@ -132,7 +136,6 @@ export const Repositories = () => {
                 if (showAlarm) {
                     setShowAlarm(false)
                 }
-                setProgress('100%')
             } else {
                 setCardInfoList({})
             }
@@ -146,14 +149,13 @@ export const Repositories = () => {
             setShowCards(true)
             setCardInfoListToDisplay(cardInfoList)
         }, 200)
-    }, [cardInfoList, progress])
+    }, [cardInfoList])
 
     const renderAlarmInfo = () => {
         if (showAlarm) {
             return (
                 <Row style={{
-                    marginTop: '10px',
-                    marginBottom: '-25px',
+                    marginTop: '-15px',
                 }}>
                     <Col>
                         <GFIAlarm title={'Lost connection with server'} onClose={() => {setShowAlarm(false)}} />
@@ -165,29 +167,10 @@ export const Repositories = () => {
         }
     }
 
-    const renderProgressBar = () => {
-        const height = '3px'
-        if (showProgressBar) {
-            return (
-                <GFIProgressBar
-                    barWidth={progress}
-                    onFinished={() => {setShowProgressBar(false)}}
-                    height={height}
-                />
-            )
-        } else {
-            return <div style={{height: height}} />
-        }
-    }
-
     return (
         <>
-            {renderProgressBar()}
-            <Container className={'single-page'}>
+            <Container className={'single-page account-page-sub-container'}>
                 {renderAlarmInfo()}
-                <Row>
-                    <GFISearchBar description={'Search for your project'} title={'search'}/>
-                </Row>
                 <Row>
                     <Col sm={4} style={{
                         minWidth: '330px',
