@@ -1,15 +1,7 @@
 import {store} from '../module/storage/configureStorage';
 import {asyncRequest} from './query';
-import {DEV_URL} from './api';
-
-export const userInfo = () => {
-	return [
-		store.getState().loginReducer.hasLogin,
-		store.getState().loginReducer.name,
-		store.getState().loginReducer.loginName,
-		store.getState().loginReducer.token,
-	]
-}
+import {DEV_URL, userInfo} from './api';
+import {RepoPermissions, StandardHTTPResponse} from '../module/data/dataModel';
 
 export const gitHubLogin = () => {
 	const [hasLogin, userName] = userInfo()
@@ -31,7 +23,7 @@ export const checkGithubLogin = async () => {
 			headers: {
 				'Authorization': `token ${userToken}`,
 			},
-			customReq: false,
+			customRequestResponse: false,
 		})
 		if (res?.status === 200) {
 			return true
@@ -47,6 +39,23 @@ const gitHubOAuthLogin = async () => {
 	})
 }
 
+export const checkHasRepoPermissions = async (repoName: string, owner: string) => {
+	const hasLogin = store.getState().loginReducer.hasLogin
+	const userToken = store.getState().loginReducer.token
+	if (!hasLogin) {
+		return false
+	}
+	const res = await asyncRequest<StandardHTTPResponse<{ permissions?: RepoPermissions }>>({
+		url: `https://api.github.com/repos/${owner}/${repoName}`,
+		headers: {
+			'Authorization': `token ${userToken}`,
+		},
+		customRequestResponse: false,
+	})
+
+	return !!res.data?.permissions?.maintain;
+}
+
 export const getIssueByRepoInfo = async (repoName: string, owner?: string, issueId?: string | number) => {
 	// url such as https://api.github.com/repos/pallets/flask/issues/4333
 
@@ -59,7 +68,7 @@ export const getIssueByRepoInfo = async (repoName: string, owner?: string, issue
 	res = await asyncRequest({
 		url: url,
 		headers: headers,
-		customReq: false,
+		customRequestResponse: false,
 	}).catch((error: any) => {
 		if ('response' in error) {
 			return error.response

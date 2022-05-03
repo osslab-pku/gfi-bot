@@ -16,7 +16,7 @@ import remarkGemoji from 'remark-gemoji';
 import ReactMarkdown from 'react-markdown';
 
 import '../../style/gfiStyle.css'
-import {GFIOverlay, GFISimplePagination} from '../gfiComponents';
+import {GFIOverlay, GFISimplePagination} from '../GFIComponents';
 import {GFIRepoInfo} from '../../module/data/dataModel';
 import {getIssueByRepoInfo} from '../../api/githubApi';
 import {GFIRootReducers} from '../../module/storage/configureStorage';

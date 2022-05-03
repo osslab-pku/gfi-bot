@@ -8,8 +8,8 @@ import {Container, Col, Row} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 import {checkIsNumber, defaultFontFamily} from '../../utils';
 
-import {GFINotiToast} from '../login/welcomePage';
-import {GFIAlarm, GFICopyright, GFIPagination} from '../gfiComponents';
+import {GFINotiToast} from '../login/GFILoginComponents';
+import {GFIAlarm, GFICopyright, GFIPagination} from '../GFIComponents';
 import {getRepoNum, getIssueNum, getLanguageTags, getRepoInfoByNameOrURL, getRepoDetailedInfo} from '../../api/api';
 import {checkGithubLogin} from '../../api/githubApi';
 

@@ -18,7 +18,7 @@ import {createAccountNavStateAction, createLogoutAction} from '../module/storage
 import '../style/gfiStyle.css'
 
 import navLogo from '../assets/favicon-thumbnail.png';
-import {GFIAccountPageNav} from './account/GFIAccountPage';
+import {GFIPortalPageNav} from './portal/GFIPortal';
 
 export const GFIHeader = () => {
 
@@ -148,7 +148,6 @@ export const GFIHeader = () => {
     const iconRef = useRef(null)
 
     const hideAccountNav = () => {
-        console.log('hide?')
         dispatch(createAccountNavStateAction({show: false}))
     }
     const showAccountNav = () => {
@@ -242,8 +241,8 @@ export const GFIHeader = () => {
         const MyPage = () => {
             if (hasLogin) {
                 return (
-                    <LinkContainer to={'/my'} onClick={() => { showAccountNav() }}>
-                        <Nav.Link> My </Nav.Link>
+                    <LinkContainer to={'/portal'} onClick={() => { showAccountNav() }}>
+                        <Nav.Link> Portal </Nav.Link>
                     </LinkContainer>
                 )
             }
@@ -314,7 +313,6 @@ export const GFIHeader = () => {
     }
 
     const shouldShowAccountNav = useSelector((state) => {
-        console.log(state)
         if ('accountNavStateReducer' in state && 'show' in state.accountNavStateReducer) return state.accountNavStateReducer.show
         return false
     })
@@ -322,7 +320,7 @@ export const GFIHeader = () => {
     return (
         <>
             {render()}
-            {shouldShowAccountNav && <GFIAccountPageNav id={'account-page-nav'} />}
+            {shouldShowAccountNav && <GFIPortalPageNav id={'portal-page-nav'} />}
         </>
     )
 }

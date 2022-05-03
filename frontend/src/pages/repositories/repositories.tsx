@@ -3,7 +3,7 @@ import {Alert, Badge, Col, Container, ListGroup, Row} from 'react-bootstrap';
 import '../../style/gfiStyle.css'
 
 import {checkIsNumber} from '../../utils';
-import {GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} from '../gfiComponents';
+import {GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} from '../GFIComponents';
 import {RepoGraphContainer} from './repoDataDemonstrator';
 
 import {getRepoNum, getRepoDetailedInfo} from '../../api/api';
@@ -169,7 +169,7 @@ export const Repositories = () => {
 
     return (
         <>
-            <Container className={'single-page repo-container'}>
+            <Container className={'single-page account-page-sub-container'}>
                 {renderAlarmInfo()}
                 <Row>
                     <Col sm={4} style={{

@@ -157,7 +157,7 @@ export const createAccountNavStateAction: (p: AccountNavState) => AccountNavStat
 }
 
 export const accountNavStateReducer: Reducer<AccountNavState, AccountNavStateAction> = (state = initialAccountNavState, action) => {
-	if (action.type === 'ACCOUNT_NAV') {
+	if (action.type === ACCOUNT_NAV_ACTION_TYPE) {
 		return {
 			show: action.show,
 		}

@@ -1,6 +1,15 @@
-import {userInfo} from './githubApi';
 import {asyncRequest} from './query';
 import {GetRepoDetailedInfo, GFIRepoInfo} from '../module/data/dataModel';
+import {store} from '../module/storage/configureStorage';
+
+export const userInfo = () => {
+	return [
+		store.getState().loginReducer.hasLogin,
+		store.getState().loginReducer.name,
+		store.getState().loginReducer.loginName,
+		store.getState().loginReducer.token,
+	]
+}
 
 // for local development
 export const DEV_URL = 'https://dev.mskyurina.top'
@@ -85,13 +94,33 @@ export const getLanguageTags = async () => {
 	})
 }
 
-export const getProcessingSearches = async (shouldClearSession: boolean) => {
-	const [hasLogin, userName] = userInfo()
+export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
+	const [hasLogin, _, loginName] = userInfo()
 	return await asyncRequest<any>({
-		url: '/api/repos/searches',
+		method: 'POST',
+		url: '/api/repos/add',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		data: {
+			user: loginName,
+			repo: repoName,
+			owner: repoOwner,
+		},
+		baseURL: DEV_URL,
+	})
+}
+
+export const getAddRepoHistory = async () => {
+	const [_, __, loginName] = userInfo()
+	return await asyncRequest<{
+		nums?: number,
+		queries: GFIRepoInfo[],
+		finished_queries?: GFIRepoInfo[],
+	}>({
+		url: '/api/user/queries',
 		params: {
-			user: userName,
-			clear_session: shouldClearSession,
+			user: loginName,
 		},
 		baseURL: DEV_URL,
 	})
