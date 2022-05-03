@@ -2,7 +2,14 @@ import {combineReducers, createStore, Reducer} from 'redux';
 import {persistStore, persistReducer} from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
-import {loginReducer, PopoverAction, showMainPagePopoverReducer} from './reducers';
+import {
+	AccountNavState,
+	accountNavStateReducer,
+	GlobalProgressBarState,
+	globalProgressBarStateReducer,
+	loginReducer,
+	showMainPagePopoverReducer
+} from './reducers';
 import {RepoShouldDisplayPopoverState} from '../../pages/main/GFIRepoDisplayView';
 
 const persistConfig = {
@@ -11,17 +18,21 @@ const persistConfig = {
 	blacklist: [],
 }
 
-const reducers = persistReducer(persistConfig, loginReducer)
+const persistReducers = persistReducer(persistConfig, loginReducer)
 
-const reducer = combineReducers({
-	loginReducer: reducers,
+const combinedReducers = combineReducers({
+	loginReducer: persistReducers,
 	mainPopoverReducer: showMainPagePopoverReducer,
+	globalProgressBarReducer: globalProgressBarStateReducer,
+	accountNavStateReducer: accountNavStateReducer,
 })
 
-export const store = createStore(reducer)
+export const store = createStore(combinedReducers)
 export const persistor = persistStore(store)
 
 export interface GFIRootReducers {
 	loginReducer: any,
 	mainPopoverReducer: RepoShouldDisplayPopoverState,
+	globalProgressBarReducer: GlobalProgressBarState,
+	accountNavStateReducer: AccountNavState,
 }

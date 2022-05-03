@@ -572,3 +572,40 @@ div.full-overlay-bottom {
     border-top: 1px solid var(--color-border-default);
     margin-bottom: -3px;
 }
+
+.transition-01 {
+    transition: 0.1s;
+}
+
+.progress-bar-thin {
+    border-radius: 0;
+    height: 4px;
+    width: 100%;
+}
+
+.gfi-hidden-with-space {
+    opacity: 0;
+}
+
+a.account-nav {
+    padding: 0.3rem 0.7rem;
+}
+
+.account-nav {
+    color: #8d9196;
+    font-size: small;
+}
+
+.account-nav-container {
+    padding: 0.3rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}
+
+.repo-container {
+    margin-top: 30px;
+}
+
+#account-page-nav {
+    margin-top: 10px;
+}

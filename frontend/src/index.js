@@ -20,6 +20,7 @@ import {MainPage} from './pages/main/mainPage';
 import {LoginRedirect} from './pages/login/welcomePage';
 import {GlobalRefProvider, WindowContextProvider} from './pages/app/windowContext';
 import {GFIQueryProcessContextProvider} from './pages/app/processStatusProvider';
+import {GFIAccountPage} from './pages/account/GFIAccountPage';
 
 ReactDOM.render(
 	<React.StrictMode>
@@ -39,6 +40,7 @@ ReactDOM.render(
 											<CacheRoute exact path={'/'} component={MainPage} />
 											<CacheRoute path={'/home'} component={DescriptionPage} />
 											<CacheRoute path={'/repos'} component={Repositories} />
+											<CacheRoute path={'/my'} component={GFIAccountPage} />
 											<Route path={'/login/redirect'} component={LoginRedirect} />
 											<CacheRoute path={'*'} component={MainPage} />
 										</CacheSwitch>

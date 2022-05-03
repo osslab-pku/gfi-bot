@@ -4,7 +4,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
 
-import {Container, Nav, Navbar, Button, Popover, OverlayTrigger} from 'react-bootstrap';
+import {Container, Nav, Navbar, Button, Popover, OverlayTrigger, ProgressBar} from 'react-bootstrap';
 import {LinkContainer} from 'react-router-bootstrap';
 import {GithubFilled, UserDeleteOutlined} from '@ant-design/icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -14,14 +14,13 @@ import {gsap} from 'gsap';
 import {useIsMobile} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
 import {gitHubLogin} from '../api/githubApi';
-import {createLogoutAction} from '../module/storage/reducers';
+import {createAccountNavStateAction, createLogoutAction} from '../module/storage/reducers';
 import '../style/gfiStyle.css'
 
 import navLogo from '../assets/favicon-thumbnail.png';
+import {GFIAccountPageNav} from './account/GFIAccountPage';
 
 export const GFIHeader = () => {
-
-    // Account Actions
 
     const dispatch = useDispatch()
 
@@ -148,6 +147,14 @@ export const GFIHeader = () => {
     const isMobile = useIsMobile()
     const iconRef = useRef(null)
 
+    const hideAccountNav = () => {
+        console.log('hide?')
+        dispatch(createAccountNavStateAction({show: false}))
+    }
+    const showAccountNav = () => {
+        dispatch(createAccountNavStateAction({show: true}))
+    }
+
     const renderNavItem = () => {
 
         const renderSignInItems = () => {
@@ -232,9 +239,20 @@ export const GFIHeader = () => {
             }
         }
 
+        const MyPage = () => {
+            if (hasLogin) {
+                return (
+                    <LinkContainer to={'/my'} onClick={() => { showAccountNav() }}>
+                        <Nav.Link> My </Nav.Link>
+                    </LinkContainer>
+                )
+            }
+            return <></>
+        }
+
         return (
             <Container style={{marginRight: '5px', marginLeft: '5px', maxWidth: '100vw'}}>
-                <LinkContainer to={'/'}>
+                <LinkContainer to={'/'} onClick={() => { hideAccountNav() }}>
                     <Navbar.Brand>
                         <img
                             alt={''}
@@ -249,10 +267,8 @@ export const GFIHeader = () => {
                 <Navbar.Toggle />
                 <Navbar.Collapse>
                     <Nav>
-                        <LinkContainer to={'/repos'}>
-                            <Nav.Link> Repositories </Nav.Link>
-                        </LinkContainer>
-                        <LinkContainer to={'/home'}>
+                        {MyPage()}
+                        <LinkContainer to={'/home'} onClick={() => { hideAccountNav() }}>
                             <Nav.Link> About Us </Nav.Link>
                         </LinkContainer>
                         {renderMobileSignIn()}
@@ -269,17 +285,23 @@ export const GFIHeader = () => {
 
     const renderDesktopNavbar = () => {
         return (
-            <Navbar bg={'light'} sticky={'top'}>
-                {renderNavItem(false)}
-            </Navbar>
+            <div className={'flex-col sticky-top'}>
+                <Navbar bg={'light'} sticky={'top'}>
+                    {renderNavItem(false)}
+                </Navbar>
+                <GFIGlobalProgressBar />
+            </div>
         )
     }
 
     const renderMobileNavbar = () => {
         return (
-            <Navbar bg={'light'} sticky={'top'} expand={'false'}>
-                {renderNavItem(true)}
-            </Navbar>
+            <>
+                <Navbar bg={'light'} sticky={'top'} expand={'false'}>
+                    {renderNavItem(true)}
+                </Navbar>
+                <GFIGlobalProgressBar />
+            </>
         )
     }
 
@@ -291,7 +313,34 @@ export const GFIHeader = () => {
         }
     }
 
+    const shouldShowAccountNav = useSelector((state) => {
+        console.log(state)
+        if ('accountNavStateReducer' in state && 'show' in state.accountNavStateReducer) return state.accountNavStateReducer.show
+        return false
+    })
+
     return (
-        render()
+        <>
+            {render()}
+            {shouldShowAccountNav && <GFIAccountPageNav id={'account-page-nav'} />}
+        </>
+    )
+}
+
+const GFIGlobalProgressBar = () => {
+    const ref = useRef(null)
+    const hidden = useSelector((state) => {
+        if ('globalProgressBarReducer' in state && 'hidden' in state.globalProgressBarReducer) {
+            if (state.globalProgressBarReducer.hidden) {
+                return 'gfi-hidden-with-space'
+            }
+        }
+        return ''
+    })
+
+    return (
+        <>
+            <ProgressBar ref={ref} className={`progress-bar-thin ${hidden} sticky-top transition-01`} animated={true} now={100} />
+        </>
     )
 }

@@ -79,9 +79,8 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 			setSelectedTagList(tags.map((_, i) => {
 				return !i;
 			}))
-			setSelectedTag(0)
 		}
-	}, [tags])
+	}, [])
 
 	const Info = () => {
 		if (panels && tags && panels.length === tags.length) {
@@ -448,7 +447,6 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 					title={dataTitle}
 				/>
 			</div>
-
 		</div>
 	)
 })

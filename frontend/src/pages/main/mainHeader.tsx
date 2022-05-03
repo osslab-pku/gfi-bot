@@ -7,6 +7,7 @@ import '../../style/gfiStyle.css'
 import {getLanguageTags} from '../../api/api';
 
 export type GFIMainHeaderFilterType = 'None' | 'Popularity' | 'Activity' | 'Recommended'
+export const GFI_REPO_FILTER_NONE = 'None'
 
 export interface GFIMainPageHeader {
 	onSearch?: (s: string) => void,
