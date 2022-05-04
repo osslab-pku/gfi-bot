@@ -58,10 +58,12 @@ class JSONEncoder(json.JSONEncoder):
 @app.route("/api/repos/num")
 def get_repo_num():
     language = request.args.get("lang")
-    repos = Repo.objects(language=language)
-    res = len(repos)
-    if language != None and language != "":
-        res = repos.count_documents({"language": language})
+    repos = Repo.objects()
+    res = 0
+    if language != None:
+        res = len(Repo.objects(language=language))
+    else:
+        res = len(repos)
     return {"code": 200, "result": res}
 
 
@@ -101,7 +103,7 @@ def get_repo_detail_info_by_name():
     return {"code": 404, "result": "repo not found"}
 
 
-REPO_FILTER_TYPES = ["None", "Popularity", "Activity", "Recommended"]
+REPO_FILTER_TYPES = ["None", "Popularity", "Activity", "Recommended", "Time"]
 
 
 @app.route("/api/repos/detailed_info")
@@ -356,9 +358,9 @@ def add_repo_to_bot():
                     )
                     new_query.save()
                     executor.submit(update_repo, user_token, repo_owner, repo_name)
-                    return {"code": 200, "result": "has been successfully added"}
+                    return {"code": 200, "result": "is being processed by GFI-Bot"}
                 else:
-                    return {"code": 200, "result": "already exists in GFI-Bot"}
+                    return {"code": 200, "result": "already exists"}
         return {"code": 400, "result": "Bad request"}
     else:
         return {"code": 404, "result": "user not found"}
