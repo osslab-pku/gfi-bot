@@ -1,5 +1,5 @@
 import React, {
-	createContext,
+	createContext, ForwardedRef,
 	forwardRef,
 	MouseEventHandler,
 	ReactElement,
@@ -56,7 +56,7 @@ const useOverlayID = () => {
 	return useContext(RepoDisplayOverlayIDContext)
 }
 
-export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) => {
+export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref: ForwardedRef<HTMLDivElement>) => {
 
 	const {repoInfo, tags, panels, style} = props
 
@@ -175,7 +175,7 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 	}
 
 	return (
-		<>
+		<div className={'repo-display-view-container'} ref={ref}>
 			{renderOverlay()}
 			<div style={style} className={'flex-col repo-display'}>
 				<div className={'flex-row repo-display-info-nav'}>
@@ -188,7 +188,7 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref) =>
 					</Col>
 				</Row>
 			</div>
-		</>
+		</div>
 	)
 })
 
@@ -245,6 +245,11 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 	return (
 		<div className={'flex-col'}>
 			{render()}
+			{displayIssueList ? <></>:
+				<div id={'gfi-issue-monitor-empty'}>
+					Currently no GFIs for this repository.
+				</div>
+			}
 		</div>
 	)
 })
@@ -393,7 +398,7 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 	const [displayData, setDisplayData] = useState<DisplayData>()
 	const dataCategories = ['monthly_stars', 'monthly_commits', 'monthly_issues', 'monthly_pulls']
 	const dataTitle = ['Monthly Stars', 'Monthly Commits', 'Monthly Issues', 'Monthly Pulls']
-
+	const [title, setTitle] = useState<string[]>()
 	const [selectedIdx, setSelectedIdx] = useState(0)
 
 	useEffect(() => {
@@ -407,20 +412,26 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 		if (displayInfo) {
 			let info: DisplayData = {}
 			let key: keyof typeof displayInfo
+			let titles = []
 			for (key in displayInfo) {
-				if (dataCategories.includes(key)) {
-					info[key as DataTag] = displayInfo[key] as any[]
+				const displayInfoItem = displayInfo[key] as any []
+				if (dataCategories.includes(key) && displayInfoItem.length) {
+					info[key as DataTag] = displayInfoItem
+					titles.push(dataTitle[dataCategories.indexOf(key)])
 				}
 			}
+			setTitle(titles)
 			setDisplayData(info)
 		}
 	}, [displayInfo])
 
 	const RenderGraphs = () => {
+		let availableIdx = -1
 	    return dataCategories.map((item, idx) => {
-		    if (displayData && Object.keys(displayData).includes(item)) {
+		    if (displayData && title && Object.keys(displayData).includes(item)) {
+				availableIdx += 1
 			    return (
-					<div style={idx === selectedIdx ? {}: {display: 'none'}}>
+					<div style={availableIdx === selectedIdx ? {}: {display: 'none'}}>
 						<RepoGraphContainer
 							title={dataTitle[idx]}
 							info={displayData[item as DataTag]}
@@ -440,9 +451,10 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 				<GFISimplePagination
 					nums={displayData ? Object.keys(displayData).length: 1}
 					onClick={(idx) => {
+						console.log('selected ' + idx)
 						setSelectedIdx(idx)
 					}}
-					title={dataTitle}
+					title={title}
 				/>
 			</div>
 		</div>

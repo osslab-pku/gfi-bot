@@ -21,7 +21,7 @@ export const getRepoNum = async (lang?: string) => {
 	return await asyncRequest<any>({
 		url: '/api/repos/num',
 		params: {
-			lang: lang ? lang : '',
+			lang: lang,
 		},
 		baseURL: DEV_URL,
 	})

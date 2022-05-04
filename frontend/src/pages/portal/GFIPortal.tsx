@@ -1,8 +1,10 @@
 import React, {MouseEventHandler, useEffect, useRef, useState} from 'react';
-import {Button, Col, Container, Form, ListGroup, Nav, Overlay, Popover, Row} from 'react-bootstrap';
+import {Button, Col, Container, Dropdown, Form, ListGroup, Nav, Overlay, Popover, Row} from 'react-bootstrap';
 import {LinkContainer} from 'react-router-bootstrap';
 import {withRouter} from 'react-router-dom';
 import KeepAlive from 'react-activation';
+
+import {gsap} from 'gsap';
 
 import '../../style/gfiStyle.css'
 import {useDispatch, useSelector} from 'react-redux';
@@ -15,6 +17,8 @@ import {checkHasRepoPermissions} from '../../api/githubApi';
 import {GFIAlarm, GFIAlarmPanelVariants} from '../GFIComponents';
 import {addRepoToGFIBot, getAddRepoHistory} from '../../api/api';
 import {GFIRepoInfo, GFIUserSearchHistoryItem} from '../../module/data/dataModel';
+import {GFIIssueMonitor, GFIRepoDisplayView, GFIRepoStaticsDemonstrator} from '../main/GFIRepoDisplayView';
+import {GFIRepoSearchingFilterType} from '../main/mainHeader';
 
 export interface GFIPortal {}
 
@@ -156,11 +160,14 @@ const AddProjectComponent = () => {
 	const [projectURL, setProjectURL] = useState<string>()
 	const [showAlarmMsg, setShowAlarmMsg] = useState(false)
 
-	const [mainAlarmConfig, setMainAlarmConfig] = useState<{
+	type AlarmConfig = {
 		show: boolean,
 		msg: string,
 		variant ?: GFIAlarmPanelVariants,
-	}>({ show: false, msg: '', variant: 'danger' })
+	}
+
+	const [mainAlarmConfig, setMainAlarmConfig] = useState<AlarmConfig>({ show: false, msg: '', variant: 'danger' })
+	const [addRepoAlarmConfig, setAddRepoAlarmConfig] = useState<AlarmConfig>({ show: false, msg: '', variant: 'success' })
 
 	const dispatch = useDispatch()
 	const showProgressBar = () => {
@@ -171,8 +178,7 @@ const AddProjectComponent = () => {
 	}
 
 	const [addedRepos, setAddedRepos] = useState<GFIUserSearchHistoryItem[]>()
-	const fetchAddedRepos = () => {
-		showProgressBar()
+	const fetchAddedRepos = (onComplete?: () => void) => {
 		getAddRepoHistory().then((res) => {
 			const finishedQueries: GFIUserSearchHistoryItem[] | undefined = res?.finished_queries?.map((info) => {
 				return {
@@ -186,13 +192,49 @@ const AddProjectComponent = () => {
 					repo: info,
 				}
 			})
+
+			let completeQueries = ''
+			if (finishedQueries && addedRepos) {
+				for (const finishedQuery of finishedQueries) {
+					for (const reposAdded of addedRepos) {
+						if (reposAdded.pending && reposAdded.repo.owner === finishedQuery.repo.owner
+							&& reposAdded.repo.name === finishedQuery.repo.name) {
+							completeQueries += `${finishedQuery.repo.owner}/${finishedQuery.repo.name} `
+						}
+					}
+				}
+				if (completeQueries !== '') {
+					setAddRepoAlarmConfig({
+						show: true,
+						msg: `Repos: ${completeQueries}have been successfully added`,
+						variant: 'success',
+					})
+				}
+			}
+
 			setAddedRepos(finishedQueries ? finishedQueries.concat(pendingQueries) : pendingQueries)
-			hideProgressBar()
+			if (onComplete) {
+				onComplete()
+			}
 		})
 	}
+
 	useEffect(() => {
 		fetchAddedRepos()
 	}, [])
+
+	const [intervalID, setIntervalId] = useState<NodeJS.Timeout>()
+	useEffect(() => {
+		if (intervalID) {
+			clearInterval(intervalID)
+		}
+		setIntervalId(setInterval(fetchAddedRepos, 10000))
+		return () => {
+			if (intervalID) {
+				clearInterval(intervalID)
+			}
+		}
+	}, [addedRepos])
 
 	const addGFIRepo = () => {
 		let shouldDisplayAlarm = true
@@ -208,10 +250,12 @@ const AddProjectComponent = () => {
 							if (result) {
 								setMainAlarmConfig({
 									show: true,
-									msg: `Repo ${repoOwner}/${repoName} ${result}`,
+									msg: `Query ${repoOwner}/${repoName} ${result}`,
 									variant: 'success',
 								})
-								fetchAddedRepos()
+								fetchAddedRepos(() => {
+									hideProgressBar()
+								})
 							} else {
 								setMainAlarmConfig({
 									show: true,
@@ -261,14 +305,45 @@ const AddProjectComponent = () => {
 		}
 	}, [showOverlay])
 
+	const repoInfoPanelRef = useRef<HTMLDivElement>(null)
+	const [addedRepoDisplayPanelConfig, setAddedRepoDisplayPanelConfig] = useState<{
+		show: boolean,
+		info?: GFIRepoInfo,
+	}>({show: false})
+
+	type FilterType = GFIRepoSearchingFilterType
+	const [filterSelected, setFilterSelected] = useState<FilterType>('None')
+	const filters: FilterType[] = [
+		'None',
+		'Popularity',
+		'Activity',
+		'Recommended',
+		'Time',
+	]
+
 	const onRepoHistoryClicked = (repoInfo: GFIRepoInfo) => {
-		console.log(repoInfo)
+		if (repoInfo !== addedRepoDisplayPanelConfig.info) {
+			setAddedRepoDisplayPanelConfig({
+				show: true,
+				info: repoInfo,
+			})
+		} else {
+			setAddedRepoDisplayPanelConfig({
+				show: !addedRepoDisplayPanelConfig.show,
+				info: repoInfo,
+			})
+		}
 	}
 
 	const renderRepoHistory = () => {
 		if (addedRepos) {
 			return addedRepos.map((item) => {
-				return <RepoHistoryTag pending={item.pending} repoInfo={item.repo} available={true} onClick={onRepoHistoryClicked} />
+				return <RepoHistoryTag
+					pending={item.pending}
+					repoInfo={item.repo}
+					available={true}
+					onClick={item.pending ? () => {} : onRepoHistoryClicked}
+				/>
 			})
 		}
 		return (
@@ -281,6 +356,10 @@ const AddProjectComponent = () => {
 				available={false}
 			/>
 		)
+	}
+
+	const onFilterSelected = (filter: FilterType) => {
+		setFilterSelected(filter)
 	}
 
 	return (
@@ -353,12 +432,70 @@ const AddProjectComponent = () => {
 					</div>
 				</Form>
 			</div>
-			<div className={'account-page-panel-title'} id={'project-add-comp-added'}>
-				Project Added
+			<div className={'flex-row align-center'} id={'project-add-comp-added'}>
+				<div className={'account-page-panel-title'} >
+					Projects Added
+				</div>
+				<div className={'flex-row align-center'} style={{ marginLeft: 'auto' }}>
+					<div style={{ fontSize: 'small', marginRight: '0.7rem' }}> Sorted By </div>
+					<Dropdown >
+						<Dropdown.Toggle variant={'light'} style={{ fontSize: 'small' }}>
+							{filterSelected}
+						</Dropdown.Toggle>
+						<Dropdown.Menu align={'end'} variant={'dark'}>
+							{filters.map((item) => {
+								return (
+									<Dropdown.Item
+										onClick={(e) => {
+											onFilterSelected(item)
+										}}
+										style={{ fontSize: 'small' }}
+									>
+										{item as string}
+									</Dropdown.Item>
+								)
+							})}
+						</Dropdown.Menu>
+					</Dropdown>
+				</div>
 			</div>
+			{addRepoAlarmConfig.show ?
+				<div style={{ marginBottom: '-15px', marginTop: '5px' }}>
+					<GFIAlarm
+						title={addRepoAlarmConfig.msg}
+						onClose={() => {
+							setAddRepoAlarmConfig({
+								show: false,
+								msg: '',
+								variant: 'success',
+							})
+						}}
+						variant={addRepoAlarmConfig.variant}
+					/>
+				</div> : <></>
+			}
 			<div className={'flex-row flex-wrap align-center'} style={{ marginTop: '0.7rem' }}>
 				{renderRepoHistory()}
 			</div>
+			{addedRepoDisplayPanelConfig.info &&
+                <GFIRepoDisplayView
+                    key={`added-repo-panel-${addedRepoDisplayPanelConfig.info.owner}-${addedRepoDisplayPanelConfig.info.name}`}
+                    repoInfo={addedRepoDisplayPanelConfig.info}
+                    tags={['GFI', 'Repo Data']}
+                    panels={[
+						<GFIIssueMonitor repoInfo={addedRepoDisplayPanelConfig.info} />,
+						<GFIRepoStaticsDemonstrator repoInfo={addedRepoDisplayPanelConfig.info} />
+					]}
+                    style={{
+						border: '1px solid var(--color-border-default)',
+						borderRadius: '7px',
+						marginBottom: '0.5rem',
+						transition: '0.2s',
+						display: addedRepoDisplayPanelConfig.show ? '' : 'none',
+					}}
+                    ref={repoInfoPanelRef}
+                />
+			}
 			<div className={'account-page-panel-title'} id={'project-add-comp-tutorial'}>
 				Tutorial
 			</div>
