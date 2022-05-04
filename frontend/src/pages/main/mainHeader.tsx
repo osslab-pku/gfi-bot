@@ -6,12 +6,12 @@ import './mainPage.css'
 import '../../style/gfiStyle.css'
 import {getLanguageTags} from '../../api/api';
 
-export type GFIMainHeaderFilterType = 'None' | 'Popularity' | 'Activity' | 'Recommended'
-export const GFI_REPO_FILTER_NONE: GFIMainHeaderFilterType & string = 'None'
+export type GFIRepoSearchingFilterType = 'None' | 'Popularity' | 'Activity' | 'Recommended' | 'Time'
+export const GFI_REPO_FILTER_NONE: GFIRepoSearchingFilterType & string = 'None'
 
 export interface GFIMainPageHeader {
 	onSearch?: (s: string) => void,
-	onFilterSelect?: (s: GFIMainHeaderFilterType) => void,
+	onFilterSelect?: (s: GFIRepoSearchingFilterType) => void,
 	onTagSelected?: (s: string) => void,
 }
 
@@ -20,13 +20,14 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
 	const {onSearch, onFilterSelect, onTagSelected} = props
 
 	const [search, setSearch] = useState<string | undefined>()
-	const [filterSelected, setFilterSelected] = useState<GFIMainHeaderFilterType>('None')
+	const [filterSelected, setFilterSelected] = useState<GFIRepoSearchingFilterType>('None')
 
-	const sortedBy: GFIMainHeaderFilterType[] = [
+	const sortedBy: GFIRepoSearchingFilterType[] = [
 		'None',
 		'Popularity',
 		'Activity',
 		'Recommended',
+		'Time',
 	]
 
 	const renderDropDownItem = (onClick: MouseEventHandler<HTMLElement>, title: string) => {
