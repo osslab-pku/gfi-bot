@@ -53,6 +53,7 @@ export const checkHasRepoPermissions = async (repoName: string, owner: string) =
 		customRequestResponse: false,
 	})
 
+	if (res === undefined) return false
 	return !!res.data?.permissions?.maintain;
 }
 

@@ -26,6 +26,7 @@ export const GFIHeader = () => {
 
     const logout = () => {
         dispatch(createLogoutAction())
+        window.location.reload()
     }
 
     const hasLogin = useSelector(state => {

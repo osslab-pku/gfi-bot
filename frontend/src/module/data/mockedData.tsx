@@ -9,19 +9,3 @@ export const MockedRepoInfo: GFIRepoInfo = {
 	description: 'scikit-learn: machine learning in Python',
 	topics: ['python', 'data-science', 'machine-learning'],
 }
-
-export const MockedGFIList = [1354, 4006, 13315, 12018, 23253, 23231]
-
-export const MockedGFIIssueMonitorProp: GFIIssueMonitor = {
-	repoInfo: MockedRepoInfo,
-	issueList: MockedGFIList,
-}
-
-export const MockedDisplayViewProp: GFIRepoDisplayView = {
-	repoInfo: MockedRepoInfo,
-	tags: ['GFI', 'Repo Data'],
-	panels: [
-		<GFIIssueMonitor repoInfo={MockedRepoInfo} issueList={MockedGFIList} />,
-		<div> Hello World </div>,
-	],
-}

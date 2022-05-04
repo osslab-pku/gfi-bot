@@ -77,7 +77,7 @@ export const Repositories = () => {
     const renderProjectsInfos = (infoArray?: any[]) => {
         if (infoArray && Array.isArray(infoArray)) {
             return (infoArray.map((info, idx) => {
-                return projectsInfos(JSON.parse(info), idx)
+                return projectsInfos(info, idx)
             }))
         }
     }
@@ -130,7 +130,7 @@ export const Repositories = () => {
         if (infoList.length && activeCardIdx < infoList.length) {
             setShowCards(false)
             setCardInfoListToDisplay({})
-            let parsedInfoList = JSON.parse(infoList[activeCardIdx])
+            let parsedInfoList = infoList[activeCardIdx]
             if (parsedInfoList) {
                 setCardInfoList(parsedInfoList)
                 if (showAlarm) {
