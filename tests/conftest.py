@@ -68,6 +68,8 @@ def mock_mongodb():
         ResolvedIssue,
         Dataset,
         User,
+        GfiUsers,
+        GfiQueries,
     ]
     for cls in collections:
         cls.drop_collection()
