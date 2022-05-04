@@ -122,13 +122,12 @@ export const MainPage = () => {
 		getRepoDetailedInfo(beginIdx, repoCapacity, tag, filter).then((repoList) => {
 			if (repoList && Array.isArray(repoList)) {
 				const repoInfoList = repoList.map((repo, i) => {
-					const parsedRepo = JSON.parse(repo)
-					if ('name' in parsedRepo && 'owner' in parsedRepo) {
+					if ('name' in repo && 'owner' in repo) {
 						return {
-							name: parsedRepo.name,
-							owner: parsedRepo.owner,
-							description: 'description' in parsedRepo ? parsedRepo.description: undefined,
-							topics: 'topics' in parsedRepo ? parsedRepo.topics : undefined,
+							name: repo.name,
+							owner: repo.owner,
+							description: 'description' in repo ? repo.description: undefined,
+							topics: 'topics' in repo ? repo.topics : undefined,
 							url: '',
 						}
 					} else {

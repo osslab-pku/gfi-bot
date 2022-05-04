@@ -36,3 +36,11 @@ export type GFIUserSearchHistoryItem = {
 	pending: boolean,
 	repo: GFIRepoInfo,
 }
+
+export type GFIInfo = {
+	name: string,
+	owner: string,
+	probability: number,
+	number: number,
+	last_updated: string,
+}

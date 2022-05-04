@@ -1,5 +1,5 @@
 import {asyncRequest} from './query';
-import {GetRepoDetailedInfo, GFIRepoInfo} from '../module/data/dataModel';
+import {GetRepoDetailedInfo, GFIInfo, GFIRepoInfo} from '../module/data/dataModel';
 import {store} from '../module/storage/configureStorage';
 
 export const userInfo = () => {
@@ -47,11 +47,12 @@ export const getRepoDetailedInfo = async (beginIdx: string | number, capacity: s
 	})
 }
 
-export const getRepoDetailedInfoByName = async (name: string) => {
+export const getRepoDetailedInfoByName = async (name: string, owner: string) => {
 	return await asyncRequest<GetRepoDetailedInfo>({
 		url: '/api/repos/detail_info_name',
 		params: {
 			name: name,
+			owner: owner,
 		},
 		baseURL: DEV_URL,
 	})
@@ -77,11 +78,12 @@ export const getRecommendedRepoInfo = async () => {
 	})
 }
 
-export const getGFIByRepoName = async (repoName: string) => {
-	return await asyncRequest<any>({
+export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
+	return await asyncRequest<GFIInfo | undefined>({
 		url: '/api/issue/gfi',
 		params: {
 			repo: repoName,
+			owner: repoOwner,
 		},
 		baseURL: DEV_URL,
 	})

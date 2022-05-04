@@ -17,7 +17,7 @@ import ReactMarkdown from 'react-markdown';
 
 import '../../style/gfiStyle.css'
 import {GFIOverlay, GFISimplePagination} from '../GFIComponents';
-import {GFIRepoInfo} from '../../module/data/dataModel';
+import {GFIInfo, GFIRepoInfo} from '../../module/data/dataModel';
 import {getIssueByRepoInfo} from '../../api/githubApi';
 import {GFIRootReducers} from '../../module/storage/configureStorage';
 import {createPopoverAction} from '../../module/storage/reducers';
@@ -211,18 +211,16 @@ const PanelTag = (props: {name: string, id: number, selected: boolean, onClick: 
 	)
 }
 
-export interface GFIIssueMonitor extends GFIRepoBasicProp {
-	issueList?: number[],
-}
+export interface GFIIssueMonitor extends GFIRepoBasicProp {}
 
 export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 
-	const {repoInfo, issueList} = props
-	const [displayIssueList, setDisplayIssueList] = useState<number[] | undefined>(issueList)
+	const {repoInfo} = props
+	const [displayIssueList, setDisplayIssueList] = useState<GFIInfo[] | undefined>()
 
 	useEffect(() => {
 		if (!displayIssueList) {
-			getGFIByRepoName(repoInfo.name).then((res) => {
+			getGFIByRepoName(repoInfo.name, repoInfo.owner).then((res) => {
 				if (Array.isArray(res) && res.length) {
 					setDisplayIssueList(res)
 				} else {
@@ -252,7 +250,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 })
 
 export interface GFIIssueListItem extends GFIRepoBasicProp {
-	issue: number,
+	issue: GFIInfo,
 }
 
 type IssueState = 'closed' | 'open' | 'resolved'
@@ -272,7 +270,7 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 	const [displayData, setDisplayData] = useState<IssueDisplayData>()
 
 	useEffect(() => {
-		getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue).then((res) => {
+		getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number).then((res) => {
 			if (res.code === 200) {
 				if ('number' in res.result && 'title' in res.result && 'state' in res.result
 					&& 'active_lock_reason' in res.result && 'body' in res.result && 'html_url' in res.result) {
@@ -303,7 +301,7 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 				className={`issue-display-item-btn ${displayData ? displayData.state: ''}`}
 			>
 				<a href={displayData ? displayData.url: ''}>
-					{`#${issue}`}
+					{`#${issue.number}`}
 				</a>
 			</button>
 		)
@@ -399,7 +397,7 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 	const [selectedIdx, setSelectedIdx] = useState(0)
 
 	useEffect(() => {
-		getRepoDetailedInfoByName(repoInfo.name).then((res) => {
+		getRepoDetailedInfoByName(repoInfo.name, repoInfo.owner).then((res) => {
 			const result = res as GetRepoDetailedInfo
 			setDisplayInfo(result)
 		})

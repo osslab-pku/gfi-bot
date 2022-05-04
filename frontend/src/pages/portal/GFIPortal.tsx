@@ -2,10 +2,11 @@ import React, {MouseEventHandler, useEffect, useRef, useState} from 'react';
 import {Button, Col, Container, Form, ListGroup, Nav, Overlay, Popover, Row} from 'react-bootstrap';
 import {LinkContainer} from 'react-router-bootstrap';
 import {withRouter} from 'react-router-dom';
+import KeepAlive from 'react-activation';
 
 import '../../style/gfiStyle.css'
 import {useDispatch, useSelector} from 'react-redux';
-import {createAccountNavStateAction} from '../../module/storage/reducers';
+import {createAccountNavStateAction, createGlobalProgressBarAction} from '../../module/storage/reducers';
 import {GFIRootReducers} from '../../module/storage/configureStorage';
 import {checkIsGitRepoURL} from '../../utils';
 
@@ -35,7 +36,11 @@ export const GFIPortal = (props: GFIPortal) => {
 
 	const renderSubPanel = () => {
 		if (currentPanelID === 'Add Project') {
-			return <AddProjectComponent />
+			return (
+				<KeepAlive>
+					<AddProjectComponent />
+				</KeepAlive>
+			)
 		} else if (currentPanelID === 'Search History') {
 			return <></>
 		} else if (currentPanelID === 'My Account') {
@@ -157,8 +162,17 @@ const AddProjectComponent = () => {
 		variant ?: GFIAlarmPanelVariants,
 	}>({ show: false, msg: '', variant: 'danger' })
 
+	const dispatch = useDispatch()
+	const showProgressBar = () => {
+		dispatch(createGlobalProgressBarAction({ hidden: false }))
+	}
+	const hideProgressBar = () => {
+		dispatch(createGlobalProgressBarAction({ hidden: true }))
+	}
+
 	const [addedRepos, setAddedRepos] = useState<GFIUserSearchHistoryItem[]>()
 	const fetchAddedRepos = () => {
+		showProgressBar()
 		getAddRepoHistory().then((res) => {
 			const finishedQueries: GFIUserSearchHistoryItem[] | undefined = res?.finished_queries?.map((info) => {
 				return {
@@ -173,6 +187,7 @@ const AddProjectComponent = () => {
 				}
 			})
 			setAddedRepos(finishedQueries ? finishedQueries.concat(pendingQueries) : pendingQueries)
+			hideProgressBar()
 		})
 	}
 	useEffect(() => {
@@ -186,6 +201,7 @@ const AddProjectComponent = () => {
 			const repoName = urls[urls.length - 1].split('.git')[0]
 			const repoOwner = urls[urls.length - 2]
 			if (repoName && repoOwner) {
+				showProgressBar()
 				checkHasRepoPermissions(repoName, repoOwner).then((res) => {
 					if (res) {
 						addRepoToGFIBot(repoName, repoOwner).then((result?: string) => {
@@ -202,14 +218,16 @@ const AddProjectComponent = () => {
 									msg: `Connection Lost`,
 									variant: 'danger',
 								})
+								hideProgressBar()
 							}
 						})
 					} else {
 						setMainAlarmConfig({
 							show: true,
-							msg: `You\'re not a maintainer of ${repoOwner}/${repoName}`,
+							msg: `You\'re not a maintainer of ${repoOwner}/${repoName} or this is a private repository`,
 							variant: 'danger',
 						})
+						hideProgressBar()
 					}
 				})
 				shouldDisplayAlarm = false
