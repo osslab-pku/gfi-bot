@@ -424,6 +424,14 @@ def update_user(token: str, login: str) -> None:
         logger.exception(e)
 
 
+def update_gfi_repo_add_query(owner: str, name: str) -> None:
+    GfiQueries.objects(Q(owner=owner) & Q(name=name)).update_one(
+        set__is_pending=False,
+        set__is_finished=True,
+        set___finished_at=datetime.now(timezone.utc),
+    )
+
+
 def update_repo(token: str, owner: str, name: str) -> None:
     """Update all information of a repository for RecGFI training"""
     fetcher = RepoFetcher(token, owner, name)
@@ -465,6 +473,8 @@ def update_repo(token: str, owner: str, name: str) -> None:
             if "commenter" in event:
                 all_users.add(event["commenter"])
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
+
+    update_gfi_repo_add_query(owner, name)
 
     for user in all_users:
         update_user(token, user)
