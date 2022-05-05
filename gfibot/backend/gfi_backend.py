@@ -57,7 +57,9 @@ class JSONEncoder(json.JSONEncoder):
 
 @app.route("/api/repos/num")
 def get_repo_num():
+    """Get number of repos by filter"""
     language = request.args.get("lang")
+    filter = request.args.get("filter")
     repos = Repo.objects()
     res = 0
     if language != None:
@@ -67,17 +69,16 @@ def get_repo_num():
     return {"code": 200, "result": res}
 
 
-def get_month_count(mounth_counts):
-    return [
-        {
-            "month": item.month,
-            "count": item.count,
-        }
-        for item in mounth_counts
-    ]
-
-
 def get_repo_info_from_engine(repo):
+    def get_month_count(mounth_counts):
+        return [
+            {
+                "month": item.month,
+                "count": item.count,
+            }
+            for item in mounth_counts
+        ]
+
     return {
         "name": repo.name,
         "owner": repo.owner,
@@ -91,9 +92,9 @@ def get_repo_info_from_engine(repo):
     }
 
 
-@app.route("/api/repos/detail_info_name")
-def get_repo_detail_info_by_name():
-
+@app.route("/api/repos/info/detail")
+def get_repo_detailed_info():
+    """Get repo info by name/owner"""
     repo_name = request.args.get("name")
     repo_owner = request.args.get("owner")
     repos = Repo.objects(Q(name=repo_name) & Q(owner=repo_owner))
@@ -106,8 +107,8 @@ def get_repo_detail_info_by_name():
 REPO_FILTER_TYPES = ["None", "Popularity", "Activity", "Recommended", "Time"]
 
 
-@app.route("/api/repos/detailed_info")
-def get_repo_detailed_info():
+@app.route("/api/repos/info/paged")
+def get_paged_repo_detailed_info():
     start_idx = request.args.get("start")
     req_size = request.args.get("length")
     lang = request.args.get("lang")
@@ -140,8 +141,8 @@ def get_repo_detailed_info():
         abort(400)
 
 
-@app.route("/api/repos/info")
-def get_repo_info_by_name_or_url():
+@app.route("/api/repos/info/search")
+def search_repo_info_by_name_or_url():
     repo_name = request.args.get("repo")
     repo_url = parse.unquote(request.args.get("url"))
     app.logger.info(repo_url)
@@ -168,22 +169,55 @@ def get_repo_info_by_name_or_url():
         abort(400)
 
 
-@app.route("/api/repos/language")
-def get_deduped_repo_languages():
-    languages = Repo.objects().distinct(field="language")
-    return {"code": 200, "result": languages}
-
-
-GITHUB_LOGIN_URL: Final = "https://github.com/login/oauth/authorize"
-
-
-@app.route("/api/user/github/login")
-def github_login():
-    """
-    Process Github OAuth login procedure
-    """
-    client_id = GithubTokens.objects().first().client_id
-    return {"code": 200, "result": GITHUB_LOGIN_URL + "?client_id=" + client_id}
+@app.route("/api/repos/add", methods=["POST"])
+def add_repo_to_bot():
+    content_type = request.headers.get("Content-Type")
+    app.logger.info("content_type: {}".format(content_type))
+    if content_type == "application/json":
+        data = request.get_json()
+        user_name = data["user"]
+        repo_name = data["repo"]
+        repo_owner = data["owner"]
+        user_token = (
+            GfiUsers.objects(github_login=user_name).first().github_access_token
+        )
+        if user_token == None:
+            return {"code": 400, "result": "user not found"}
+        if user_name != None and repo_name != None and repo_owner != None:
+            app.logger.info(
+                "adding repo to bot, {}, {}, {}".format(
+                    repo_name, repo_owner, user_name
+                )
+            )
+            if len(GfiUsers.objects(github_login=user_name)):
+                repo_info = {
+                    "name": repo_name,
+                    "owner": repo_owner,
+                }
+                queries = [
+                    {
+                        "name": query.name,
+                        "owner": query.owner,
+                    }
+                    for query in GfiQueries.objects()
+                ]
+                if repo_info not in queries:
+                    new_query = GfiQueries(
+                        name=repo_name,
+                        owner=repo_owner,
+                        user_github_login=user_name,
+                        is_pending=True,
+                        is_finished=False,
+                        _created_at=datetime.utcnow(),
+                    )
+                    new_query.save()
+                    executor.submit(update_repo, user_token, repo_owner, repo_name)
+                    return {"code": 200, "result": "is being processed by GFI-Bot"}
+                else:
+                    return {"code": 200, "result": "already exists"}
+        return {"code": 400, "result": "Bad request"}
+    else:
+        return {"code": 404, "result": "user not found"}
 
 
 @app.route("/api/repos/recommend")
@@ -196,10 +230,13 @@ def get_recommend_repo():
     return {"code": 200, "result": get_repo_info_from_engine(res)}
 
 
-@app.route("/api/issue/num")
-def get_issue_num():
-    issues = OpenIssue.objects()
-    return {"code": 200, "result": len(issues)}
+@app.route("/api/repos/language")
+def get_deduped_repo_languages():
+    languages = Repo.objects().distinct(field="language")
+    return {"code": 200, "result": languages}
+
+
+GITHUB_LOGIN_URL: Final = "https://github.com/login/oauth/authorize"
 
 
 def get_predicted_info_from_engine(predict_list):
@@ -216,6 +253,12 @@ def get_predicted_info_from_engine(predict_list):
     ]
 
 
+@app.route("/api/issue/num")
+def get_issue_num():
+    issues = OpenIssue.objects()
+    return {"code": 200, "result": len(issues)}
+
+
 @app.route("/api/issue/gfi")
 def get_issue_info():
     """
@@ -223,20 +266,30 @@ def get_issue_info():
     """
     repo_name = request.args.get("repo")
     repo_owner = request.args.get("owner")
+    app.logger.info
     if repo_name != None and repo_owner != None:
-        gfi_list = Prediction.objects(Q(name=repo_name) & Q(owner=repo_owner)).order_by(
-            "-probability"
-        )
-        res = get_predicted_info_from_engine(gfi_list)[0 : min(5, len(gfi_list))]
+        gfi_list = Prediction.objects(
+            Q(name=repo_name) & Q(owner=repo_owner) & Q(probability__gte=0.5)
+        ).order_by("-probability")
+        res = get_predicted_info_from_engine(gfi_list)
         if len(gfi_list):
             return {
                 "code": 200,
                 "result": res,
             }
         else:
-            return {"code": 404, "result": "repo not found"}
+            return {"code": 404, "result": "no gfi found"}
     else:
         abort(400)
+
+
+@app.route("/api/user/github/login")
+def github_login():
+    """
+    Process Github OAuth login procedure
+    """
+    client_id = GithubTokens.objects().first().client_id
+    return {"code": 200, "result": GITHUB_LOGIN_URL + "?client_id=" + client_id}
 
 
 @app.route("/api/user/github/callback")
@@ -313,57 +366,6 @@ def github_login_redirect():
             "code": 400,
             "result": "No code provided",
         }
-
-
-@app.route("/api/repos/add", methods=["POST"])
-def add_repo_to_bot():
-    content_type = request.headers.get("Content-Type")
-    app.logger.info("content_type: {}".format(content_type))
-    if content_type == "application/json":
-        data = request.get_json()
-        user_name = data["user"]
-        repo_name = data["repo"]
-        repo_owner = data["owner"]
-        user_token = (
-            GfiUsers.objects(github_login=user_name).first().github_access_token
-        )
-        if user_token == None:
-            return {"code": 400, "result": "user not found"}
-        if user_name != None and repo_name != None and repo_owner != None:
-            app.logger.info(
-                "adding repo to bot, {}, {}, {}".format(
-                    repo_name, repo_owner, user_name
-                )
-            )
-            if len(GfiUsers.objects(github_login=user_name)):
-                repo_info = {
-                    "name": repo_name,
-                    "owner": repo_owner,
-                }
-                queries = [
-                    {
-                        "name": query.name,
-                        "owner": query.owner,
-                    }
-                    for query in GfiQueries.objects()
-                ]
-                if repo_info not in queries:
-                    new_query = GfiQueries(
-                        name=repo_name,
-                        owner=repo_owner,
-                        user_github_login=user_name,
-                        is_pending=True,
-                        is_finished=False,
-                        _created_at=datetime.utcnow(),
-                    )
-                    new_query.save()
-                    executor.submit(update_repo, user_token, repo_owner, repo_name)
-                    return {"code": 200, "result": "is being processed by GFI-Bot"}
-                else:
-                    return {"code": 200, "result": "already exists"}
-        return {"code": 400, "result": "Bad request"}
-    else:
-        return {"code": 404, "result": "user not found"}
 
 
 @app.route("/api/user/queries")
