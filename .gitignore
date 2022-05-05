@@ -143,3 +143,6 @@ dmypy.json
 
 # github tokens
 gfibot/backend/set_tokens_private.py
+
+# trained models
+gfi-bot
