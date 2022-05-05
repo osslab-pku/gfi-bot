@@ -18,7 +18,7 @@ export const checkGithubLogin = async () => {
 	const userToken = store.getState().loginReducer.token
 	const userLoginName = store.getState().loginReducer.loginName
 	if (userToken) {
-		const res = await asyncRequest<any>({
+		const res = await asyncRequest<StandardHTTPResponse<any>>({
 			url: `https://api.github.com/users/${userLoginName}`,
 			headers: {
 				'Authorization': `token ${userToken}`,

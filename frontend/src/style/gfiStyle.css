@@ -772,5 +772,14 @@ a.account-nav {
     border: 1px solid var(--color-fg-pending);
     padding: 0.5rem 1rem;
     border-radius: 5px;
+}
 
+#issue-display-item-prob-tag {
+    font-size: small;
+    font-family: var(--default-font-family);
+    color: var(--color-fg-pending);
+    background-color: var(--color-bg-pending);
+    text-align: center;
+    padding: 0.2rem 0.2rem;
+    border-radius: 5px;
 }

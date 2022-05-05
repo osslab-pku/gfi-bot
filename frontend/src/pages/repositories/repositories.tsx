@@ -6,7 +6,7 @@ import {checkIsNumber} from '../../utils';
 import {GFICopyright, GFIAlarm, GFIPagination, GFIProgressBar} from '../GFIComponents';
 import {RepoGraphContainer} from './repoDataDemonstrator';
 
-import {getRepoNum, getRepoDetailedInfo} from '../../api/api';
+import {getRepoNum, getPagedRepoDetailedInfo} from '../../api/api';
 // @ts-ignore
 import Fade from 'react-reveal/Fade'
 import {useDispatch} from 'react-redux';
@@ -42,7 +42,7 @@ export const Repositories = () => {
         let beginIdx = (pageIdx - 1) * repoListCapacity
         dispatch(createGlobalProgressBarAction({ hidden: false }))
         dispatch(createAccountNavStateAction({ show: true }))
-        getRepoDetailedInfo(beginIdx, repoListCapacity).then((repoList) => {
+        getPagedRepoDetailedInfo(beginIdx, repoListCapacity).then((repoList) => {
             if (repoList && Array.isArray(repoList)) {
                 setInfoList(repoList)
             } else {
@@ -200,6 +200,7 @@ export const Repositories = () => {
                                 onPageBtnClicked={() => onPageBtnClicked()}
                                 maxPagingCount={3}
                                 needPadding={true}
+                                needInputArea={true}
                             />
                         </Row>
                     </Col>
