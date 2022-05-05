@@ -10,7 +10,7 @@ import {checkIsNumber, defaultFontFamily} from '../../utils';
 
 import {GFINotiToast} from '../login/GFILoginComponents';
 import {GFIAlarm, GFICopyright, GFIPagination} from '../GFIComponents';
-import {getRepoNum, getIssueNum, getLanguageTags, getRepoInfoByNameOrURL, getRepoDetailedInfo} from '../../api/api';
+import {getRepoNum, getIssueNum, getLanguageTags, searchRepoInfoByNameOrURL, getPagedRepoDetailedInfo} from '../../api/api';
 import {checkGithubLogin} from '../../api/githubApi';
 
 import {checkIsGitRepoURL} from '../../utils';
@@ -119,7 +119,7 @@ export const MainPage = () => {
 				setTotalRepos(res)
 			}
 		})
-		getRepoDetailedInfo(beginIdx, repoCapacity, tag, filter).then((repoList) => {
+		getPagedRepoDetailedInfo(beginIdx, repoCapacity, tag, filter).then((repoList) => {
 			if (repoList && Array.isArray(repoList)) {
 				const repoInfoList = repoList.map((repo, i) => {
 					if ('name' in repo && 'owner' in repo) {
@@ -157,7 +157,7 @@ export const MainPage = () => {
 			repoName = s
 		}
 		dispatch(createGlobalProgressBarAction({hidden: false}))
-		getRepoInfoByNameOrURL(repoName, repoURL).then((res) => {
+		searchRepoInfoByNameOrURL(repoName, repoURL).then((res) => {
 			if (res) {
 				setTotalRepos(1)
 				setDisplayRepoInfo([res])
@@ -201,7 +201,7 @@ export const MainPage = () => {
 						<Container className={'flex-col'} style={{
 							padding: '0px',
 							marginLeft: '0px',
-							maxWidth: isMobile ? '100%' : '60%',
+							width: isMobile ? '100%' : '60%',
 						}}>
 							{renderInfoComponent()}
 							<GFIPagination
@@ -218,7 +218,7 @@ export const MainPage = () => {
 									onPageBtnClicked()
 								}}
 								maxPagingCount={3}
-								needPadding={false}
+								needInputArea={true}
 							/>
 						</Container>
 						{isMobile ? <Container style={{
@@ -337,7 +337,7 @@ const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
 		})
 
 		getIssueNum().then((res) => {
-			if (res && checkIsNumber(res)) {
+			if (res) {
 				setIssueNum(res)
 				setGFINum(Math.round(res * 0.05))
 			}

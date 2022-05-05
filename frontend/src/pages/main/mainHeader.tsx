@@ -59,12 +59,11 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
 		})
 	}
 
-
 	const [tagArray, setTagArray] = useState<string[]>(['None'])
 	const [tagSelected, setTagSelected] = useState('None')
 	useEffect(() => {
 		getLanguageTags().then((res) => {
-			if (res && Array.isArray(res)) {
+			if (res) {
 				setTagArray(['None', ...res])
 			}
 		})

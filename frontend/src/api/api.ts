@@ -18,7 +18,7 @@ export const DEV_URL = 'https://dev.mskyurina.top'
 export const WEBSOCKET_URL = 'ws://la-3.1919114.xyz:5000/gfi_process'
 
 export const getRepoNum = async (lang?: string) => {
-	return await asyncRequest<any>({
+	return await asyncRequest<number | undefined>({
 		url: '/api/repos/num',
 		params: {
 			lang: lang,
@@ -28,15 +28,15 @@ export const getRepoNum = async (lang?: string) => {
 }
 
 export const getIssueNum = async () => {
-	return await asyncRequest<any>({
+	return await asyncRequest<number | undefined>({
 		url: '/api/issue/num',
 		baseURL: DEV_URL,
 	})
 }
 
-export const getRepoDetailedInfo = async (beginIdx: string | number, capacity: string | number, lang?: string, filter?: string) => {
+export const getPagedRepoDetailedInfo = async (beginIdx: string | number, capacity: string | number, lang?: string, filter?: string) => {
 	return await asyncRequest<GetRepoDetailedInfo>({
-		url: '/api/repos/detailed_info',
+		url: '/api/repos/info/paged',
 		params: {
 			start: beginIdx,
 			length: capacity,
@@ -47,9 +47,9 @@ export const getRepoDetailedInfo = async (beginIdx: string | number, capacity: s
 	})
 }
 
-export const getRepoDetailedInfoByName = async (name: string, owner: string) => {
+export const getRepoDetailedInfo = async (name: string, owner: string) => {
 	return await asyncRequest<GetRepoDetailedInfo>({
-		url: '/api/repos/detail_info_name',
+		url: '/api/repos/info/detail',
 		params: {
 			name: name,
 			owner: owner,
@@ -58,22 +58,15 @@ export const getRepoDetailedInfoByName = async (name: string, owner: string) => 
 	})
 }
 
-export const getRepoInfoByNameOrURL = async (repoName?: string, repoURL?: string) => {
+export const searchRepoInfoByNameOrURL = async (repoName?: string, repoURL?: string) => {
 	const [hasLogin, userName] = userInfo()
 	return await asyncRequest<GFIRepoInfo>({
-		url: '/api/repos/info',
+		url: '/api/repos/info/search',
 		params: {
 			repo: repoName,
 			url: repoURL,
 			user: userName,
 		},
-		baseURL: DEV_URL,
-	})
-}
-
-export const getRecommendedRepoInfo = async () => {
-	return await asyncRequest<any>({
-		url: '/api/repos/recommend',
 		baseURL: DEV_URL,
 	})
 }
@@ -90,7 +83,7 @@ export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
 }
 
 export const getLanguageTags = async () => {
-	return await asyncRequest<any>({
+	return await asyncRequest<string[] | undefined>({
 		url: '/api/repos/language',
 		baseURL: DEV_URL,
 	})

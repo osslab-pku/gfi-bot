@@ -16,15 +16,16 @@ import remarkGemoji from 'remark-gemoji';
 import ReactMarkdown from 'react-markdown';
 
 import '../../style/gfiStyle.css'
-import {GFIOverlay, GFISimplePagination} from '../GFIComponents';
+import {GFIOverlay, GFIPagination, GFISimplePagination} from '../GFIComponents';
 import {GFIInfo, GFIRepoInfo} from '../../module/data/dataModel';
 import {getIssueByRepoInfo} from '../../api/githubApi';
 import {GFIRootReducers} from '../../module/storage/configureStorage';
 import {createPopoverAction} from '../../module/storage/reducers';
-import {getGFIByRepoName, getRepoDetailedInfoByName} from '../../api/api';
+import {getGFIByRepoName, getRepoDetailedInfo} from '../../api/api';
 import {useIsMobile} from '../app/windowContext';
 import {RepoGraphContainer} from '../repositories/repoDataDemonstrator';
 import {GetRepoDetailedInfo} from '../../module/data/dataModel';
+import {checkIsNumber} from '../../utils';
 
 export interface RepoShouldDisplayPopoverState {
 	shouldDisplayPopover?: boolean,
@@ -217,12 +218,17 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 
 	const {repoInfo} = props
 	const [displayIssueList, setDisplayIssueList] = useState<GFIInfo[] | undefined>()
+	const maxPageItems = 6
+	const [shouldDisplayPagination, setShouldDisplayPagination] = useState(false)
+	const [currentPageIdx, setCurrentPageIdx] = useState(1)
+	const [pageInput, setPageInput] = useState<string>()
 
 	useEffect(() => {
 		if (!displayIssueList) {
 			getGFIByRepoName(repoInfo.name, repoInfo.owner).then((res) => {
 				if (Array.isArray(res) && res.length) {
 					setDisplayIssueList(res)
+					setShouldDisplayPagination(res.length > maxPageItems)
 				} else {
 					setDisplayIssueList(undefined)
 				}
@@ -231,14 +237,20 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 	}, [repoInfo])
 
 	const render = () => {
+		const pageLowerBound = (currentPageIdx - 1) * maxPageItems
+		const pageUpperBound = currentPageIdx * maxPageItems
 		return displayIssueList?.map((issue, i) => {
-			return (
-				<GFIIssueListItem
-					repoInfo={repoInfo}
-					issue={issue}
-					key={`gfi-issue-${repoInfo.name}-${issue}-${i}`}
-				/>
-			)
+			if (pageLowerBound <= i && i < pageUpperBound) {
+				return (
+					<GFIIssueListItem
+						repoInfo={repoInfo}
+						issue={issue}
+						key={`gfi-issue-${repoInfo.name}-${issue}-${i}`}
+					/>
+				)
+			} else {
+				return <></>
+			}
 		})
 	}
 
@@ -248,6 +260,30 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 			{displayIssueList ? <></>:
 				<div id={'gfi-issue-monitor-empty'}>
 					Currently no GFIs for this repository.
+				</div>
+			}
+			{
+				shouldDisplayPagination && displayIssueList &&
+				<div style={{ marginRight: '0.7rem', marginLeft: '0.7rem', marginBottom: '0.3rem' }}>
+                    <GFIPagination
+                        maxPagingCount={3}
+                        pageNums={Math.ceil(displayIssueList.length / maxPageItems)}
+                        pageIdx={currentPageIdx}
+                        toPage={(page) => setCurrentPageIdx(page)}
+                        needInputArea={true}
+                        onFormInput={(target) => {
+							const t = target as HTMLTextAreaElement
+	                        setPageInput(t.value)
+                        }}
+                        onPageBtnClicked={() => {
+							if (pageInput && checkIsNumber(pageInput)) {
+								const page = parseInt(pageInput)
+								if (page > 0 && page <= Math.ceil(displayIssueList.length / maxPageItems)) {
+									setCurrentPageIdx(parseInt(pageInput))
+								}
+							}
+                        }}
+                    />
 				</div>
 			}
 		</div>
@@ -333,10 +369,21 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 				}}>
 					{issueBtn()}
 				</div>
-
 				<div className={'flex-row flex-wrap text-break'}>
 					{displayData ? displayData.title : ''}
 				</div>
+				{displayData &&
+					<div style={{
+						width: '5%',
+						minWidth: '60px',
+						marginLeft: 'auto',
+						paddingLeft: '0.3rem',
+					}}>
+                        <div id={'issue-display-item-prob-tag'}>
+							{(issue.probability * 100).toFixed(2) + '%'}
+                        </div>
+					</div>
+				}
 			</div>
 		</>
 	)
@@ -402,7 +449,7 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 	const [selectedIdx, setSelectedIdx] = useState(0)
 
 	useEffect(() => {
-		getRepoDetailedInfoByName(repoInfo.name, repoInfo.owner).then((res) => {
+		getRepoDetailedInfo(repoInfo.name, repoInfo.owner).then((res) => {
 			const result = res as GetRepoDetailedInfo
 			setDisplayInfo(result)
 		})
@@ -451,7 +498,6 @@ export const GFIRepoStaticsDemonstrator = forwardRef((props: GFIRepoStaticsDemon
 				<GFISimplePagination
 					nums={displayData ? Object.keys(displayData).length: 1}
 					onClick={(idx) => {
-						console.log('selected ' + idx)
 						setSelectedIdx(idx)
 					}}
 					title={title}

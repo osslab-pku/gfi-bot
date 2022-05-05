@@ -39,10 +39,11 @@ export interface GFIPaginationProps {
 	maxPagingCount: number,
 	pageNums: number,
 	pageIdx: number,
-	onPageBtnClicked: () => void,
+	onPageBtnClicked?: () => void,
 	toPage: (page: number) => void,
-	onFormInput: (target: EventTarget) => void,
-	needPadding: boolean,
+	needInputArea?: boolean,
+	onFormInput?: (target: EventTarget) => void,
+	needPadding?: boolean,
 	className?: string,
 }
 
@@ -67,6 +68,9 @@ export const GFIPagination = (props: GFIPaginationProps) => {
 	}
 
 	const toNextPage = () => {
+		if (props.pageIdx === props.pageNums) {
+			return
+		}
 		if (props.pageIdx === props.pageNums - 1) {
 			toLastPage()
 		} else {
@@ -76,7 +80,7 @@ export const GFIPagination = (props: GFIPaginationProps) => {
 
 	const calRenderRange = (pageNums: number, selectedIdx: number) => {
 		let pageArray: number[] = Array()
-		let idx = Math.max(selectedIdx - maxPagingCount + 1, 1)
+		let idx = Math.max(selectedIdx - maxPagingCount + 2, 1)
 		for (let i = 0; i < maxPagingCount; i++, idx++) {
 			pageArray.push(idx)
 			if (idx + 1 > pageNums) {
@@ -134,23 +138,25 @@ export const GFIPagination = (props: GFIPaginationProps) => {
 							<Pagination.Next onClick={() => {toNextPage()}} />
 						</Pagination>
 					</Col>
-					<Col sm={4} style={{ float: 'right', }}>
-						<Form.Label style={{
-							maxWidth: '80px',
-							float: 'right',
-						}}>
-							<Form.Control
-								placeholder={props.pageIdx + '/' + props.pageNums}
-								onChange={(e: ChangeEvent<HTMLInputElement>) => {props.onFormInput(e.target)}}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter') {
-										e.preventDefault()
-										props.onPageBtnClicked()
-									}
-								}}
-							/>
-						</Form.Label>
-					</Col>
+					{ props.needInputArea &&
+						<Col sm={4} style={{ float: 'right', }}>
+							<Form.Label style={{
+								maxWidth: '80px',
+								float: 'right',
+							}}>
+								<Form.Control
+									placeholder={props.pageIdx + '/' + props.pageNums}
+									onChange={(e: ChangeEvent<HTMLInputElement>) => {props.onFormInput && props.onFormInput(e.target)}}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' && props.onPageBtnClicked) {
+											e.preventDefault()
+											props.onPageBtnClicked()
+										}
+									}}
+								/>
+							</Form.Label>
+						</Col>
+					}
 				</Form.Group>
 			</Row>
 		</Container>
