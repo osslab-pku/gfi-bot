@@ -117,7 +117,7 @@ export const GFIRepoDisplayView = forwardRef((props: GFIRepoDisplayView, ref: Fo
 		}
 
 		return (
-			<div className={'flex-col justify-content-center repo-display-info'}>
+			<div className={'flex-col justify-content-center repo-display-info flex-wrap'}>
 				<div className={'repo-display-info-title flex-row'}>
 					<p> {repoInfo.owner} </p>
 					<p> {' / '} </p>
