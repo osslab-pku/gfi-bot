@@ -36,6 +36,9 @@ db_client = pymongo.MongoClient(MONGO_URI)
 gfi_db = db_client["gfibot"]
 db_gfi_email: Final = "gmail-email"
 
+WEB_APP_NAME = "gfibot-webapp"
+GITHUB_APP_NAME = "gfibot-githubapp"
+
 
 def generate_update_msg(dict: Dict) -> Dict:
     return {"$set": dict}
@@ -120,10 +123,10 @@ def get_paged_repo_detailed_info():
         repos_query = []
         count = 0
         if lang != None and lang != "":
-            repos_query = Repo.objects(language=lang)
+            repos_query = Repo.objects(language=lang).order_by("name")
             count = len(repos_query)
         else:
-            repos_query = Repo.objects()
+            repos_query = Repo.objects().order_by("name")
             count = len(repos_query)
 
         start_idx = max(0, start_idx)
@@ -292,15 +295,19 @@ def github_login():
     return {"code": 200, "result": GITHUB_LOGIN_URL + "?client_id=" + client_id}
 
 
-@app.route("/api/user/github/callback")
-def github_login_redirect():
+def github_login_redirect(name: str, code: str):
     """
-    Process Github OAuth callback procedure
+    Process Github OAuth login redirect
     """
-    code = request.args.get("code")
+    client_id = GithubTokens.objects(app_name=name).first().client_id
+    client_secret = GithubTokens.objects(app_name=name).first().client_secret
 
-    client_id = GithubTokens.objects().first().client_id
-    client_secret = GithubTokens.objects().first().client_secret
+    if name == WEB_APP_NAME:
+        is_github_app = False
+    elif name == GITHUB_APP_NAME:
+        is_github_app = True
+    else:
+        abort(400)
 
     if client_id == None or client_secret == None:
         abort(500)
@@ -316,6 +323,7 @@ def github_login_redirect():
         )
         if r.status_code == 200:
             res_dict = dict(urllib.parse.parse_qsl(r.text))
+            app.logger.info(res_dict)
             access_token = res_dict["access_token"]
             if access_token != None:
                 r = requests.get(
@@ -324,22 +332,20 @@ def github_login_redirect():
                 )
                 if r.status_code == 200:
                     user_res = json.loads(r.text)
-                    if len(GfiUsers.objects(github_id=user_res["id"])) == 0:
-                        new_user_data = GfiUsers(
-                            github_id=user_res["id"],
-                            github_login=user_res["login"],
-                            github_name=user_res["name"],
-                            github_avatar_url=user_res["avatar_url"],
-                            github_access_token=access_token,
-                            github_email=user_res["email"],
-                            github_url=user_res["url"],
-                            twitter_user_name=user_res["twitter_username"],
-                        )
-                        new_user_data.save()
-                    else:
-                        GfiUsers.objects(github_id=user_res["id"]).update_one(
-                            set__github_access_token=access_token,
-                        )
+                    GfiUsers.objects(
+                        Q(is_github_app_user=is_github_app)
+                        & Q(github_id=user_res["id"])
+                    ).upsert_one(
+                        github_id=user_res["id"],
+                        github_login=user_res["login"],
+                        is_github_app_user=is_github_app,
+                        github_name=user_res["name"],
+                        github_avatar_url=user_res["avatar_url"],
+                        github_access_token=access_token,
+                        github_email=user_res["email"],
+                        github_url=user_res["url"],
+                        twitter_user_name=user_res["twitter_username"],
+                    )
                     return redirect(
                         "/login/redirect?github_login={}&github_name={}&github_id={}&github_token={}&github_avatar_url={}".format(
                             user_res["login"],
@@ -366,6 +372,12 @@ def github_login_redirect():
             "code": 400,
             "result": "No code provided",
         }
+
+
+@app.route("/api/user/github/callback")
+def github_login_redirect_web():
+    code = request.args.get("code")
+    return github_login_redirect(name=WEB_APP_NAME, code=code)
 
 
 @app.route("/api/user/queries")
@@ -402,6 +414,33 @@ def get_user_queries():
             },
         }
     return {"code": 404, "result": "user not found"}
+
+
+@app.route("/api/github/app/installation")
+def github_app_install():
+    code = request.args.get("code")
+    return github_login_redirect(name=GITHUB_APP_NAME, code=code)
+
+
+@app.route("/api/github/actions/webhook", methods=["POST"])
+def github_app_webhook_process():
+    """
+    Process Github App webhook
+    """
+    event = request.headers.get("X-Github-Event")
+    data = request.get_json()
+    if event == "installation":
+        action = data["action"]
+        if action == "created":
+            None
+        elif action == "deleted":
+            None
+    elif event == "issues":
+        action = data["action"]
+    elif event == "issue_comment":
+        None
+
+    return {"code": 200, "result": "callback succeed for event {}".format(event)}
 
 
 def fetch_repo_gfi(repo_url, github_name):
