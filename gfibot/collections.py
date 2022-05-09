@@ -473,10 +473,16 @@ class User(Document):
 class GithubTokens(Document):
     """GitHub tokens for GitHub App"""
 
+    app_name: str = StringField(required=True)
     client_id: str = StringField(required=True)
     client_secret: str = StringField(required=True)
 
-    meta = {"indexes": [{"fields": ["client_id"], "unique": True}]}
+    meta = {
+        "indexes": [
+            {"fields": ["client_id"], "unique": True},
+            {"fields": ["app_name"], "unique": True},
+        ]
+    }
 
 
 class GfiUsers(Document):
@@ -486,6 +492,7 @@ class GfiUsers(Document):
     github_access_token: str = StringField(required=True)
     github_login: str = StringField(required=True)
     github_name: str = StringField(required=True)
+    is_github_app_user: bool = BooleanField(required=True)
     github_avatar_url: str = StringField(required=False)
     github_url: str = StringField(required=False)
     github_email: str = StringField(required=False)
@@ -493,9 +500,8 @@ class GfiUsers(Document):
 
     meta = {
         "indexes": [
-            {"fields": ["github_id"], "unique": True},
-            {"fields": ["github_login"], "unique": True},
-            {"fields": ["github_access_token"], "unique": True},
+            {"fields": ["github_id", "is_github_app_user"], "unique": True},
+            {"fields": ["github_login", "is_github_app_user"], "unique": True},
             {"fields": ["github_email"]},
             {"fields": ["twitter_user_name"]},
         ]
@@ -518,6 +524,6 @@ class GfiQueries(Document):
     mata = {
         "indexes": [
             {"fields": ["name", "owner"], "unique": True},
-            {"fields": ["user_github_login"], "unique": True},
+            {"fields": ["user_github_login"]},
         ]
     }
