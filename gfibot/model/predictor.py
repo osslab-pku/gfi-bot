@@ -181,7 +181,6 @@ def update_training_summary(
 
 
 def update_prediction(threshold: int):
-    Prediction.objects().delete()
     model_full_path = TrainingSummary.objects(threshold=threshold)[0].model_full_file
     model_full = xgb.Booster()
     model_full.load_model(model_full_path)
@@ -197,7 +196,9 @@ def update_prediction(threshold: int):
         y_prob = model_full.predict(xg_test)
         # print(xg_test)
         # print(y_prob)
-        predicted_issue = Prediction(
+        Prediction.objects(
+            Q(owner=iss.owner) & Q(name=iss.name) & Q(number=iss.number)
+        ).upsert_one(
             owner=iss.owner,
             name=iss.name,
             number=iss.number,
@@ -205,7 +206,6 @@ def update_prediction(threshold: int):
             probability=y_prob,
             last_updated=datetime.now(),
         )
-        predicted_issue.save()
     logger.info(
         "Get predictions for open issues under threshold " + str(threshold) + "."
     )

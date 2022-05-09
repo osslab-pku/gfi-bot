@@ -1,7 +1,18 @@
-import {Container, Col, Row, Form, InputGroup, Button, Pagination, Alert} from 'react-bootstrap';
-import React, {ChangeEvent, createRef, ForwardedRef, forwardRef} from 'react';
-import {checkIsNumber, defaultFontFamily} from '../utils';
+import {Container, Col, Row, Form, Pagination, Alert} from 'react-bootstrap';
+import React, {
+	ChangeEvent,
+	createRef,
+	forwardRef,
+	MutableRefObject,
+	useEffect,
+	useRef,
+	useState
+} from 'react';
+import {checkIsNumber, checkIsPercentage, defaultFontFamily} from '../utils';
 import {gsap} from 'gsap';
+
+import '../style/gfiStyle.css'
+import {Variant as AlarmPanelVariants} from 'react-bootstrap/types';
 
 export const GFICopyright = () => {
 
@@ -24,64 +35,15 @@ export const GFICopyright = () => {
 	)
 }
 
-export interface GFISearchBarProps {
-	fieldStyle?: 'large' | '' ,
-	search?: () => void,
-	title: string,
-	description: string
-}
-
-export const GFISearchBar = forwardRef((props: GFISearchBarProps, ref: ForwardedRef<HTMLDivElement>) => {
-	const calStyle = (fieldStyle: 'large' | any, isBtn: boolean) => {
-		if (isBtn) {
-			if (fieldStyle === 'large') {
-				return 2
-			} else {
-				return 1
-			}
-		} else {
-			if (fieldStyle === 'large') {
-				return 10
-			} else {
-				return 4
-			}
-		}
-	}
-
-	return (
-		<Container>
-			<Row style={{marginTop: '20px', marginBottom: '20px'}}>
-				<Form.Group>
-					<InputGroup>
-						<Col sm={calStyle(props.fieldStyle, false)}>
-							<Form.Control placeholder={props.description} />
-						</Col>
-						<Col/>
-						<Col sm={calStyle(props.fieldStyle, true)}>
-							<Button
-								style={{float: 'right'}}
-								onClick={() => {
-									if (props.search) {
-										props.search()
-									}
-								}}
-							> {props.title} </Button>
-						</Col>
-					</InputGroup>
-				</Form.Group>
-			</Row>
-		</Container>
-	)
-})
-
 export interface GFIPaginationProps {
 	maxPagingCount: number,
 	pageNums: number,
 	pageIdx: number,
-	onPageBtnClicked: () => void,
+	onPageBtnClicked?: () => void,
 	toPage: (page: number) => void,
-	onFormInput: (target: EventTarget) => void,
-	needPadding: boolean,
+	needInputArea?: boolean,
+	onFormInput?: (target: EventTarget) => void,
+	needPadding?: boolean,
 	className?: string,
 }
 
@@ -106,6 +68,9 @@ export const GFIPagination = (props: GFIPaginationProps) => {
 	}
 
 	const toNextPage = () => {
+		if (props.pageIdx === props.pageNums) {
+			return
+		}
 		if (props.pageIdx === props.pageNums - 1) {
 			toLastPage()
 		} else {
@@ -115,7 +80,7 @@ export const GFIPagination = (props: GFIPaginationProps) => {
 
 	const calRenderRange = (pageNums: number, selectedIdx: number) => {
 		let pageArray: number[] = Array()
-		let idx = Math.max(selectedIdx - maxPagingCount + 1, 1)
+		let idx = Math.max(selectedIdx - maxPagingCount + 2, 1)
 		for (let i = 0; i < maxPagingCount; i++, idx++) {
 			pageArray.push(idx)
 			if (idx + 1 > pageNums) {
@@ -173,32 +138,36 @@ export const GFIPagination = (props: GFIPaginationProps) => {
 							<Pagination.Next onClick={() => {toNextPage()}} />
 						</Pagination>
 					</Col>
-					<Col sm={4} style={{ float: 'right', }}>
-						<Form.Label style={{
-							maxWidth: '80px',
-							float: 'right',
-						}}>
-							<Form.Control
-								placeholder={props.pageIdx + '/' + props.pageNums}
-								onChange={(e: ChangeEvent<HTMLInputElement>) => {props.onFormInput(e.target)}}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter') {
-										e.preventDefault()
-										props.onPageBtnClicked()
-									}
-								}}
-							/>
-						</Form.Label>
-					</Col>
+					{ props.needInputArea &&
+						<Col sm={4} style={{ float: 'right', }}>
+							<Form.Label style={{
+								maxWidth: '80px',
+								float: 'right',
+							}}>
+								<Form.Control
+									placeholder={props.pageIdx + '/' + props.pageNums}
+									onChange={(e: ChangeEvent<HTMLInputElement>) => {props.onFormInput && props.onFormInput(e.target)}}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' && props.onPageBtnClicked) {
+											e.preventDefault()
+											props.onPageBtnClicked()
+										}
+									}}
+								/>
+							</Form.Label>
+						</Col>
+					}
 				</Form.Group>
 			</Row>
 		</Container>
 	)
 }
 
+export type GFIAlarmPanelVariants = AlarmPanelVariants
 export interface GFIAlarmProps {
 	onClose?: () => void,
 	title?: string,
+	variant?: AlarmPanelVariants,
 }
 
 export class GFIAlarm extends React.Component<GFIAlarmProps> {
@@ -240,7 +209,7 @@ export class GFIAlarm extends React.Component<GFIAlarmProps> {
 		const {title} = this.props
 		return (
 			<Alert
-				variant={'danger'}
+				variant={this.props.variant ? this.props.variant: 'danger'}
 				dismissible={true}
 				ref={this.selfRef}
 				onClick={this.alarmOnClose}
@@ -266,7 +235,6 @@ interface GFIProgressBarStates {
 
 export class GFIProgressBar extends React.Component<GFIProgressBarProps, GFIProgressBarStates> {
 	private readonly barRef: React.RefObject<any>;
-
 
 	constructor(props: GFIProgressBarProps) {
 		super(props)
@@ -330,4 +298,126 @@ export class GFIProgressBar extends React.Component<GFIProgressBarProps, GFIProg
 			}} ref={this.barRef} />
 		)
 	}
+}
+
+export interface GFIOverlay {
+	width?: string,
+	height?: string,
+	direction: 'left' | 'right' | 'top' | 'bottom',
+	children?: React.ReactNode,
+	hidden?: boolean,
+	id: string,
+	callback?: () => void,
+	animation?: boolean,
+}
+
+export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>((props: GFIOverlay, ref) => {
+
+	const selfRef = useRef<HTMLDivElement>(null)
+
+	const {id, width, height, direction, children, hidden, callback, animation} = props
+	const hide = hidden ? 'hidden': ''
+
+	const resizeHandler = () => {
+		if (animation && selfRef.current && direction === 'right') {
+			selfRef.current.style.left = ''
+		}
+	}
+
+	useEffect(() => {
+		window.addEventListener('resize', resizeHandler)
+		return () => {
+			window.removeEventListener('resize', resizeHandler)
+		}
+	}, [])
+
+	useEffect(() => {
+		const currentRef = (ref as MutableRefObject<HTMLDivElement>).current
+		if (currentRef && !hidden) {
+			document.getElementsByTagName('html')[0].classList.add('scrollbar-hidden')
+			currentRef.style.display = 'block'
+
+			// animation
+			// currently only for direction = right
+			if (animation && selfRef.current && direction === 'right' && width && checkIsPercentage(width)) {
+				selfRef.current.style.left = '100%'
+				currentRef.style.overflowX = 'hidden'
+				gsap
+					.to(selfRef.current, {
+						duration: 0.4,
+						left: `${100 - parseFloat(width)}%`,
+						ease: 'power3.out',
+					})
+					.play()
+			}
+		} else if (currentRef) {
+			currentRef.style.display = 'none'
+		}
+	}, [hidden, children])
+
+	return (
+		<div id={id} className={`full-overlay ${hide}`} ref={ref} onClick={(e) => {
+			e.stopPropagation()
+			if (ref) {
+				document.getElementsByTagName('html')[0].classList.remove('scrollbar-hidden')
+				const currentRef = (ref as MutableRefObject<HTMLDivElement>).current
+				if (currentRef) {
+					currentRef.style.display = 'none'
+				}
+				if (callback) {
+					callback()
+				}
+			}
+		}}>
+			<div
+				className={`full-overlay-${direction}`}
+				style={{
+					width: width ? width : '100%',
+					height: height ? height : '100%',
+				}}
+				onClick={(e) => e.stopPropagation()}
+				ref={selfRef}
+			>
+				{children}
+			</div>
+		</div>
+	)
+})
+
+export const GFISimplePagination = (props: {nums: number, onClick: (idx: number) => void, title?: string[]}) => {
+
+	const {nums, onClick, title} = props
+	const [selectedIdx, setSelectedIdx] = useState<number>(0)
+	let showTitle = ''
+	let shouldShowTitle = false
+	if (title && title.length === nums) {
+		showTitle = '-title'
+		shouldShowTitle = true
+	}
+
+	const render = () => {
+		const List = []
+		for (let i = 0; i < nums; i++) {
+			List.push(i)
+		}
+		return List.map((i, idx) => {
+			const isSelected = (idx === selectedIdx) ? 'page-selected': ''
+			return (
+				<div className={`simple-pagination-item${showTitle} ${isSelected} hoverable`} onClick={() => {
+					if (idx !== selectedIdx) {
+						setSelectedIdx(idx)
+						onClick(idx)
+					}
+				}}>
+					{shouldShowTitle && title && title[idx]}
+				</div>
+			)
+		})
+	}
+
+	return (
+		<div className={'simple-pagination flex-row align-center justify-content-between'}>
+			{render()}
+		</div>
+	)
 }

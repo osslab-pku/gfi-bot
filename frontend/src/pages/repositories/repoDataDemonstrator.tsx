@@ -26,7 +26,7 @@ export const RepoGraphContainer = (props: RepoGraphContainerProps) => {
             return info.map((tempInfo, i) => {
                 return {
                     count: tempInfo.count,
-                    month: tempInfo.month.slice(0, 7),
+                    month: tempInfo.month.slice(8, 16),
                 }
             })
         } else return []

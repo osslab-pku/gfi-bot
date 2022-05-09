@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from gfibot import CONFIG, TOKENS
 from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
+from gfibot.data.dataset import get_dataset
 from gfibot.data.graphql import UserFetcher
 from gfibot.data.rest import RepoFetcher, logger as rest_logger
 
@@ -255,6 +256,9 @@ def update_resolved_issues(
         ResolvedIssue.objects(
             owner=fetcher.owner, name=fetcher.name, number=resolved_issue["number"]
         ).upsert_one(**resolved_issue)
+        issue = ResolvedIssue(**resolved_issue)
+        get_dataset(issue, issue.resolved_at)
+        get_dataset(issue, issue.created_at)
     return resolved_issues
 
 
@@ -277,6 +281,7 @@ def update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
                 created_at=issue.created_at,
                 updated_at=since,
             )
+        get_dataset(open_issue, open_issue.updated_at)
         logger.debug(
             "Fetching details for open issue #%d, rate remaining = %s",
             issue.number,
@@ -424,6 +429,14 @@ def update_user(token: str, login: str) -> None:
         logger.exception(e)
 
 
+def update_gfi_repo_add_query(owner: str, name: str) -> None:
+    GfiQueries.objects(Q(owner=owner) & Q(name=name)).update_one(
+        set__is_pending=False,
+        set__is_finished=True,
+        set___finished_at=datetime.now(timezone.utc),
+    )
+
+
 def update_repo(token: str, owner: str, name: str) -> None:
     """Update all information of a repository for RecGFI training"""
     fetcher = RepoFetcher(token, owner, name)
@@ -465,6 +478,8 @@ def update_repo(token: str, owner: str, name: str) -> None:
             if "commenter" in event:
                 all_users.add(event["commenter"])
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
+
+    update_gfi_repo_add_query(owner, name)
 
     for user in all_users:
         update_user(token, user)

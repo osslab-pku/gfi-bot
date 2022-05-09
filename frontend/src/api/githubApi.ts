@@ -1,13 +1,7 @@
 import {store} from '../module/storage/configureStorage';
 import {asyncRequest} from './query';
-import {DEV_URL} from './api';
-
-export const userInfo = () => {
-	return [
-		store.getState().hasLogin,
-		store.getState().name,
-	]
-}
+import {DEV_URL, userInfo} from './api';
+import {RepoPermissions, StandardHTTPResponse} from '../module/data/dataModel';
 
 export const gitHubLogin = () => {
 	const [hasLogin, userName] = userInfo()
@@ -16,28 +10,66 @@ export const gitHubLogin = () => {
 		return
 	}
 	gitHubOAuthLogin().then((url : string) => {
-		window.open(url)
+		window.location.assign(url)
 	})
 }
 
+export const checkGithubLogin = async () => {
+	const userToken = store.getState().loginReducer.token
+	const userLoginName = store.getState().loginReducer.loginName
+	if (userToken) {
+		const res = await asyncRequest<StandardHTTPResponse<any>>({
+			url: `https://api.github.com/users/${userLoginName}`,
+			headers: {
+				'Authorization': `token ${userToken}`,
+			},
+			customRequestResponse: false,
+		})
+		if (res?.status === 200) {
+			return true
+		}
+	}
+	return false
+}
+
 const gitHubOAuthLogin = async () => {
-	return await asyncRequest({
+	return await asyncRequest<string>({
 		url: '/api/user/github/login',
 		baseURL: DEV_URL
 	})
 }
 
+export const checkHasRepoPermissions = async (repoName: string, owner: string) => {
+	const hasLogin = store.getState().loginReducer.hasLogin
+	const userToken = store.getState().loginReducer.token
+	if (!hasLogin) {
+		return false
+	}
+	const res = await asyncRequest<StandardHTTPResponse<{ permissions?: RepoPermissions }>>({
+		url: `https://api.github.com/repos/${owner}/${repoName}`,
+		headers: {
+			'Authorization': `token ${userToken}`,
+		},
+		customRequestResponse: false,
+	})
+
+	if (res === undefined) return false
+	return !!res.data?.permissions?.maintain;
+}
+
 export const getIssueByRepoInfo = async (repoName: string, owner?: string, issueId?: string | number) => {
 	// url such as https://api.github.com/repos/pallets/flask/issues/4333
+
 	const url = `https://api.github.com/repos/${owner}/${repoName}/issues/${issueId}`
-	const hasLogin = store.getState().hasLogin
-	const userToken = store.getState().token
+	const hasLogin = store.getState().loginReducer.hasLogin
+	const userToken = store.getState().loginReducer.token
 	let res: any
 	const headers: any | undefined = (hasLogin && userToken) ? {'Authorization': `token ${userToken}`}: undefined
 
 	res = await asyncRequest({
 		url: url,
 		headers: headers,
+		customRequestResponse: false,
 	}).catch((error: any) => {
 		if ('response' in error) {
 			return error.response
@@ -50,9 +82,8 @@ export const getIssueByRepoInfo = async (repoName: string, owner?: string, issue
 			result: res.data
 		}
 	} else {
-		// not good, needs to be changed
 		return {
-			code: 403,
+			code: res.status,
 			result: ''
 		}
 	}

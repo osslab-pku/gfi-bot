@@ -9,6 +9,10 @@ export const checkIsNumber = (val: string | number | undefined) => {
     return false
 }
 
+export const checkIsPercentage = (val: string) => {
+    return /^\d+(\.\d+)?%$/.test(val);
+}
+
 export const checkIsGitRepoURL = (val: string) => {
     let isGitUrl = require('is-git-url')
     return isGitUrl(val)
