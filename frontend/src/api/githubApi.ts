@@ -10,7 +10,7 @@ export const gitHubLogin = () => {
 		return
 	}
 	gitHubOAuthLogin().then((url : string) => {
-		window.open(url)
+		window.location.assign(url)
 	})
 }
 
