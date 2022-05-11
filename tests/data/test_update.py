@@ -1,6 +1,7 @@
 import gfibot
 import gfibot.data.update as upd
 import gfibot.data.rest as rest
+import logging
 
 from pprint import pprint
 from datetime import datetime, timezone
@@ -101,3 +102,10 @@ def test_locate_resolved_issues(mock_mongodb):
         resolved[12698]["resolver"] == "a1"
         and resolved[12698]["resolver_commit_num"] == 1
     )
+
+
+def test_update_user(mock_mongodb):
+    logging.basicConfig(level=logging.DEBUG)
+    token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
+    upd.update_user(token, "xmcp")
+    assert User.objects(login="xmcp").first().login == "xmcp"

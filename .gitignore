@@ -1,8 +1,14 @@
 # Ignore IDEA related files
 *.idea/
 
+# Ignore VSCode related files
+.vscode/
+
 # Ignore tokens.txt as it is very sensitive
 tokens.txt
+
+# Ignore cached graphql schema
+*schema*.graphql
 
 # ---------- The following are Python specific ignore patterns ----------
 # Byte-compiled / optimized / DLL files
@@ -137,3 +143,6 @@ dmypy.json
 
 # github tokens
 gfibot/backend/set_tokens_private.py
+
+# trained models
+gfi-bot

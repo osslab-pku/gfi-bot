@@ -1,7 +1,10 @@
+// TODO:MSKYurina
+// Refactor using TypeScript
+
 import React, {useEffect, useRef, useState} from 'react';
 import {useSelector, useDispatch} from 'react-redux';
 
-import {Container, Nav, Navbar, Button, Popover, OverlayTrigger} from 'react-bootstrap';
+import {Container, Nav, Navbar, Button, Popover, OverlayTrigger, ProgressBar} from 'react-bootstrap';
 import {LinkContainer} from 'react-router-bootstrap';
 import {GithubFilled, UserDeleteOutlined} from '@ant-design/icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -11,38 +14,28 @@ import {gsap} from 'gsap';
 import {useIsMobile} from './app/windowContext';
 import {defaultFontFamily} from '../utils';
 import {gitHubLogin} from '../api/githubApi';
-import {createLogoutAction, LoginState} from '../module/storage/reducers';
+import {createAccountNavStateAction, createLogoutAction} from '../module/storage/reducers';
 import '../style/gfiStyle.css'
 
 import navLogo from '../assets/favicon-thumbnail.png';
+import {GFIPortalPageNav} from './portal/GFIPortal';
 
 export const GFIHeader = () => {
-
-    // Account Actions
 
     const dispatch = useDispatch()
 
     const logout = () => {
         dispatch(createLogoutAction())
+        window.location.reload()
     }
 
-    const checkLogin = () => {
-        // TODO: MSKYurina
-        // currently for debugging
-        logout()
-    }
-
-    useEffect(() => {
-        checkLogin()
-    }, [])
-
-    const hasLogin = useSelector((state: LoginState) => {
-        if ('hasLogin' in state) return state.hasLogin
+    const hasLogin = useSelector(state => {
+        if ('loginReducer' in state && 'hasLogin' in state.loginReducer) return state.loginReducer.hasLogin
         return undefined
     })
 
-    const userName = useSelector((state: LoginState) => {
-        if ('name' in state) return state.name
+    const userName = useSelector(state => {
+        if ('loginReducer' in state && 'name' in state.loginReducer) return state.loginReducer.name
         return undefined
     })
 
@@ -50,12 +43,12 @@ export const GFIHeader = () => {
 
     const [popOverToggled, setPopOverToggled] = useState(false)
     const [showPopOver, setShowPopOver] = useState(false)
-    const popOverRef = useRef<HTMLDivElement>(null)
-    const loginBtnRef = useRef<HTMLDivElement>(null)
+    const popOverRef = useRef(null)
+    const loginBtnRef = useRef(null)
 
-    const checkIfClosePopOver = (e: MouseEvent) => {
-        const ele = e.target as Node
-        if (popOverRef.current && !popOverRef.current.contains(ele) && loginBtnRef.current && !loginBtnRef.current.contains(ele)) {
+    const checkIfClosePopOver = (e) => {
+        const ele = e.target
+        if (popOverRef.current && !popOverRef.current.contains(ele) && !loginBtnRef.current.contains(ele)) {
             e.preventDefault()
             e.stopPropagation()
             setShowPopOver(false)
@@ -63,7 +56,7 @@ export const GFIHeader = () => {
     }
 
     useEffect(() => {
-        if (popOverToggled) {
+        if (popOverToggled === true) {
             window.addEventListener('mousedown', (e) => checkIfClosePopOver(e))
         }
         return () => {
@@ -128,12 +121,6 @@ export const GFIHeader = () => {
                             setPopOverToggled(true)
                         }}
                         show={showPopOver}
-                        defaultShow={false}
-                        delay={0}
-                        flip={false}
-                        onHide={undefined}
-                        popperConfig={{}}
-                        target={undefined}
                     >
                         <Button
                             variant={'outline-secondary'}
@@ -161,6 +148,13 @@ export const GFIHeader = () => {
     const isMobile = useIsMobile()
     const iconRef = useRef(null)
 
+    const hideAccountNav = () => {
+        dispatch(createAccountNavStateAction({show: false}))
+    }
+    const showAccountNav = () => {
+        dispatch(createAccountNavStateAction({show: true}))
+    }
+
     const renderNavItem = () => {
 
         const renderSignInItems = () => {
@@ -180,7 +174,7 @@ export const GFIHeader = () => {
                     <div style={{
                         display: 'inline-block',
                         width: '80%',
-                        textAlign: isMobile ? undefined: 'right',
+                        textAlign: isMobile ? '': 'right',
                     }}>
                         {signInLink()}
                     </div>
@@ -245,9 +239,20 @@ export const GFIHeader = () => {
             }
         }
 
+        const MyPage = () => {
+            if (hasLogin) {
+                return (
+                    <LinkContainer to={'/portal'} onClick={() => { showAccountNav() }}>
+                        <Nav.Link> Portal </Nav.Link>
+                    </LinkContainer>
+                )
+            }
+            return <></>
+        }
+
         return (
             <Container style={{marginRight: '5px', marginLeft: '5px', maxWidth: '100vw'}}>
-                <LinkContainer to={'/'}>
+                <LinkContainer to={'/'} onClick={() => { hideAccountNav() }}>
                     <Navbar.Brand>
                         <img
                             alt={''}
@@ -262,10 +267,8 @@ export const GFIHeader = () => {
                 <Navbar.Toggle />
                 <Navbar.Collapse>
                     <Nav>
-                        <LinkContainer to={'/repos'}>
-                            <Nav.Link> Repositories </Nav.Link>
-                        </LinkContainer>
-                        <LinkContainer to={'/home'}>
+                        {MyPage()}
+                        <LinkContainer to={'/home'} onClick={() => { hideAccountNav() }}>
                             <Nav.Link> About Us </Nav.Link>
                         </LinkContainer>
                         {renderMobileSignIn()}
@@ -282,17 +285,23 @@ export const GFIHeader = () => {
 
     const renderDesktopNavbar = () => {
         return (
-            <Navbar bg={'light'} sticky={'top'}>
-                {renderNavItem()}
-            </Navbar>
+            <div className={'flex-col sticky-top'}>
+                <Navbar bg={'light'} sticky={'top'}>
+                    {renderNavItem(false)}
+                </Navbar>
+                <GFIGlobalProgressBar />
+            </div>
         )
     }
 
     const renderMobileNavbar = () => {
         return (
-            <Navbar bg={'light'} sticky={'top'} expanded={false}>
-                {renderNavItem()}
-            </Navbar>
+            <>
+                <Navbar bg={'light'} sticky={'top'} expand={'false'}>
+                    {renderNavItem(true)}
+                </Navbar>
+                <GFIGlobalProgressBar />
+            </>
         )
     }
 
@@ -304,7 +313,33 @@ export const GFIHeader = () => {
         }
     }
 
+    const shouldShowAccountNav = useSelector((state) => {
+        if ('accountNavStateReducer' in state && 'show' in state.accountNavStateReducer) return state.accountNavStateReducer.show
+        return false
+    })
+
     return (
-        render()
+        <>
+            {render()}
+            {shouldShowAccountNav && <GFIPortalPageNav id={'portal-page-nav'} />}
+        </>
+    )
+}
+
+const GFIGlobalProgressBar = () => {
+    const ref = useRef(null)
+    const hidden = useSelector((state) => {
+        if ('globalProgressBarReducer' in state && 'hidden' in state.globalProgressBarReducer) {
+            if (state.globalProgressBarReducer.hidden) {
+                return 'gfi-hidden-with-space'
+            }
+        }
+        return ''
+    })
+
+    return (
+        <>
+            <ProgressBar ref={ref} className={`progress-bar-thin ${hidden} sticky-top transition-01`} animated={true} now={100} />
+        </>
     )
 }

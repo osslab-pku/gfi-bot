@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useEffect, useState} from 'react';
+import React, {createContext, RefObject, useContext, useEffect, useRef, useState} from 'react';
 
 const windowContext = createContext<{width: number, height: number}>({} as any)
 
@@ -31,9 +31,30 @@ export const useWindowSize = () => {
 	return {width, height}
 }
 
-const mobileThreshold = 630
+export const mobileThreshold = 700
 
 export const useIsMobile = () => {
 	const {width} = useContext(windowContext)
 	return width <= mobileThreshold
+}
+
+
+const GlobalRefContext = createContext<{ref: RefObject<HTMLDivElement>}>({} as any)
+
+export const GlobalRefProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
+
+	const ref = useRef<HTMLDivElement>(null)
+
+	return (
+		<GlobalRefContext.Provider value={{ref}}>
+			<div ref={ref}>
+				{children}
+			</div>
+		</GlobalRefContext.Provider>
+	)
+}
+
+export const useGlobalRef = () => {
+	const {ref} = useContext(GlobalRefContext)
+	return ref
 }

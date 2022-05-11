@@ -1,6 +1,7 @@
 from typing import List, Union
 from datetime import datetime
 from mongoengine import *
+from regex import F
 
 
 class Prediction(Document):
@@ -401,26 +402,128 @@ class RepoStar(Document):
 class User(Document):
     """User statistics for RecGFI training (TODO: This documentation is not finalized yet)"""
 
-    class Repo(EmbeddedDocument):
-        name: str = StringField(required=True)
-        created_at: datetime = DateTimeField(required=True)
-
     class Issue(EmbeddedDocument):
+        # repo info
         owner: str = StringField(required=True)
         name: str = StringField(required=True)
-        number: int = IntField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # issue number (state can not be updated incrementally)
+        state: str = StringField(required=True)
+        number: int = IntField(required=True, min_value=0)
         created_at: datetime = DateTimeField(required=True)
 
     class Pull(EmbeddedDocument):
+        # repo info
         owner: str = StringField(required=True)
         name: str = StringField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # pull request number  (state can not be updated incrementally)
+        state: str = StringField(required=True)
         number: int = IntField(required=True)
         created_at: datetime = DateTimeField(required=True)
 
-    created_at: datetime = DateTimeField(required=True)
-    updated_at: datetime = DateTimeField(required=True)
-    username: str = StringField(required=True, unique=True)
-    repos: Repo = EmbeddedDocumentListField(Repo)
+    class Review(EmbeddedDocument):
+        # repo info
+        owner: str = StringField(required=True)
+        name: str = StringField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # review number & state
+        number: int = IntField(required=True)
+        state: str = StringField(required=True)
+        created_at: datetime = DateTimeField(required=True)
+
+    class CommitContribution(EmbeddedDocument):
+        # repo info
+        owner: str = StringField(required=True)
+        name: str = StringField(required=True)
+        repo_stars: int = IntField(required=True, min_value=0)
+        # commit count
+        commit_count: int = IntField(required=True, min_value=0)
+        created_at: datetime = DateTimeField(required=True)
+
+    _created_at: datetime = DateTimeField(required=True)  # created in the database
+    _updated_at: datetime = DateTimeField(required=True)  # updated in the database
+
+    name: str = StringField(null=True)
+    login: str = StringField(required=True)
+    # issues, issueComments, pulls (use end cursor to paginate)
     issues: Issue = EmbeddedDocumentListField(Issue)
     pulls: Pull = EmbeddedDocumentListField(Pull)
-    meta = {"indexes": [{"fields": ["username"], "unique": True}]}
+    # reviews, commits (use date to paginate)
+    pull_reviews: Review = EmbeddedDocumentListField(Review)
+    commit_contributions: CommitContribution = EmbeddedDocumentListField(
+        CommitContribution
+    )
+
+    meta = {
+        "indexes": [
+            {"fields": ["login"], "unique": True},
+            {"fields": ["issues.owner", "issues.name"]},
+            {"fields": ["issues.created_at"]},
+            {"fields": ["pulls.owner", "pulls.name"]},
+            {"fields": ["pulls.created_at"]},
+            {"fields": ["pull_reviews.owner", "pull_reviews.name"]},
+            {"fields": ["pull_reviews.created_at"]},
+            {"fields": ["commit_contributions.owner", "commit_contributions.name"]},
+            {"fields": ["commit_contributions.created_at"]},
+        ]
+    }
+
+
+class GithubTokens(Document):
+    """GitHub tokens for GitHub App"""
+
+    app_name: str = StringField(required=True)
+    client_id: str = StringField(required=True)
+    client_secret: str = StringField(required=True)
+
+    meta = {
+        "indexes": [
+            {"fields": ["client_id"], "unique": True},
+            {"fields": ["app_name"], "unique": True},
+        ]
+    }
+
+
+class GfiUsers(Document):
+    """User statictics for GFI-Bot Web App Users"""
+
+    github_id: int = IntField(required=True)
+    github_access_token: str = StringField(required=True)
+    github_login: str = StringField(required=True)
+    github_name: str = StringField(required=True)
+    is_github_app_user: bool = BooleanField(required=True)
+    github_avatar_url: str = StringField(required=False)
+    github_url: str = StringField(required=False)
+    github_email: str = StringField(required=False)
+    twitter_user_name = StringField(required=False)
+
+    meta = {
+        "indexes": [
+            {"fields": ["github_id", "is_github_app_user"], "unique": True},
+            {"fields": ["github_login", "is_github_app_user"], "unique": True},
+            {"fields": ["github_email"]},
+            {"fields": ["twitter_user_name"]},
+        ]
+    }
+
+
+class GfiQueries(Document):
+    """GFI-Bot Web App queries"""
+
+    name: str = StringField(required=True)
+    owner: str = StringField(required=True)
+    user_github_login: str = StringField(required=True)
+
+    is_pending: bool = BooleanField(required=True)
+    is_finished: bool = BooleanField(required=True)
+
+    _created_at: datetime = DateTimeField(required=True)
+    _finished_at: datetime = DateTimeField(required=False)
+
+    mata = {
+        "indexes": [
+            {"fields": ["name", "owner"], "unique": True},
+            {"fields": ["user_github_login"]},
+        ]
+    }
