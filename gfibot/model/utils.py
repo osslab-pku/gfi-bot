@@ -50,7 +50,7 @@ def get_num(lst: list, threshold: int) -> int:
 def get_text_feature(text):
     vectorizer = HashingVectorizer(
         decode_error="ignore",
-        n_features=2 ** 10,
+        n_features=1024,
         stop_words="english",
         alternate_sign=False,
     )
