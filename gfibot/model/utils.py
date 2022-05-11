@@ -8,6 +8,7 @@ import math
 import xgboost as xgb
 from mongoengine.queryset.visitor import Q
 from gfibot.collections import *
+from sklearn.feature_extraction.text import HashingVectorizer
 
 
 def cat_comment(comment: list) -> str:
@@ -44,6 +45,17 @@ def get_num(lst: list, threshold: int) -> int:
             return 0
         pnum = sum(d < threshold for d in lst)
         return pnum
+
+
+def get_text_feature(text):
+    vectorizer = HashingVectorizer(
+        decode_error="ignore",
+        n_features=2 ** 10,
+        stop_words="english",
+        alternate_sign=False,
+    )
+    vector_text = vectorizer.transform([text]).toarray()
+    return vector_text
 
 
 def get_user_average(user_list: List[Dataset.UserFeature], threshold: int):
@@ -85,6 +97,12 @@ def get_issue_data(issue: list, threshold: int) -> dict:
     owner_gfi_num = get_num(issue.owner_feat.resolver_commits, threshold)
     pro_gfi_ratio = get_ratio(issue.prev_resolver_commits, threshold)
     pro_gfi_num = get_num(issue.prev_resolver_commits, threshold)
+    comments = ""
+    for comment in issue.comments:
+        comments = comments + " " + comment
+    title = get_text_feature(issue.title)[0]
+    body = get_text_feature(issue.body)[0]
+    comment_text = get_text_feature(comments)[0]
 
     (
         commenter_commits_num,
@@ -162,6 +180,12 @@ def get_issue_data(issue: list, threshold: int) -> dict:
         "comment_num": comment_num,
         "event_num": event_num,
     }
+    for i in range(len(title)):
+        one_issue["title" + str(i)] = title[i]
+    for i in range(len(body)):
+        one_issue["body" + str(i)] = body[i]
+    for i in range(len(comment_text)):
+        one_issue["comment_text" + str(i)] = comment_text[i]
     return one_issue
 
 
@@ -196,9 +220,10 @@ def train_incremental(
 def load_train_data(data: pd.DataFrame):
     p_train = data[data["is_gfi"] == 1]
     n_train = data[data["is_gfi"] == 0]
-    n_train = n_train.sample(
-        frac=p_train.shape[0] / n_train.shape[0], replace=True, random_state=0
-    )
+    if p_train.shape[0] != 0:
+        n_train = n_train.sample(
+            frac=p_train.shape[0] / n_train.shape[0], replace=True, random_state=0
+        )
     data = pd.concat([p_train, n_train], ignore_index=True)
     y_train = data["is_gfi"]
     X_train = data.drop(["is_gfi", "owner", "name", "number"], axis=1)

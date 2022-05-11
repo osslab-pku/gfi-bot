@@ -47,6 +47,7 @@ def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
             continue
         else:
             update_set.append([i.name, i.owner, [i.number, i.before]])
+            logger.info(f"{i.owner}/{i.name}#{i.number}): added")
     return update_set
 
 

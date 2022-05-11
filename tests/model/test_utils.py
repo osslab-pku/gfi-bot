@@ -46,8 +46,14 @@ def test_get_user_average(mock_mongodb):
 def test_load_data(mock_mongodb):
     threshold = 1
     batch = [["name", "owner", [5, datetime(1970, 1, 3, tzinfo=timezone.utc)]]]
+    df_data = load_data(threshold, batch)
+    columns = df_data.columns.tolist()
+    for key in columns:
+        if "title" in key or "body" in key or "comment_text" in key:
+            if key != "len_title" and key != "len_body":
+                del df_data[key]
     df_diff = assert_frame_equal(
-        load_data(threshold, batch),
+        df_data,
         pd.DataFrame(
             [
                 {
@@ -113,6 +119,11 @@ def test_get_issue_data(mock_mongodb):
     issue = Dataset.objects(name="name", owner="owner", number=5).first()
     threshold = 1
     one_issue = get_issue_data(issue, threshold)
+    keys = list(one_issue.keys())
+    for key in keys:
+        if "title" in key or "body" in key or "comment_text" in key:
+            if key != "len_title" and key != "len_body":
+                del one_issue[key]
     assert one_issue == {
         "owner": "owner",
         "name": "name",
@@ -364,6 +375,11 @@ def test_load_test_incremental(mock_mongodb):
     y_test = data["is_gfi"]
     X_test = data.drop(["is_gfi", "owner", "name"], axis=1)
     x, y = load_test_incremental(test_set, threshold)
+    columns = x.columns.tolist()
+    for key in columns:
+        if "title" in key or "body" in key or "comment_text" in key:
+            if key != "len_title" and key != "len_body":
+                del x[key]
     df_diff_x = assert_frame_equal(x, X_test)
     df_diff_y = assert_frame_equal(pd.DataFrame(y), pd.DataFrame(y_test))
     assert df_diff_x is None
@@ -375,114 +391,125 @@ def test_predict_issues(mock_mongodb):
     threshold = 1
     batch_size = 100
     params = {"objective": "binary:logistic"}
+    data_dic0 = {
+        "owner": "owner",
+        "name": "name",
+        "number": 6,
+        "is_gfi": 1,
+        "len_title": 1,
+        "len_body": 1,
+        "n_code_snips": 0,
+        "n_urls": 0,
+        "n_imgs": 0,
+        "coleman_liau_index": 0.1,
+        "flesch_reading_ease": 0.1,
+        "flesch_kincaid_grade": 0.1,
+        "automated_readability_index": 0.1,
+        "bug_num": 0,
+        "feature_num": 0,
+        "test_num": 0,
+        "build_num": 0,
+        "doc_num": 0,
+        "coding_num": 0,
+        "enhance_num": 0,
+        "gfi_num": 1,
+        "medium_num": 0,
+        "major_num": 0,
+        "triaged_num": 0,
+        "untriaged_num": 0,
+        "rpt_is_new": 0,
+        "rpt_gfi_ratio": 0.0,
+        "owner_gfi_ratio": 0.0,
+        "owner_gfi_num": 0,
+        "pro_gfi_ratio": 0,
+        "pro_gfi_num": 0,
+        "n_stars": 0,
+        "n_pulls": 1,
+        "n_commits": 5,
+        "n_contributors": 2,
+        "n_closed_issues": 1,
+        "n_open_issues": 1,
+        "r_open_issues": 1.0,
+        "issue_close_time": 1.0,
+        "commenter_commits_num": 4.0,
+        "commenter_issues_num": 1.0,
+        "commenter_pulls_num": 1.5,
+        "commenter_gfi_ratio": 0.0,
+        "commenter_gfi_num": 0.0,
+        "eventer_commits_num": 0,
+        "eventer_issues_num": 0,
+        "eventer_pulls_num": 0,
+        "eventer_gfi_ratio": 0,
+        "eventer_gfi_num": 0,
+        "comment_num": 0,
+        "event_num": 0,
+    }
+    data_dic1 = {
+        "owner": "owner",
+        "name": "name",
+        "number": 5,
+        "is_gfi": 0,
+        "len_title": 1,
+        "len_body": 1,
+        "n_code_snips": 0,
+        "n_urls": 0,
+        "n_imgs": 0,
+        "coleman_liau_index": 0.1,
+        "flesch_reading_ease": 0.1,
+        "flesch_kincaid_grade": 0.1,
+        "automated_readability_index": 0.1,
+        "bug_num": 0,
+        "feature_num": 0,
+        "test_num": 0,
+        "build_num": 0,
+        "doc_num": 0,
+        "coding_num": 0,
+        "enhance_num": 0,
+        "gfi_num": 1,
+        "medium_num": 0,
+        "major_num": 0,
+        "triaged_num": 0,
+        "untriaged_num": 0,
+        "rpt_is_new": 0,
+        "rpt_gfi_ratio": 0.0,
+        "owner_gfi_ratio": 0.0,
+        "owner_gfi_num": 0,
+        "pro_gfi_ratio": 0,
+        "pro_gfi_num": 0,
+        "n_stars": 0,
+        "n_pulls": 1,
+        "n_commits": 5,
+        "n_contributors": 2,
+        "n_closed_issues": 1,
+        "n_open_issues": 1,
+        "r_open_issues": 1.0,
+        "issue_close_time": 1.0,
+        "commenter_commits_num": 4.0,
+        "commenter_issues_num": 1.0,
+        "commenter_pulls_num": 1.5,
+        "commenter_gfi_ratio": 0.0,
+        "commenter_gfi_num": 0.0,
+        "eventer_commits_num": 0,
+        "eventer_issues_num": 0,
+        "eventer_pulls_num": 0,
+        "eventer_gfi_ratio": 0,
+        "eventer_gfi_num": 0,
+        "comment_num": 0,
+        "event_num": 0,
+    }
+    for i in range(1024):
+        data_dic0["title" + str(i)] = 0
+        data_dic1["title" + str(i)] = 0
+    for i in range(1024):
+        data_dic0["body" + str(i)] = 0
+        data_dic1["body" + str(i)] = 0
+    for i in range(1024):
+        data_dic0["comment_text" + str(i)] = 0
+        data_dic1["comment_text" + str(i)] = 0
     data = pd.DataFrame(
         [
-            {
-                "owner": "owner",
-                "name": "name",
-                "number": 6,
-                "is_gfi": 1,
-                "len_title": 1,
-                "len_body": 1,
-                "n_code_snips": 0,
-                "n_urls": 0,
-                "n_imgs": 0,
-                "coleman_liau_index": 0.1,
-                "flesch_reading_ease": 0.1,
-                "flesch_kincaid_grade": 0.1,
-                "automated_readability_index": 0.1,
-                "bug_num": 0,
-                "feature_num": 0,
-                "test_num": 0,
-                "build_num": 0,
-                "doc_num": 0,
-                "coding_num": 0,
-                "enhance_num": 0,
-                "gfi_num": 1,
-                "medium_num": 0,
-                "major_num": 0,
-                "triaged_num": 0,
-                "untriaged_num": 0,
-                "rpt_is_new": 0,
-                "rpt_gfi_ratio": 0.0,
-                "owner_gfi_ratio": 0.0,
-                "owner_gfi_num": 0,
-                "pro_gfi_ratio": 0,
-                "pro_gfi_num": 0,
-                "n_stars": 0,
-                "n_pulls": 1,
-                "n_commits": 5,
-                "n_contributors": 2,
-                "n_closed_issues": 1,
-                "n_open_issues": 1,
-                "r_open_issues": 1.0,
-                "issue_close_time": 1.0,
-                "commenter_commits_num": 4.0,
-                "commenter_issues_num": 1.0,
-                "commenter_pulls_num": 1.5,
-                "commenter_gfi_ratio": 0.0,
-                "commenter_gfi_num": 0.0,
-                "eventer_commits_num": 0,
-                "eventer_issues_num": 0,
-                "eventer_pulls_num": 0,
-                "eventer_gfi_ratio": 0,
-                "eventer_gfi_num": 0,
-                "comment_num": 0,
-                "event_num": 0,
-            },
-            {
-                "owner": "owner",
-                "name": "name",
-                "number": 5,
-                "is_gfi": 0,
-                "len_title": 1,
-                "len_body": 1,
-                "n_code_snips": 0,
-                "n_urls": 0,
-                "n_imgs": 0,
-                "coleman_liau_index": 0.1,
-                "flesch_reading_ease": 0.1,
-                "flesch_kincaid_grade": 0.1,
-                "automated_readability_index": 0.1,
-                "bug_num": 0,
-                "feature_num": 0,
-                "test_num": 0,
-                "build_num": 0,
-                "doc_num": 0,
-                "coding_num": 0,
-                "enhance_num": 0,
-                "gfi_num": 1,
-                "medium_num": 0,
-                "major_num": 0,
-                "triaged_num": 0,
-                "untriaged_num": 0,
-                "rpt_is_new": 0,
-                "rpt_gfi_ratio": 0.0,
-                "owner_gfi_ratio": 0.0,
-                "owner_gfi_num": 0,
-                "pro_gfi_ratio": 0,
-                "pro_gfi_num": 0,
-                "n_stars": 0,
-                "n_pulls": 1,
-                "n_commits": 5,
-                "n_contributors": 2,
-                "n_closed_issues": 1,
-                "n_open_issues": 1,
-                "r_open_issues": 1.0,
-                "issue_close_time": 1.0,
-                "commenter_commits_num": 4.0,
-                "commenter_issues_num": 1.0,
-                "commenter_pulls_num": 1.5,
-                "commenter_gfi_ratio": 0.0,
-                "commenter_gfi_num": 0.0,
-                "eventer_commits_num": 0,
-                "eventer_issues_num": 0,
-                "eventer_pulls_num": 0,
-                "eventer_gfi_ratio": 0,
-                "eventer_gfi_num": 0,
-                "comment_num": 0,
-                "event_num": 0,
-            },
+            data_dic0,
+            data_dic1,
         ]
     )
     y_train = data["is_gfi"]
