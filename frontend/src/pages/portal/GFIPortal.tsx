@@ -141,8 +141,8 @@ const AccountSideBar = (props: AccountSideBar) => {
 
 	return (
 		<div className={'flex-col flex-wrap'} id={'portal-side-bar'}>
-			<div className={'flex-row align-center'} id={'portal-side-bar-userinfo'}>
-				<div className={'flex-col'} id={'portal-side-bar-userinfo-name'}>
+			<div className={'flex-row align-center portal-side-bar-userinfo'}>
+				<div className={'flex-col portal-side-bar-userinfo-name'}>
 					<div> Hello, </div>
 					<div> {userName} </div>
 				</div>
@@ -374,16 +374,16 @@ const AddProjectComponent = () => {
 					variant={mainAlarmConfig?.variant}
 				/> : <></>
 			}
-			<div className={'account-page-panel-title'} id={'project-add-comp-title'}>
+			<div className={'account-page-panel-title project-add-comp-title'}>
 				Add Your Project To GFI-Bot
 			</div>
-			<div id={'project-add-comp-tips'}>
+			<div className={'project-add-comp-tips'}>
 				<p> <strong>Notice: </strong> We'll register the repository to our database and use it for data training and predictions. </p>
 				<p> Make sure that you are one of the maintainers of the repository. </p>
 			</div>
-			<div id={'project-adder'}>
-				<Form className={'flex-col'} id={'project-adder-form'}>
-					<Form.Label id={'project-adder-label'}> Please input a GitHub Repo URL </Form.Label>
+			<div className={'project-adder'}>
+				<Form className={'flex-col project-adder-form'}>
+					<Form.Label className={'project-adder-label'}> Please input a GitHub Repo URL </Form.Label>
 					<Form.Control
 						placeholder={'GitHub URL'}
 						onChange={(e) => {
@@ -400,8 +400,7 @@ const AddProjectComponent = () => {
 						{showAlarmMsg &&
 							<div ref={overlayContainer}>
                                 <div
-	                                className={'hoverable'}
-	                                id={'project-add-alarm'}
+	                                className={'hoverable project-add-alarm'}
 	                                onClick={onErrorTipClick}
                                 >
                                     Please input a correct GitHub Repo URL
@@ -415,7 +414,7 @@ const AddProjectComponent = () => {
 								>
 									<Popover className={'fit'} ref={popoverRef}>
 										<Popover.Body className={'fit'}>
-											<img src={importTips} alt={''} id={'project-add-overlay-warn-tip'} />
+											<img src={importTips} alt={''} className={'project-add-overlay-warn-tip'} />
 										</Popover.Body>
 									</Popover>
 								</Overlay>
@@ -432,7 +431,7 @@ const AddProjectComponent = () => {
 					</div>
 				</Form>
 			</div>
-			<div className={'flex-row align-center'} id={'project-add-comp-added'}>
+			<div className={'flex-row align-center project-add-comp-added'}>
 				<div className={'account-page-panel-title'} >
 					Projects Added
 				</div>
@@ -496,10 +495,10 @@ const AddProjectComponent = () => {
                     ref={repoInfoPanelRef}
                 />
 			}
-			<div className={'account-page-panel-title'} id={'project-add-comp-tutorial'}>
+			<div className={'account-page-panel-title project-add-comp-tutorial'}>
 				Tutorial
 			</div>
-			<div id={'account-page-panel-tutorial'}>
+			<div className={'account-page-panel-tutorial'}>
 				<p> To Be Completed. </p>
 				<p> We describe our envisioned use cases for GFI-Bot in this <a href={'https://github.com/osslab-pku/gfi-bot/blob/main/USE_CASES.md'}>documentation</a>. </p>
 			</div>

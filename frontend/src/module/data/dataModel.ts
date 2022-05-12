@@ -3,7 +3,7 @@ export type KeyMap = { [key: string]: any }
 export type StandardHTTPResponse<T extends KeyMap> = {
 	[key: string]: any,
 	status: number,
-	data: KeyMap & T,
+	data?: KeyMap & T,
 }
 
 export interface GFIRepoInfo {
@@ -43,4 +43,13 @@ export type GFIInfo = {
 	probability: number,
 	number: number,
 	last_updated: string,
+}
+
+export type GitHubIssueResponse = {
+	number: number,
+	title: string,
+	state: string,
+	active_lock_reason: string,
+	body: string,
+	html_url: string,
 }

@@ -89,9 +89,9 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
 				<Col className={'flex-row'} style={{ padding: '0' }}>
 					<div className={'flex-col full wrap'}>
 						<div className={'flex-row'}>
-							<Form id={'main-header-input'}>
+							<Form className={'main-header-input'}>
 								<Form.Control
-									className={'main-header-form'}
+									className={'main-header-form main-header-input-text'}
 									placeholder={'GitHub URL or Repo Name'}
 									aria-describedby={'append-icon'}
 									onChange={(e) => {
@@ -105,18 +105,16 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
 											}
 										}
 									}}
-									id={'main-header-input-text'}
 								>
 								</Form.Control>
 							</Form>
 							<Button
-								className={'flex-row flex-center'}
+								className={'flex-row flex-center main-header-search'}
 								onClick={() => {
 									if (search && onSearch) {
 										onSearch(search)
 									}
 								}}
-								id={'main-header-search'}
 							>
 								<SearchOutlined />
 							</Button>

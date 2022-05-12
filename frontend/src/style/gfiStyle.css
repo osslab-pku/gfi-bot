@@ -614,7 +614,7 @@ a.account-nav {
     margin-top: 10px;
 }
 
-#portal-side-bar-userinfo {
+.portal-side-bar-userinfo {
     border: 1px solid var(--color-border-default);
     padding: 0.7rem;
     border-radius: 7px;
@@ -622,19 +622,19 @@ a.account-nav {
     margin-bottom: 1rem;
 }
 
-#portal-side-bar-userinfo > img {
+.portal-side-bar-userinfo > img {
     border-radius: 999px;
     width: 4.5rem;
     height: 4.5rem;
     margin-left: auto;
 }
 
-#portal-side-bar-userinfo-name > div:first-child {
+.portal-side-bar-userinfo-name > div:first-child {
     font-size: 1.1rem;
     font-weight: lighter;
 }
 
-#portal-side-bar-userinfo-name > div:last-child {
+.portal-side-bar-userinfo-name > div:last-child {
     font-size: 1.3rem;
 }
 
@@ -644,11 +644,11 @@ a.account-nav {
     color: var(--color-fg-default);
 }
 
-#project-add-comp-tips > p {
+.project-add-comp-tips > p {
     margin: 0;
 }
 
-#project-add-comp-tips {
+.project-add-comp-tips {
     background-color: var(--color-bg-succeed);
     color: var(--color-fg-succeed);
     padding: 0.5rem 0.7rem;
@@ -658,38 +658,38 @@ a.account-nav {
     margin-top: 0.7rem;
 }
 
-#project-adder {
+.project-adder {
     padding: 0.3rem 0.7rem;
     border: 2px solid var(--color-border-default);
     border-radius: 5px;
     margin-top: 1rem;
 }
 
-#project-adder-label {
+.project-adder-label {
     color: #7a7d81;
     font-weight: bold;
 }
 
-#project-adder-form {
+.project-adder-form {
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
 }
 
-#project-add-comp-added {
+.project-add-comp-added{
     margin-top: 1rem;
 }
 
-#project-add-comp-tutorial {
+.project-add-comp-tutorial {
     margin-top: 0.3rem;
 }
 
-#project-add-alarm {
+.project-add-alarm {
     font-size: 0.9rem;
     color: var(--color-default-closed);
     text-decoration: underline;
 }
 
-#project-add-overlay-warn-tip {
+.project-add-overlay-warn-tip {
     height: 7rem;
 }
 
@@ -714,7 +714,7 @@ a.account-nav {
     .account-page-sub-container-row {
         flex-direction: column;
     }
-    #project-add-comp-title {
+    .project-add-comp-title {
         margin-top: 1rem;
     }
 }
@@ -756,16 +756,16 @@ a.account-nav {
     color: var(--color-fg-succeed);
 }
 
-#account-page-panel-tutorial {
+.account-page-panel-tutorial {
     margin-top: 0.5rem;
     margin-bottom: 2rem;
 }
 
-#account-page-panel-tutorial > p {
+.account-page-panel-tutorial > p {
     margin: 0;
 }
 
-#gfi-issue-monitor-empty {
+.gfi-issue-monitor-empty {
     margin: 0 0.7rem 1rem 1rem;
     background-color: var(--color-bg-pending);
     color: var(--color-fg-pending);
@@ -774,7 +774,7 @@ a.account-nav {
     border-radius: 5px;
 }
 
-#issue-display-item-prob-tag {
+.issue-display-item-prob-tag {
     font-size: small;
     font-family: var(--default-font-family);
     color: var(--color-fg-pending);
@@ -782,4 +782,47 @@ a.account-nav {
     text-align: center;
     padding: 0.2rem 0.2rem;
     border-radius: 5px;
+
+    width: 56px;
+    height: 26px;
+}
+
+.tool-tips .tool-tips-text-top {
+    opacity: 0;
+
+    position: absolute;
+    transform: translate(-27px, -58px);
+    width: 110px;
+    height: 30px;
+    background-color: var(--color-canvas-subtle);
+    border: 1px solid var(--color-border-default);
+    color: var(--color-fg-default);
+    border-radius: 5px;
+
+    transition: 0.1s;
+}
+
+.tool-tips:hover .tool-tips-text-top {
+    opacity: 1;
+    transition: 0.1s;
+}
+
+.issue-display-item:hover div:last-child .tool-tips .tool-tips-text-top {
+    opacity: 1;
+    transition: 0.1s;
+}
+
+.tool-tips .tool-tips-text-top::after {
+    content: " ";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--color-border-default) transparent transparent transparent;
+}
+
+.make-top {
+    z-index: 999;
 }
