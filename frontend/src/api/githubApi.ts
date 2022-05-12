@@ -1,7 +1,7 @@
 import {store} from '../module/storage/configureStorage';
 import {asyncRequest} from './query';
 import {DEV_URL, userInfo} from './api';
-import {RepoPermissions, StandardHTTPResponse} from '../module/data/dataModel';
+import {GitHubIssueResponse, RepoPermissions, StandardHTTPResponse} from '../module/data/dataModel';
 
 export const gitHubLogin = () => {
 	const [hasLogin, userName] = userInfo()
@@ -63,28 +63,11 @@ export const getIssueByRepoInfo = async (repoName: string, owner?: string, issue
 	const url = `https://api.github.com/repos/${owner}/${repoName}/issues/${issueId}`
 	const hasLogin = store.getState().loginReducer.hasLogin
 	const userToken = store.getState().loginReducer.token
-	let res: any
 	const headers: any | undefined = (hasLogin && userToken) ? {'Authorization': `token ${userToken}`}: undefined
 
-	res = await asyncRequest({
+	return await asyncRequest<StandardHTTPResponse<Partial<GitHubIssueResponse>>>({
 		url: url,
 		headers: headers,
 		customRequestResponse: false,
-	}).catch((error: any) => {
-		if ('response' in error) {
-			return error.response
-		}
 	})
-
-	if (res?.status === 200) {
-		return {
-			code: 200,
-			result: res.data
-		}
-	} else {
-		return {
-			code: res.status,
-			result: ''
-		}
-	}
 }

@@ -25,7 +25,7 @@ import {getGFIByRepoName, getRepoDetailedInfo} from '../../api/api';
 import {useIsMobile} from '../app/windowContext';
 import {RepoGraphContainer} from '../repositories/repoDataDemonstrator';
 import {GetRepoDetailedInfo} from '../../module/data/dataModel';
-import {checkIsNumber} from '../../utils';
+import {checkHasUndefinedProperty, checkIsNumber} from '../../utils';
 
 export interface RepoShouldDisplayPopoverState {
 	shouldDisplayPopover?: boolean,
@@ -222,6 +222,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 	const [shouldDisplayPagination, setShouldDisplayPagination] = useState(false)
 	const [currentPageIdx, setCurrentPageIdx] = useState(1)
 	const [pageInput, setPageInput] = useState<string>()
+	const [isLoading, setIsLoading] = useState(true)
 
 	useEffect(() => {
 		if (!displayIssueList) {
@@ -231,6 +232,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 					setShouldDisplayPagination(res.length > maxPageItems)
 				} else {
 					setDisplayIssueList(undefined)
+					setIsLoading(false)
 				}
 			})
 		}
@@ -246,6 +248,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 						repoInfo={repoInfo}
 						issue={issue}
 						key={`gfi-issue-${repoInfo.name}-${issue}-${i}`}
+						useTips={!i}
 					/>
 				)
 			} else {
@@ -258,8 +261,8 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 		<div className={'flex-col'}>
 			{render()}
 			{displayIssueList ? <></>:
-				<div id={'gfi-issue-monitor-empty'}>
-					Currently no GFIs for this repository.
+				<div className={'gfi-issue-monitor-empty'}>
+					{isLoading ? 'Loading GFIs...' : 'Currently no GFIs for this repository.'}
 				</div>
 			}
 			{
@@ -292,6 +295,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 
 export interface GFIIssueListItem extends GFIRepoBasicProp {
 	issue: GFIInfo,
+	useTips: boolean,
 }
 
 type IssueState = 'closed' | 'open' | 'resolved'
@@ -307,27 +311,26 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 
 	const dispatch = useDispatch()
 	const overlayID = useOverlayID()
-	const {repoInfo, issue} = props
+	const {repoInfo, issue, useTips} = props
 	const [displayData, setDisplayData] = useState<IssueDisplayData>()
 
 	useEffect(() => {
 		getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number).then((res) => {
-			if (res.code === 200) {
-				if ('number' in res.result && 'title' in res.result && 'state' in res.result
-					&& 'active_lock_reason' in res.result && 'body' in res.result && 'html_url' in res.result) {
+			if (res && res.status === 200) {
+				if (res.data && !checkHasUndefinedProperty(res.data)) {
 					let issueState = 'open'
-					if (res.result.state === 'closed') {
+					if (res.data.state === 'closed') {
 						issueState = 'closed'
 					}
-					if (res.result.active_lock_reason === 'resolved') {
+					if (res.data.active_lock_reason === 'resolved') {
 						issueState = 'resolved'
 					}
 					setDisplayData({
-						issueId: res.result.number,
-						title: res.result.title,
-						body: res.result.body,
+						issueId: res.data.number as number,
+						title: res.data.title as string,
+						body: res.data.body as string,
 						state: issueState as IssueState,
-						url: res.result.html_url,
+						url: res.data.html_url as string,
 					})
 				}
 			} else {
@@ -379,8 +382,13 @@ const GFIIssueListItem = (props: GFIIssueListItem) => {
 						marginLeft: 'auto',
 						paddingLeft: '0.3rem',
 					}}>
-                        <div id={'issue-display-item-prob-tag'}>
+                        <div className={`issue-display-item-prob-tag ${useTips? 'tool-tips': ''}`}>
 							{(issue.probability * 100).toFixed(2) + '%'}
+	                        {useTips &&
+		                        <div className={'tool-tips-text-top flex-row align-center justify-content-center'}>
+									GFI Probability
+								</div>
+							}
                         </div>
 					</div>
 				}

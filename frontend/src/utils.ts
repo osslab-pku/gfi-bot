@@ -21,3 +21,10 @@ export const checkIsGitRepoURL = (val: string) => {
 export const defaultFontFamily : string = '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif'
 
 export const monospaceFontFamily : string = 'Consolas, monaco, monospace'
+
+export const checkHasUndefinedProperty = (obj: any) => {
+    for (const key in obj) {
+        if (obj[key] === undefined) return true
+    }
+    return false
+}

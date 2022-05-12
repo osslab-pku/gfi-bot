@@ -9,17 +9,17 @@
 
 }
 
-#main-header-input {
+.main-header-input {
     flex-grow: 1;
 }
 
-#main-header-search {
+.main-header-search {
     margin-left: auto;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
 }
 
-#main-header-input-text {
+.main-header-input-text {
     border-bottom-right-radius: 0;
     border-top-right-radius: 0;
 }

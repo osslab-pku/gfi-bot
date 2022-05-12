@@ -402,8 +402,9 @@ export const GFISimplePagination = (props: {nums: number, onClick: (idx: number)
 		}
 		return List.map((i, idx) => {
 			const isSelected = (idx === selectedIdx) ? 'page-selected': ''
+			const idRandom = Math.random() * 1000
 			return (
-				<div className={`simple-pagination-item${showTitle} ${isSelected} hoverable`} onClick={() => {
+				<div key={`simple-pagination-item-${title}-${idx}-${idRandom}`} className={`simple-pagination-item${showTitle} ${isSelected} hoverable`} onClick={() => {
 					if (idx !== selectedIdx) {
 						setSelectedIdx(idx)
 						onClick(idx)
