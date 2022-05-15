@@ -1,19 +1,9 @@
-import React, {
-	createContext,
-	RefObject,
-	useContext,
-	useEffect,
-	useRef,
-	useState,
-} from 'react'
+import React, {createContext, RefObject, useContext, useEffect, useRef, useState} from 'react';
 
-const windowContext = createContext<{ width: number; height: number }>(
-	{} as any
-)
+const windowContext = createContext<{width: number, height: number}>({} as any)
 
-export const WindowContextProvider: React.FC<{ children: React.ReactNode }> = ({
-	children,
-}) => {
+export const WindowContextProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
+
 	const [width, setWidth] = useState<number>(window.innerWidth)
 	const [height, setHeight] = useState<number>(window.innerHeight)
 
@@ -30,41 +20,41 @@ export const WindowContextProvider: React.FC<{ children: React.ReactNode }> = ({
 	}, [])
 
 	return (
-		<windowContext.Provider value={{ width, height }}>
+		<windowContext.Provider value={{width, height}}>
 			{children}
 		</windowContext.Provider>
 	)
 }
 
 export const useWindowSize = () => {
-	const { width, height } = useContext(windowContext)
-	return { width, height }
+	const {width, height} = useContext(windowContext)
+	return {width, height}
 }
 
 export const mobileThreshold = 700
 
 export const useIsMobile = () => {
-	const { width } = useContext(windowContext)
+	const {width} = useContext(windowContext)
 	return width <= mobileThreshold
 }
 
-const GlobalRefContext = createContext<{ ref: RefObject<HTMLDivElement> }>(
-	{} as any
-)
 
-export const GlobalRefProvider: React.FC<{ children: React.ReactNode }> = ({
-	children,
-}) => {
+const GlobalRefContext = createContext<{ref: RefObject<HTMLDivElement>}>({} as any)
+
+export const GlobalRefProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
+
 	const ref = useRef<HTMLDivElement>(null)
 
 	return (
-		<GlobalRefContext.Provider value={{ ref }}>
-			<div ref={ref}>{children}</div>
+		<GlobalRefContext.Provider value={{ref}}>
+			<div ref={ref}>
+				{children}
+			</div>
 		</GlobalRefContext.Provider>
 	)
 }
 
 export const useGlobalRef = () => {
-	const { ref } = useContext(GlobalRefContext)
+	const {ref} = useContext(GlobalRefContext)
 	return ref
 }

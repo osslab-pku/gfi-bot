@@ -1,17 +1,13 @@
 html body {
-	height: 100%;
-	width: 100%;
+    height: 100%;
+    width: 100%;
 }
 
 root {
-	width: 100%;
+    width: 100%;
 }
 
 code {
-	font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-		monospace;
-}
-
-.main-container {
-	min-height: 100vh;
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }

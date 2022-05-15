@@ -1,11 +1,6 @@
-import { asyncRequest } from './query'
-import {
-	GetRepoDetailedInfo,
-	GFIInfo,
-	GFIRepoInfo,
-	GFITrainingResult,
-} from '../module/data/dataModel'
-import { store } from '../module/storage/configureStorage'
+import {asyncRequest} from './query';
+import {GetRepoDetailedInfo, GFIInfo, GFIRepoInfo} from '../module/data/dataModel';
+import {store} from '../module/storage/configureStorage';
 
 export const userInfo = () => {
 	return [
@@ -39,12 +34,7 @@ export const getIssueNum = async () => {
 	})
 }
 
-export const getPagedRepoDetailedInfo = async (
-	beginIdx: string | number,
-	capacity: string | number,
-	lang?: string,
-	filter?: string
-) => {
+export const getPagedRepoDetailedInfo = async (beginIdx: string | number, capacity: string | number, lang?: string, filter?: string) => {
 	return await asyncRequest<GetRepoDetailedInfo>({
 		url: '/api/repos/info/paged',
 		params: {
@@ -68,10 +58,7 @@ export const getRepoDetailedInfo = async (name: string, owner: string) => {
 	})
 }
 
-export const searchRepoInfoByNameOrURL = async (
-	repoName?: string,
-	repoURL?: string
-) => {
+export const searchRepoInfoByNameOrURL = async (repoName?: string, repoURL?: string) => {
 	const [hasLogin, userName] = userInfo()
 	return await asyncRequest<GFIRepoInfo>({
 		url: '/api/repos/info/search',
@@ -122,24 +109,13 @@ export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
 export const getAddRepoHistory = async () => {
 	const [_, __, loginName] = userInfo()
 	return await asyncRequest<{
-		nums?: number
-		queries: GFIRepoInfo[]
-		finished_queries?: GFIRepoInfo[]
+		nums?: number,
+		queries: GFIRepoInfo[],
+		finished_queries?: GFIRepoInfo[],
 	}>({
 		url: '/api/user/queries',
 		params: {
 			user: loginName,
-		},
-		baseURL: DEV_URL,
-	})
-}
-
-export const getTrainingResult = async (name?: string, owner?: string) => {
-	return await asyncRequest<GFITrainingResult[] | undefined>({
-		url: '/api/model/training/result',
-		params: {
-			name: name,
-			owner: owner,
 		},
 		baseURL: DEV_URL,
 	})
