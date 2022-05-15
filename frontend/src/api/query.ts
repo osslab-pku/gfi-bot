@@ -1,22 +1,23 @@
-import axios from 'axios';
-import {KeyMap} from '../module/data/dataModel';
+import axios from 'axios'
+import { KeyMap } from '../module/data/dataModel'
 
 type HTTPMethods = 'GET' | 'POST'
 type ErrorFunc = null | ((error: Error) => void)
 
 type RequestParams = {
-	method?: HTTPMethods,
-	url?: string,
-	params?: KeyMap,
-	headers?: KeyMap,
-	baseURL?: string,
-	onError?: ErrorFunc,
-	customRequestResponse?: boolean,
-	data?: KeyMap,
+	method?: HTTPMethods
+	url?: string
+	params?: KeyMap
+	headers?: KeyMap
+	baseURL?: string
+	onError?: ErrorFunc
+	customRequestResponse?: boolean
+	data?: KeyMap
 }
 
-export const asyncRequest: <T>(params: RequestParams) => Promise<T>
-	= async <T>(params: RequestParams) => {
+export const asyncRequest: <T>(params: RequestParams) => Promise<T> = async <T>(
+	params: RequestParams
+) => {
 	try {
 		let method: HTTPMethods = 'GET'
 		if (params?.method) {
