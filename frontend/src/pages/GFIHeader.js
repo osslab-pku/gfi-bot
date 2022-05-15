@@ -1,413 +1,345 @@
 // TODO:MSKYurina
 // Refactor using TypeScript
 
-import React, { useEffect, useRef, useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
+import React, {useEffect, useRef, useState} from 'react';
+import {useSelector, useDispatch} from 'react-redux';
 
-import {
-	Container,
-	Nav,
-	Navbar,
-	Button,
-	Popover,
-	OverlayTrigger,
-	ProgressBar,
-} from 'react-bootstrap'
-import { LinkContainer } from 'react-router-bootstrap'
-import { GithubFilled, UserDeleteOutlined } from '@ant-design/icons'
-import 'bootstrap/dist/css/bootstrap.min.css'
+import {Container, Nav, Navbar, Button, Popover, OverlayTrigger, ProgressBar} from 'react-bootstrap';
+import {LinkContainer} from 'react-router-bootstrap';
+import {GithubFilled, UserDeleteOutlined} from '@ant-design/icons';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-import { gsap } from 'gsap'
+import {gsap} from 'gsap';
 
-import { useIsMobile } from './app/windowContext'
-import { defaultFontFamily } from '../utils'
-import { gitHubLogin } from '../api/githubApi'
-import {
-	createAccountNavStateAction,
-	createLogoutAction,
-} from '../module/storage/reducers'
+import {useIsMobile} from './app/windowContext';
+import {defaultFontFamily} from '../utils';
+import {gitHubLogin} from '../api/githubApi';
+import {createAccountNavStateAction, createLogoutAction} from '../module/storage/reducers';
 import '../style/gfiStyle.css'
 
-import navLogo from '../assets/favicon-thumbnail.png'
-import { GFIPortalPageNav } from './portal/GFIPortal'
+import navLogo from '../assets/favicon-thumbnail.png';
+import {GFIPortalPageNav} from './portal/GFIPortal';
 
 export const GFIHeader = () => {
-	const dispatch = useDispatch()
 
-	const logout = () => {
-		dispatch(createLogoutAction())
-		window.location.reload()
-	}
+    const dispatch = useDispatch()
 
-	const hasLogin = useSelector((state) => {
-		if ('loginReducer' in state && 'hasLogin' in state.loginReducer)
-			return state.loginReducer.hasLogin
-		return undefined
-	})
+    const logout = () => {
+        dispatch(createLogoutAction())
+        window.location.reload()
+    }
 
-	const userName = useSelector((state) => {
-		if ('loginReducer' in state && 'name' in state.loginReducer)
-			return state.loginReducer.name
-		return undefined
-	})
+    const hasLogin = useSelector(state => {
+        if ('loginReducer' in state && 'hasLogin' in state.loginReducer) return state.loginReducer.hasLogin
+        return undefined
+    })
 
-	// Login / Logout related components
+    const userName = useSelector(state => {
+        if ('loginReducer' in state && 'name' in state.loginReducer) return state.loginReducer.name
+        return undefined
+    })
 
-	const [popOverToggled, setPopOverToggled] = useState(false)
-	const [showPopOver, setShowPopOver] = useState(false)
-	const popOverRef = useRef(null)
-	const loginBtnRef = useRef(null)
+    // Login / Logout related components
 
-	const checkIfClosePopOver = (e) => {
-		const ele = e.target
-		if (
-			popOverRef.current &&
-			!popOverRef.current.contains(ele) &&
-			!loginBtnRef.current.contains(ele)
-		) {
-			e.preventDefault()
-			e.stopPropagation()
-			setShowPopOver(false)
-		}
-	}
+    const [popOverToggled, setPopOverToggled] = useState(false)
+    const [showPopOver, setShowPopOver] = useState(false)
+    const popOverRef = useRef(null)
+    const loginBtnRef = useRef(null)
 
-	useEffect(() => {
-		if (popOverToggled === true) {
-			window.addEventListener('mousedown', (e) => checkIfClosePopOver(e))
-		}
-		return () => {
-			window.removeEventListener('mousedown', (e) =>
-				checkIfClosePopOver(e)
-			)
-		}
-	}, [popOverToggled])
+    const checkIfClosePopOver = (e) => {
+        const ele = e.target
+        if (popOverRef.current && !popOverRef.current.contains(ele) && !loginBtnRef.current.contains(ele)) {
+            e.preventDefault()
+            e.stopPropagation()
+            setShowPopOver(false)
+        }
+    }
 
-	// Popover menu, currently for user logout
+    useEffect(() => {
+        if (popOverToggled === true) {
+            window.addEventListener('mousedown', (e) => checkIfClosePopOver(e))
+        }
+        return () => {
+            window.removeEventListener('mousedown', (e) => checkIfClosePopOver(e))
+        }
+    }, [popOverToggled])
 
-	const logoutPopover = (
-		<Popover id={'popover-basic'}>
-			<Popover.Body>
-				<div ref={popOverRef}>
-					<p>
-						{' '}
-						<u> Hi, {userName} </u>{' '}
-					</p>
-					<div
-						style={{
-							display: 'flex',
-							justifyContent: 'center',
-							alignItems: 'center',
-						}}
-					>
-						<UserDeleteOutlined
-							style={{
-								fontSize: '17px',
-							}}
-						/>
-						<Button
-							onClick={logout}
-							size={'sm'}
-							variant={'outline-danger'}
-							style={{ marginLeft: 'auto' }}
-						>
-							Logout
-						</Button>
-					</div>
-				</div>
-			</Popover.Body>
-		</Popover>
-	)
+    // Popover menu, currently for user logout
 
-	// Sign in component
+    const logoutPopover = (
+        <Popover id={'popover-basic'}>
+            <Popover.Body>
+                <div ref={popOverRef}>
+                    <p> <u> Hi, {userName} </u> </p>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}>
+                        <UserDeleteOutlined style={{
+                            fontSize: '17px',
+                        }}/>
+                        <Button
+                            onClick={logout}
+                            size={'sm'}
+                            variant={'outline-danger'}
+                            style={{ marginLeft: 'auto' }}
+                        >
+                            Logout
+                        </Button>
+                    </div>
+                </div>
+            </Popover.Body>
+        </Popover>
+    )
 
-	const signInLink = () => {
-		const login = hasLogin === true && userName !== undefined
-		if (!login) {
-			return (
-				<Button
-					onClick={gitHubLogin}
-					variant={'outline-secondary'}
-					size={'sm'}
-					style={{ marginRight: '15px' }}
-					className={'sign-in'}
-				>
-					{'Sign in via GitHub'}
-				</Button>
-			)
-		} else {
-			return (
-				<div ref={loginBtnRef}>
-					<OverlayTrigger
-						trigger={'click'}
-						placement={'bottom'}
-						overlay={logoutPopover}
-						onToggle={() => {
-							setShowPopOver(true)
-							setPopOverToggled(true)
-						}}
-						show={showPopOver}
-					>
-						<Button
-							variant={'outline-secondary'}
-							size={'sm'}
-							style={{
-								marginRight: '15px',
-							}}
-							onClick={() => {
-								if (showPopOver) {
-									setShowPopOver(false)
-									setPopOverToggled(false)
-								}
-							}}
-						>
-							{userName}
-						</Button>
-					</OverlayTrigger>
-				</div>
-			)
-		}
-	}
+    // Sign in component
 
-	// Display responsively
+    const signInLink = () => {
+        const login = hasLogin === true && userName !== undefined
+        if (!login) {
+            return  (
+                <Button
+                    onClick={gitHubLogin}
+                    variant={'outline-secondary'}
+                    size={'sm'}
+                    style={{ marginRight: '15px' }}
+                    className={'sign-in'}
+                >
+                    {'Sign in via GitHub'}
+                </Button>
+            )
+        } else {
+            return (
+                <div ref={loginBtnRef}>
+                    <OverlayTrigger
+                        trigger={'click'}
+                        placement={'bottom'}
+                        overlay={logoutPopover}
+                        onToggle={() => {
+                            setShowPopOver(true)
+                            setPopOverToggled(true)
+                        }}
+                        show={showPopOver}
+                    >
+                        <Button
+                            variant={'outline-secondary'}
+                            size={'sm'}
+                            style={{
+                                marginRight: '15px',
+                            }}
+                            onClick={() => {
+                                if (showPopOver) {
+                                    setShowPopOver(false)
+                                    setPopOverToggled(false)
+                                }
+                            }}
+                        >
+                            {userName}
+                        </Button>
+                    </OverlayTrigger>
+                </div>
+            )
+        }
+    }
 
-	const isMobile = useIsMobile()
-	const iconRef = useRef(null)
+    // Display responsively
 
-	const hideAccountNav = () => {
-		dispatch(createAccountNavStateAction({ show: false }))
-	}
-	const showAccountNav = () => {
-		dispatch(createAccountNavStateAction({ show: true }))
-	}
+    const isMobile = useIsMobile()
+    const iconRef = useRef(null)
 
-	const renderNavItem = () => {
-		const renderSignInItems = () => {
-			const hoverTimeline = gsap.timeline()
-			const hoveredColor = '#404040'
-			const normalColor = '#707070'
+    const hideAccountNav = () => {
+        dispatch(createAccountNavStateAction({show: false}))
+    }
+    const showAccountNav = () => {
+        dispatch(createAccountNavStateAction({show: true}))
+    }
 
-			return (
-				<Container
-					style={{
-						padding: '0',
-						display: 'flex',
-						alignItems: 'center',
-						height: '40px',
-						marginRight: '0px',
-					}}
-				>
-					<div
-						style={{
-							display: 'inline-block',
-							width: '80%',
-							textAlign: isMobile ? '' : 'right',
-						}}
-					>
-						{signInLink()}
-					</div>
-					<div
-						style={{
-							display: 'inline-block',
-							width: '20%',
-							textAlign: 'right',
-						}}
-					>
-						<GithubFilled
-							style={{ fontSize: '30px', color: normalColor }}
-							onClick={() =>
-								window.open(
-									'https://github.com/osslab-pku/gfi-bot'
-								)
-							}
-							onMouseEnter={() => {
-								hoverTimeline
-									.pause()
-									.clear()
-									.to(iconRef.current, {
-										color: hoveredColor,
-										duration: 0.3,
-									})
-									.play()
-							}}
-							onMouseLeave={() => {
-								hoverTimeline
-									.pause()
-									.clear()
-									.to(iconRef.current, {
-										color: normalColor,
-										duration: 0.1,
-									})
-									.play()
-							}}
-							ref={iconRef}
-						/>
-					</div>
-				</Container>
-			)
-		}
+    const renderNavItem = () => {
 
-		const renderMobileSignIn = () => {
-			if (isMobile) {
-				return renderSignInItems()
-			} else {
-				return <></>
-			}
-		}
+        const renderSignInItems = () => {
 
-		const renderDesktopSignIn = () => {
-			if (!isMobile) {
-				return (
-					<Navbar.Collapse
-						className={'justify-content-end'}
-						style={{
-							fontFamily: defaultFontFamily,
-							maxWidth: '180px',
-						}}
-					>
-						{renderSignInItems()}
-					</Navbar.Collapse>
-				)
-			} else {
-				return <></>
-			}
-		}
+            const hoverTimeline = gsap.timeline()
+            const hoveredColor = '#404040'
+            const normalColor = '#707070'
 
-		const MyPage = () => {
-			if (hasLogin) {
-				return (
-					<LinkContainer
-						to={'/portal'}
-						onClick={() => {
-							showAccountNav()
-						}}
-					>
-						<Nav.Link> Portal </Nav.Link>
-					</LinkContainer>
-				)
-			}
-			return <></>
-		}
+            return (
+                <Container style={{
+                    padding: '0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: '40px',
+                    marginRight: '0px',
+                }}>
+                    <div style={{
+                        display: 'inline-block',
+                        width: '80%',
+                        textAlign: isMobile ? '': 'right',
+                    }}>
+                        {signInLink()}
+                    </div>
+                    <div style={{
+                        display: 'inline-block',
+                        width: '20%',
+                        textAlign: 'right',
+                    }}>
+                        <GithubFilled
+                            style={{fontSize: '30px', color: normalColor}}
+                            onClick={() => window.open('https://github.com/osslab-pku/gfi-bot')}
+                            onMouseEnter={() => {
+                                hoverTimeline
+                                    .pause()
+                                    .clear()
+                                    .to(iconRef.current, {
+                                        color: hoveredColor,
+                                        duration: 0.3,
+                                    })
+                                    .play()
+                            }}
+                            onMouseLeave={() => {
+                                hoverTimeline
+                                    .pause()
+                                    .clear()
+                                    .to(iconRef.current, {
+                                        color: normalColor,
+                                        duration: 0.1,
+                                    })
+                                    .play()
+                            }}
+                            ref={iconRef}
+                        />
+                    </div>
+                </Container>
+            )
+        }
 
-		return (
-			<Container
-				style={{
-					marginRight: '5px',
-					marginLeft: '5px',
-					maxWidth: '100vw',
-				}}
-			>
-				<LinkContainer
-					to={'/'}
-					onClick={() => {
-						hideAccountNav()
-					}}
-				>
-					<Navbar.Brand>
-						<img
-							alt={''}
-							src={navLogo}
-							width={'30'}
-							height={'30'}
-							className={'d-inline-block align-top'}
-						/>{' '}
-						GFI-Bot
-					</Navbar.Brand>
-				</LinkContainer>
-				<Navbar.Toggle />
-				<Navbar.Collapse>
-					<Nav>
-						{MyPage()}
-						<LinkContainer
-							to={'/home'}
-							onClick={() => {
-								hideAccountNav()
-							}}
-						>
-							<Nav.Link> About Us </Nav.Link>
-						</LinkContainer>
-						{renderMobileSignIn()}
-					</Nav>
-				</Navbar.Collapse>
-				{renderDesktopSignIn()}
-			</Container>
-		)
-	}
+        const renderMobileSignIn = () => {
+            if (isMobile) {
+                return renderSignInItems()
+            } else {
+                return <></>
+            }
+        }
 
-	// Explain:
-	// The 'expand' property of React-bootstrap Navbar turn out to be effective (equals to 'false') even when set to 'true' or ''
-	// so temporarily using two functions to render navbar responsively
+        const renderDesktopSignIn = () => {
+            if (!isMobile) {
+                return (
+                    <Navbar.Collapse
+                        className={'justify-content-end'}
+                        style={{
+                            fontFamily: defaultFontFamily,
+                            maxWidth: '180px',
+                        }}
+                    >
+                        {renderSignInItems()}
+                    </Navbar.Collapse>
+                )
+            } else {
+                return <></>
+            }
+        }
 
-	const renderDesktopNavbar = () => {
-		return (
-			<div className={'flex-col sticky-top'}>
-				<Navbar bg={'light'} sticky={'top'}>
-					{renderNavItem(false)}
-				</Navbar>
-				<GFIGlobalProgressBar />
-			</div>
-		)
-	}
+        const MyPage = () => {
+            if (hasLogin) {
+                return (
+                    <LinkContainer to={'/portal'} onClick={() => { showAccountNav() }}>
+                        <Nav.Link> Portal </Nav.Link>
+                    </LinkContainer>
+                )
+            }
+            return <></>
+        }
 
-	const renderMobileNavbar = () => {
-		return (
-			<>
-				<Navbar bg={'light'} sticky={'top'} expand={'false'}>
-					{renderNavItem(true)}
-				</Navbar>
-				<GFIGlobalProgressBar />
-			</>
-		)
-	}
+        return (
+            <Container style={{marginRight: '5px', marginLeft: '5px', maxWidth: '100vw'}}>
+                <LinkContainer to={'/'} onClick={() => { hideAccountNav() }}>
+                    <Navbar.Brand>
+                        <img
+                            alt={''}
+                            src={navLogo}
+                            width={'30'}
+                            height={'30'}
+                            className={'d-inline-block align-top'}
+                        />
+                        {' '} GFI-Bot
+                    </Navbar.Brand>
+                </LinkContainer>
+                <Navbar.Toggle />
+                <Navbar.Collapse>
+                    <Nav>
+                        {MyPage()}
+                        <LinkContainer to={'/home'} onClick={() => { hideAccountNav() }}>
+                            <Nav.Link> About Us </Nav.Link>
+                        </LinkContainer>
+                        {renderMobileSignIn()}
+                    </Nav>
+                </Navbar.Collapse>
+                {renderDesktopSignIn()}
+            </Container>
+        )
+    }
 
-	const render = () => {
-		if (!isMobile) {
-			return renderDesktopNavbar()
-		} else {
-			return renderMobileNavbar()
-		}
-	}
+    // Explain:
+    // The 'expand' property of React-bootstrap Navbar turn out to be effective (equals to 'false') even when set to 'true' or ''
+    // so temporarily using two functions to render navbar responsively
 
-	const shouldShowAccountNav = useSelector((state) => {
-		if (
-			'accountNavStateReducer' in state &&
-			'show' in state.accountNavStateReducer
-		)
-			return state.accountNavStateReducer.show
-		return false
-	})
+    const renderDesktopNavbar = () => {
+        return (
+            <div className={'flex-col sticky-top'}>
+                <Navbar bg={'light'} sticky={'top'}>
+                    {renderNavItem(false)}
+                </Navbar>
+                <GFIGlobalProgressBar />
+            </div>
+        )
+    }
 
-	return (
-		<>
-			{render()}
-			{shouldShowAccountNav && (
-				<GFIPortalPageNav id={'portal-page-nav'} />
-			)}
-		</>
-	)
+    const renderMobileNavbar = () => {
+        return (
+            <>
+                <Navbar bg={'light'} sticky={'top'} expand={'false'}>
+                    {renderNavItem(true)}
+                </Navbar>
+                <GFIGlobalProgressBar />
+            </>
+        )
+    }
+
+    const render = () => {
+        if (!isMobile) {
+            return renderDesktopNavbar()
+        } else {
+            return renderMobileNavbar()
+        }
+    }
+
+    const shouldShowAccountNav = useSelector((state) => {
+        if ('accountNavStateReducer' in state && 'show' in state.accountNavStateReducer) return state.accountNavStateReducer.show
+        return false
+    })
+
+    return (
+        <>
+            {render()}
+            {shouldShowAccountNav && <GFIPortalPageNav id={'portal-page-nav'} />}
+        </>
+    )
 }
 
 const GFIGlobalProgressBar = () => {
-	const ref = useRef(null)
-	const hidden = useSelector((state) => {
-		if (
-			'globalProgressBarReducer' in state &&
-			'hidden' in state.globalProgressBarReducer
-		) {
-			if (state.globalProgressBarReducer.hidden) {
-				return 'gfi-hidden-with-space'
-			}
-		}
-		return ''
-	})
+    const ref = useRef(null)
+    const hidden = useSelector((state) => {
+        if ('globalProgressBarReducer' in state && 'hidden' in state.globalProgressBarReducer) {
+            if (state.globalProgressBarReducer.hidden) {
+                return 'gfi-hidden-with-space'
+            }
+        }
+        return ''
+    })
 
-	return (
-		<>
-			<ProgressBar
-				ref={ref}
-				className={`progress-bar-thin ${hidden} sticky-top transition-01`}
-				animated={true}
-				now={100}
-			/>
-		</>
-	)
+    return (
+        <>
+            <ProgressBar ref={ref} className={`progress-bar-thin ${hidden} sticky-top transition-01`} animated={true} now={100} />
+        </>
+    )
 }

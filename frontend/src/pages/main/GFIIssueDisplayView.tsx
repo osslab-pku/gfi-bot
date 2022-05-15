@@ -1,9 +1,11 @@
-import React, { forwardRef } from 'react'
+import React, {forwardRef} from 'react';
 
-export interface GFIIssueDisplayView {}
+export interface GFIIssueDisplayView {
 
-export const GFIIssueDisplayView = forwardRef(
-	(props: GFIIssueDisplayView, ref) => {
-		return <></>
-	}
-)
+}
+
+export const GFIIssueDisplayView = forwardRef((props: GFIIssueDisplayView, ref) => {
+	return (
+		<></>
+	)
+})
