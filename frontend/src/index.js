@@ -20,6 +20,7 @@ import {MainPage} from './pages/main/mainPage';
 import {LoginRedirect} from './pages/login/GFILoginComponents';
 import {GlobalRefProvider, WindowContextProvider} from './pages/app/windowContext';
 import {GFIPortal} from './pages/portal/GFIPortal';
+import {GFICopyright} from './pages/GFIComponents';
 
 ReactDOM.render(
 	<React.StrictMode>
@@ -33,7 +34,7 @@ ReactDOM.render(
 						<GlobalRefProvider>
 							<BrowserRouter>
 								<AliveScope>
-									<Container fluid className={'no-gutters mx-0 px-0'}>
+									<Container fluid className={'no-gutters mx-0 px-0 main-container'}>
 										<GFIHeader />
 										<CacheSwitch>
 											<CacheRoute exact path={'/'} component={MainPage} />
@@ -43,6 +44,7 @@ ReactDOM.render(
 											<Route path={'/login/redirect'} component={LoginRedirect} />
 											<CacheRoute path={'*'} component={MainPage} />
 										</CacheSwitch>
+										<GFICopyright />
 									</Container>
 								</AliveScope>
 							</BrowserRouter>

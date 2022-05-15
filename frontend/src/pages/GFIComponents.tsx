@@ -20,11 +20,13 @@ export const GFICopyright = () => {
 
 	return (
 		<Container style={{
-			marginTop:'20px',
-			marginBottom: '10px',
+			paddingTop:'20px',
+			paddingBottom: '10px',
 			fontFamily: defaultFontFamily,
 			fontSize: '15px',
 			fontWeight: '100',
+			position: 'sticky',
+			top: '100vh',
 		}}>
 			<Row>
 				<Col style={{textAlign: 'center'}}>

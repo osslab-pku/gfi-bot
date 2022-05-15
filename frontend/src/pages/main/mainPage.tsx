@@ -9,7 +9,7 @@ import '../../style/gfiStyle.css'
 import {checkIsNumber, defaultFontFamily} from '../../utils';
 
 import {GFINotiToast} from '../login/GFILoginComponents';
-import {GFIAlarm, GFICopyright, GFIPagination} from '../GFIComponents';
+import {GFIAlarm, GFIPagination} from '../GFIComponents';
 import {getRepoNum, getIssueNum, getLanguageTags, searchRepoInfoByNameOrURL, getPagedRepoDetailedInfo} from '../../api/api';
 import {checkGithubLogin} from '../../api/githubApi';
 
@@ -290,12 +290,6 @@ export const MainPage = () => {
 					/>
 				</Row>
 				{renderMainArea()}
-				<Row style={{
-					color: 'black',
-					bottom: '0',
-				}}>
-					<GFICopyright />
-				</Row>
 			</Container>
 			<Container style={{
 				width: width,

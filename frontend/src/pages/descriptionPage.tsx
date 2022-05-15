@@ -67,14 +67,6 @@ export const DescriptionPage: React.FC = () => {
 						<Button variant={'outline-primary'}> Get Started </Button>
 					</Col>
 				</Row>
-				<Row style={{
-					float: 'inline-end',
-					bottom: '0',
-				}}>
-					<Col>
-						<GFICopyright/>
-					</Col>
-				</Row>
 			</Container>
 		</div>
 	)
