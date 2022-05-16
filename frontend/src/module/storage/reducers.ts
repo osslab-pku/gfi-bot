@@ -188,3 +188,39 @@ export const accountNavStateReducer: Reducer<
   }
   return state;
 };
+
+type MAIN_LANG_SELECT_ACTION_TYPE = 'MAIN_LANG_SELECT';
+const MAIN_LANG_SELECT_ACTION_TYPE: MAIN_LANG_SELECT_ACTION_TYPE =
+  'MAIN_LANG_SELECT';
+
+export interface MainPageLangTagSelectedState {
+  tagSelected?: string;
+}
+
+export interface MainPageLangTagSelectedAction
+  extends MainPageLangTagSelectedState {
+  type: MAIN_LANG_SELECT_ACTION_TYPE;
+}
+
+const initMainPageLangTagSelectedState: MainPageLangTagSelectedState = {};
+
+export const createMainPageLangTagSelectedAction: (
+  p: MainPageLangTagSelectedState
+) => MainPageLangTagSelectedAction = (p) => {
+  return {
+    type: MAIN_LANG_SELECT_ACTION_TYPE,
+    tagSelected: p.tagSelected,
+  };
+};
+
+export const mainPageLangTagSelectedStateReducer: Reducer<
+  MainPageLangTagSelectedState,
+  MainPageLangTagSelectedAction
+> = (state = initMainPageLangTagSelectedState, action) => {
+  if (action.type === MAIN_LANG_SELECT_ACTION_TYPE) {
+    return {
+      tagSelected: action.tagSelected,
+    };
+  }
+  return state;
+};

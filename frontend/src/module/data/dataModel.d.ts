@@ -53,3 +53,15 @@ export type GitHubIssueResponse = {
   body: string;
   html_url: string;
 };
+
+export type GFITrainingSummary = {
+  name: string;
+  owner: string;
+  issues_train: number;
+  issues_test: number;
+  n_resolved_issues: number;
+  n_newcomer_resolved: number;
+  accuracy: number;
+  auc: number;
+  last_updated: string;
+};

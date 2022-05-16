@@ -8,6 +8,8 @@ import {
   GlobalProgressBarState,
   globalProgressBarStateReducer,
   loginReducer,
+  MainPageLangTagSelectedState,
+  mainPageLangTagSelectedStateReducer,
   showMainPagePopoverReducer,
 } from './reducers';
 import { RepoShouldDisplayPopoverState } from '../../pages/main/GFIRepoDisplayView';
@@ -24,6 +26,7 @@ const combinedReducers = combineReducers({
   loginReducer: persistReducers,
   mainPopoverReducer: showMainPagePopoverReducer,
   globalProgressBarReducer: globalProgressBarStateReducer,
+  mainPageLangTagSelectedStateReducer,
   accountNavStateReducer,
 });
 
@@ -35,4 +38,5 @@ export interface GFIRootReducers {
   mainPopoverReducer: RepoShouldDisplayPopoverState;
   globalProgressBarReducer: GlobalProgressBarState;
   accountNavStateReducer: AccountNavState;
+  mainPageLangTagSelectedStateReducer: MainPageLangTagSelectedState;
 }
