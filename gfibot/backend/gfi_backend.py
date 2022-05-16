@@ -263,9 +263,9 @@ def get_issue_num():
 
 
 @app.route("/api/issue/gfi")
-def get_issue_info():
+def get_gfi_info():
     """
-    get random issues by repo name
+    get GFIs by repo name
     """
     repo_name = request.args.get("repo")
     repo_owner = request.args.get("owner")
@@ -284,6 +284,25 @@ def get_issue_info():
             return {"code": 404, "result": "no gfi found"}
     else:
         abort(400)
+
+
+@app.route("/api/issue/gfi/num")
+def get_gfi_num():
+    """
+    Get num of GFIs by repo name
+    """
+    repo_name = request.args.get("repo")
+    repo_owner = request.args.get("owner")
+    if repo_name != None and repo_owner != None:
+        gfi_list = Prediction.objects(
+            Q(name=repo_name) & Q(owner=repo_owner) & Q(probability__gte=0.5)
+        )
+    else:
+        gfi_list = Prediction.objects(Q(probability__gte=0.5))
+    return {
+        "code": 200,
+        "result": len(gfi_list),
+    }
 
 
 @app.route("/api/user/github/login")
@@ -374,6 +393,41 @@ def github_login_redirect(name: str, code: str):
         }
 
 
+@app.route("/api/model/training/result")
+def get_training_result():
+    """
+    get training result
+    """
+
+    name = request.args.get("name")
+    owner = request.args.get("owner")
+    if name != None and owner != None:
+        training_result = TrainingSummary.objects(Q(name=name) & Q(owner=owner))
+    else:
+        training_result = TrainingSummary.objects()
+
+    if training_result != None:
+        return {
+            "code": 200,
+            "result": [
+                {
+                    "owner": result.owner,
+                    "name": result.name,
+                    "issues_train": len(result.issues_train),
+                    "issues_test": len(result.issues_test),
+                    "n_resolved_issues": result.n_resolved_issues,
+                    "n_newcomer_resolved": result.n_newcomer_resolved,
+                    "accuracy": result.accuracy,
+                    "auc": result.auc,
+                    "last_updated": result.last_updated,
+                }
+                for result in training_result
+            ],
+        }
+    else:
+        return {"code": 404, "result": "no training result found"}
+
+
 @app.route("/api/user/github/callback")
 def github_login_redirect_web():
     code = request.args.get("code")
@@ -441,11 +495,6 @@ def github_app_webhook_process():
         None
 
     return {"code": 200, "result": "callback succeed for event {}".format(event)}
-
-
-def fetch_repo_gfi(repo_url, github_name):
-    ### TODO: To Be Completed
-    None
 
 
 def send_email(user_github_id, subject, body):
