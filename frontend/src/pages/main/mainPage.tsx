@@ -26,7 +26,9 @@ import { checkGithubLogin } from '../../api/githubApi';
 import {
   createGlobalProgressBarAction,
   createLogoutAction,
+  createMainPageLangTagSelectedAction,
   createPopoverAction,
+  MainPageLangTagSelectedState,
 } from '../../module/storage/reducers';
 import { GFI_REPO_FILTER_NONE, GFIMainPageHeader } from './mainHeader';
 
@@ -37,6 +39,7 @@ import {
 } from './GFIRepoDisplayView';
 import { GFIRepoInfo } from '../../module/data/dataModel';
 import { GFIRootReducers } from '../../module/storage/configureStorage';
+import { GFITrainingSummaryDisplayView } from './GFITrainingSummaryDisplayView';
 
 export function MainPage() {
   const dispatch = useDispatch();
@@ -124,6 +127,11 @@ export function MainPage() {
 
   useEffect(() => {
     fetchRepoInfoList(1, selectedTag, selectedFilter);
+    dispatch(
+      createMainPageLangTagSelectedAction({
+        tagSelected: selectedTag,
+      })
+    );
   }, [selectedTag, selectedFilter]);
 
   useEffect(() => {
@@ -159,8 +167,8 @@ export function MainPage() {
             return emptyRepoInfo;
           });
           setDisplayRepoInfo(repoInfoList);
-          dispatch(createGlobalProgressBarAction({ hidden: true }));
         }
+        dispatch(createGlobalProgressBarAction({ hidden: true }));
       }
     );
   };
@@ -229,7 +237,7 @@ export function MainPage() {
             style={{
               padding: '0px',
               marginLeft: '0px',
-              width: isMobile ? '100%' : '60%',
+              width: isMobile ? '100%' : '65%',
             }}
           >
             {renderInfoComponent()}
@@ -250,12 +258,24 @@ export function MainPage() {
               needInputArea
             />
           </Container>
-          {isMobile ? (
+          {!isMobile ? (
             <Container
               style={{
-                maxWidth: '30%',
+                width: '35%',
+                maxWidth: '430px',
+                minWidth: '310px',
+                padding: '0',
               }}
-            />
+            >
+              <div className="flex-col align-center">
+                <GFIDadaKanban
+                  onTagClicked={(tag) => {
+                    setSelectedTag(tag);
+                  }}
+                />
+                <GFITrainingSummaryDisplayView />
+              </div>
+            </Container>
           ) : (
             <></>
           )}
@@ -351,45 +371,55 @@ export function MainPage() {
 }
 
 interface GFIDadaKanban {
-  onTagClicked: React.MouseEventHandler<HTMLButtonElement>;
+  onTagClicked: (tag: string) => void;
 }
 
 const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
   const { onTagClicked } = props;
-
-  const [repoNum, setRepoNum] = useState(0);
-  const [issueNum, setIssueNum] = useState(0);
-  const [GFINum, setGFINum] = useState(0);
   const [langTags, setLangTags] = useState<any[]>([]);
+  const globalSelectedTag = useSelector<
+    GFIRootReducers,
+    MainPageLangTagSelectedState
+  >((state) => {
+    return state.mainPageLangTagSelectedStateReducer;
+  });
 
   useEffect(() => {
-    getRepoNum('').then((res) => {
-      if (res && checkIsNumber(res)) {
-        setRepoNum(res);
+    if (globalSelectedTag && langTags.includes(globalSelectedTag.tagSelected)) {
+      const idx = langTags.indexOf(globalSelectedTag.tagSelected);
+      if (idx !== selectedIdx) {
+        setSelectedIdx(idx);
       }
-    });
+    } else {
+      setSelectedIdx(-1);
+    }
+  }, [globalSelectedTag]);
 
+  useEffect(() => {
     getLanguageTags().then((res) => {
       if (res && Array.isArray(res)) {
         setLangTags(res);
       }
     });
-
-    getIssueNum().then((res) => {
-      if (res) {
-        setIssueNum(res);
-        setGFINum(Math.round(res * 0.05));
-      }
-    });
   }, []);
+  const [selectedIdx, setSelectedIdx] = useState<number>();
 
   const renderLanguageTags = () => {
     return langTags.map((val, index) => {
+      const selected =
+        selectedIdx !== undefined
+          ? selectedIdx === index
+            ? 'selected'
+            : ''
+          : '';
       return (
         <button
-          className="gfi-rounded"
+          className={`gfi-rounded ${selected}`}
           key={`lang-tag ${index}`}
-          onClick={onTagClicked}
+          onClick={(e) => {
+            setSelectedIdx(index);
+            onTagClicked(val);
+          }}
         >
           {val}
         </button>
@@ -404,37 +434,13 @@ const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
         fontFamily: defaultFontFamily,
       }}
     >
-      <div
-        className="kanban wrapper"
-        style={{
-          margin: '7px',
-        }}
-      >
-        <div className="kanban">
-          <div className="kanban data">
-            <div> Repos </div>
-            <div> {repoNum} </div>
+      <div className="kanban wrapper">
+        <div className="gfi-wrapper tags">
+          <div style={{ marginBottom: '0.3rem' }}>Languages</div>
+          <div className="tags wrapper" style={{ marginBottom: '0.1rem' }}>
+            {renderLanguageTags()}
           </div>
         </div>
-
-        <div className="kanban">
-          <div className="kanban data">
-            <div> Issues </div>
-            <div> {issueNum} </div>
-          </div>
-        </div>
-
-        <div className="kanban">
-          <div className="kanban data">
-            <div> GFIs </div>
-            <div> {GFINum} </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="gfi-wrapper tags">
-        <div>Languages</div>
-        <div className="tags wrapper">{renderLanguageTags()}</div>
       </div>
     </div>
   );

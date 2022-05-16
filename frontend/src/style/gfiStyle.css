@@ -217,15 +217,17 @@ code {
 .gfi-wrapper.kanban {
     flex-flow: column wrap;
     align-items: center;
-    border-color: black;
+    border: 0;
+    padding: 0 8px 0.7rem;
 }
 
 .kanban.wrapper {
     color: black;
-    width: 90%;
+    width: 100%;
     display: flex;
-    flex-flow: row-reverse wrap;
+    flex-flow: row wrap;
     justify-content: space-evenly;
+    margin: 0;
 }
 
 .kanban.wrapper > .kanban div {
@@ -253,11 +255,12 @@ code {
 .gfi-wrapper.tags {
     display: flex;
     flex-flow: column wrap;
-    width: 95%;
+    width: 100%;
     margin-bottom: 10px;
     padding: 5px 10px;
+    border: 1px solid var(--color-border-default);
     color: black;
-    border-color: black;
+    background-color: var(--color-canvas-subtle);
 }
 
 .tags.wrapper {
@@ -285,12 +288,18 @@ button.gfi-rounded  {
     box-sizing: border-box;
     color: black;
     transition: 0.1s ease-in-out;
+    font-size: 0.9rem;
 }
 
 button.gfi-rounded:hover {
     color: white;
     background-color: black;
     transition: 0.1s ease-in-out;
+}
+
+button.gfi-rounded.selected {
+    color: white;
+    background-color: black;
 }
 
 button.gfi-rounded:active {
@@ -825,4 +834,88 @@ a.account-nav {
 
 .make-top {
     z-index: 999;
+}
+
+.gfi-training-summary-container {
+    /*border: 1px solid var(--color-border-default);*/
+    border-radius: 5px;
+    font-family: var(--default-font-family);
+    padding-bottom: 0.7rem;
+    width: 100%;
+}
+
+.gfi-training-summary-title {
+    padding: 0 0.5rem 0 0.5rem;
+    font-size: 1.4rem;
+    font-weight: 300;
+    margin-bottom: 0.5rem;
+}
+
+.gfi-training-summary-subtitle {
+    padding: 0.3rem 0.5rem 0 0.5rem;
+    margin-bottom: 0.3rem;
+    color: var(--color-fg-pending);
+}
+
+.gfi-training-summary-subtitle > p {
+    margin: 0;
+    padding: 0 0.3rem 0 0.3rem;
+    font-weight: bold;
+}
+
+.gfi-training-summary-full-chart {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+    width: 100%;
+}
+
+.gfi-training-auc-displayer-label {
+    fill: white;
+    font-family: var(--default-font-family);
+    font-weight: lighter;
+    font-size: 0.9rem;
+}
+
+.gfi-training-auc-displayer-label-val {
+    fill: white;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.gfi-training-auc-displayer-label-title {
+    fill: rgba(255, 255, 255, 0.9);
+    font-weight: bold;
+    font-size: larger;
+}
+
+.gfi-training-num-info-num {
+    position: absolute;
+    width: 100px;
+    height: 50px;
+    fill: white;
+    font-size: x-large;
+    font-weight: bold;
+}
+
+.gfi-training-num-info-title {
+    dominant-baseline: middle;
+    text-anchor: middle;
+    fill: white;
+    font-weight: lighter;
+    font-family: var(--default-font-family);
+}
+
+.gfi-training-nums-displayer-item {
+    margin-bottom: 0.3rem;
+}
+
+.gfi-training-activity-displayer-label {
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.gfi-training-activity-displayer-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    fill: rgba(255, 255, 255, 0.9);
 }

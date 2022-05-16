@@ -3,6 +3,7 @@ import {
   GetRepoDetailedInfo,
   GFIInfo,
   GFIRepoInfo,
+  GFITrainingSummary,
 } from '../module/data/dataModel';
 import { store } from '../module/storage/configureStorage';
 
@@ -94,6 +95,17 @@ export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
   });
 };
 
+export const getGFINum = async (repoName?: string, repoOwner?: string) => {
+  return await asyncRequest<number | undefined>({
+    url: '/api/issue/gfi/num',
+    params: {
+      repo: repoName,
+      owner: repoOwner,
+    },
+    baseURL: DEV_URL,
+  });
+};
+
 export const getLanguageTags = async () => {
   return await asyncRequest<string[] | undefined>({
     url: '/api/repos/language',
@@ -128,6 +140,17 @@ export const getAddRepoHistory = async () => {
     url: '/api/user/queries',
     params: {
       user: loginName,
+    },
+    baseURL: DEV_URL,
+  });
+};
+
+export const getTrainingSummary = async (name?: string, owner?: string) => {
+  return await asyncRequest<GFITrainingSummary[] | undefined>({
+    url: '/api/model/training/result',
+    params: {
+      name,
+      owner,
     },
     baseURL: DEV_URL,
   });

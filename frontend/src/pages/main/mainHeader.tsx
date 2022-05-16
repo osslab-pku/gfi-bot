@@ -9,7 +9,10 @@ import { SearchOutlined } from '@ant-design/icons';
 
 import './mainPage.css';
 import '../../style/gfiStyle.css';
+import { useSelector } from 'react-redux';
 import { getLanguageTags } from '../../api/api';
+import { GFIRootReducers } from '../../module/storage/configureStorage';
+import { MainPageLangTagSelectedState } from '../../module/storage/reducers';
 
 export type GFIRepoSearchingFilterType =
   | 'None'
@@ -76,6 +79,23 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
       }
     });
   }, []);
+
+  const globalSelectedTag = useSelector<
+    GFIRootReducers,
+    MainPageLangTagSelectedState
+  >((state) => {
+    return state.mainPageLangTagSelectedStateReducer;
+  });
+
+  useEffect(() => {
+    if (
+      globalSelectedTag &&
+      globalSelectedTag.tagSelected &&
+      tagArray.includes(globalSelectedTag.tagSelected)
+    ) {
+      setTagSelected(globalSelectedTag.tagSelected);
+    }
+  }, [globalSelectedTag]);
 
   const renderTagMenu = () => {
     return tagArray.map((value, index, array) => {
