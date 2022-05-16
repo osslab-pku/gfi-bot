@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+    
+    mongodb:
+        image: mongo
+        container_name: mongodb
+        volumes:
+            - ~/gfi_production/db:/data/db
+        command: mongod --bind_ip=0.0.0.0
+    
+    gfi-bot:
+        build:
+            context: ../
+            dockerfile: ./production/gfibot.backend.dockerfile
+        ports:
+            - "5000:5000" 
+        depends_on:
+            - mongodb

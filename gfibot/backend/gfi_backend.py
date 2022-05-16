@@ -31,7 +31,10 @@ if app.debug:
     app.logger.info("enable CORS")
     CORS(app, supports_credentials=True)
 
-MONGO_URI: Final = "mongodb://localhost:27017/"
+MONGO_URI = "mongodb://mongodb:27017/"
+if app.debug:
+    MONGO_URI = "mongodb://localhost:27017/"
+
 db_client = pymongo.MongoClient(MONGO_URI)
 gfi_db = db_client["gfibot"]
 db_gfi_email: Final = "gmail-email"
