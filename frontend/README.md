@@ -2,6 +2,14 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Environmental Variables
+
+You should create `.env.development` and `.env.production` in frontend root directory to indicate environmental variables (request urls etc.) before build this project.
+```
+REACT_APP_ENV = 'development' or 'production'
+REACT_APP_BASE_URL ?= 'YOUR_SERVER_URL' # can be undifined
+```
+
 ## Available Scripts
 
 In the project directory, you can run:
@@ -19,7 +27,7 @@ You may also see any lint errors in the console.
 Launches the test runner in the interactive watch mode.\
 See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-### `npm run build`
+### `npm run build:prod` or `npm run build:dev`
 
 Builds the app for production to the `build` folder.\
 It correctly bundles React in production mode and optimizes the build for the best performance.

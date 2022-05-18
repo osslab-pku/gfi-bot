@@ -1,4 +1,4 @@
-import { asyncRequest } from './query';
+import { asyncRequest, BASE_URL } from './query';
 import {
   GetRepoDetailedInfo,
   GFIInfo,
@@ -16,26 +16,20 @@ export const userInfo = () => {
   ];
 };
 
-// for local development
-export const DEV_URL = 'https://dev.mskyurina.top';
-
-// currently, a compromise
-export const WEBSOCKET_URL = 'ws://la-3.1919114.xyz:5000/gfi_process';
-
 export const getRepoNum = async (lang?: string) => {
   return await asyncRequest<number | undefined>({
     url: '/api/repos/num',
     params: {
       lang,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
 export const getIssueNum = async () => {
   return await asyncRequest<number | undefined>({
     url: '/api/issue/num',
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -53,7 +47,7 @@ export const getPagedRepoDetailedInfo = async (
       lang,
       filter,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -64,7 +58,7 @@ export const getRepoDetailedInfo = async (name: string, owner: string) => {
       name,
       owner,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -80,7 +74,7 @@ export const searchRepoInfoByNameOrURL = async (
       url: repoURL,
       user: userName,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -91,7 +85,7 @@ export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
       repo: repoName,
       owner: repoOwner,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -102,14 +96,14 @@ export const getGFINum = async (repoName?: string, repoOwner?: string) => {
       repo: repoName,
       owner: repoOwner,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
 export const getLanguageTags = async () => {
   return await asyncRequest<string[] | undefined>({
     url: '/api/repos/language',
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -126,7 +120,7 @@ export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
       repo: repoName,
       owner: repoOwner,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -141,7 +135,7 @@ export const getAddRepoHistory = async () => {
     params: {
       user: loginName,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
 
@@ -152,6 +146,6 @@ export const getTrainingSummary = async (name?: string, owner?: string) => {
       name,
       owner,
     },
-    baseURL: DEV_URL,
+    baseURL: BASE_URL,
   });
 };
