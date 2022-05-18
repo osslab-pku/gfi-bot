@@ -27,10 +27,6 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 executor = ThreadPoolExecutor(max_workers=10)
 
-if app.debug:
-    app.logger.info("enable CORS")
-    CORS(app, supports_credentials=True)
-
 MONGO_URI = "mongodb://mongodb:27017/"
 if app.debug:
     MONGO_URI = "mongodb://localhost:27017/"
@@ -405,9 +401,20 @@ def get_training_result():
     name = request.args.get("name")
     owner = request.args.get("owner")
     if name != None and owner != None:
-        training_result = TrainingSummary.objects(Q(name=name) & Q(owner=owner))
+        query = TrainingSummary.objects(Q(name=name) & Q(owner=owner)).order_by(
+            "-threshold"
+        )
+        training_result = []
+        if len(query):
+            training_result = [query[0]]
     else:
-        training_result = TrainingSummary.objects()
+        training_result = []
+        for repo in Repo.objects():
+            query = TrainingSummary.objects(
+                Q(name=repo.name) & Q(owner=repo.owner)
+            ).order_by("-threshold")
+            if len(query):
+                training_result.append(query[0])
 
     if training_result != None:
         return {
