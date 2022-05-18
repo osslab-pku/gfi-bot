@@ -2,9 +2,9 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Environmental Variables
+## Environmental Variables For Running
 
-You should create `.env.development` and `.env.production` in frontend root directory to indicate environmental variables (request urls etc.) before build this project.
+You should create `.env.development` and `.env.production` in root directory of the frontend part of GFI-Bot (current directory) to set environmental variables (request urls etc.) before building.
 ```
 REACT_APP_ENV = 'development' or 'production'
 REACT_APP_BASE_URL ?= 'YOUR_SERVER_URL' # can be undifined
