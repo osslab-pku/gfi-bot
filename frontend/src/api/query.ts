@@ -15,6 +15,9 @@ type RequestParams = {
   data?: KeyMap;
 };
 
+// import base url form env, can be undefined
+export const BASE_URL: string | undefined = process.env.REACT_APP_BASE_URL;
+
 export const asyncRequest: <T>(params: RequestParams) => Promise<T> = async <T>(
   params: RequestParams
 ) => {

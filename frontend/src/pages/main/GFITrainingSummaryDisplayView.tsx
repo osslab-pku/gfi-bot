@@ -122,8 +122,8 @@ export const GFITrainingSummaryDisplayView = forwardRef(
         for (const summary of originTrainingSummary) {
           issueNumTest += summary.issues_test;
           issueNumTrain += summary.issues_train;
-          totalAcc += summary.accuracy;
-          totalAuc += summary.auc;
+          totalAcc += summary.accuracy * summary.issues_train;
+          totalAuc += summary.auc * summary.issues_train;
           resolved += summary.n_resolved_issues;
           resolvedByNewcomers += summary.n_newcomer_resolved;
           getActivityTime(summary.last_updated).forEach((value) => {
@@ -135,8 +135,8 @@ export const GFITrainingSummaryDisplayView = forwardRef(
           issueNumTest,
           issueNumTrain,
           repoNum,
-          avgAcc: totalAcc / repoNum,
-          avgAuc: totalAuc / repoNum,
+          avgAcc: totalAcc / issueNumTrain,
+          avgAuc: totalAuc / issueNumTrain,
           issueResolved: resolved,
           issueResolvedByNewcomers: resolvedByNewcomers,
         });
