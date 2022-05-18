@@ -1,5 +1,7 @@
 ### GFI-Bot Production Build
 
+> **Notice: Do not make the docker image public after building.**
+
 **Preliminary**, we're using docker-compose to build a production instance of GFI-Bot, which includes a Flask backend, a Mongo database, RecGFI  and data retrieving modules.
 
 You should initially create a `production_secrets.json` file in this directory in order to register your GitHub APP id and secrets, as well as information of a g-mail account (if you want to send emails to users). The file should be laid out as below:
@@ -31,7 +33,7 @@ docker-compose up
 
 to start your GFI-Bot service.
 
-The docker image been built doesn't consist a web server, so it's up to you to choose which kind of web server to use. Currently, we're using [caddy][https://caddyserver.com/] as our web server. A Caddy file as below would be capable for development environment: 
+The docker image been built doesn't consist a web server, so it's up to you to choose which kind of web server to use. Currently, we're using [caddy](https://caddyserver.com/) as our web server. A Caddy file as below would be capable for development environment: 
 
 ```
 $your_web_domain {
@@ -46,5 +48,3 @@ $your_web_domain {
     }
 }
 ```
-
-> **Notice: Do not make the docker image public after building.**

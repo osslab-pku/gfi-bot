@@ -16,10 +16,10 @@ import { GFINotiToast } from '../login/GFILoginComponents';
 import { GFIAlarm, GFIPagination } from '../GFIComponents';
 import {
   getRepoNum,
-  getIssueNum,
   getLanguageTags,
   searchRepoInfoByNameOrURL,
   getPagedRepoDetailedInfo,
+  getTrainingSummary,
 } from '../../api/api';
 import { checkGithubLogin } from '../../api/githubApi';
 
@@ -37,7 +37,7 @@ import {
   GFIRepoDisplayView,
   GFIRepoStaticsDemonstrator,
 } from './GFIRepoDisplayView';
-import { GFIRepoInfo } from '../../module/data/dataModel';
+import { GFIRepoInfo, GFITrainingSummary } from '../../module/data/dataModel';
 import { GFIRootReducers } from '../../module/storage/configureStorage';
 import { GFITrainingSummaryDisplayView } from './GFITrainingSummaryDisplayView';
 
@@ -105,12 +105,15 @@ export function MainPage() {
 
   const repoCapacity = 5;
   const [pageIdx, setPageIdx] = useState(1);
-  let [totalRepos, setTotalRepos] = useState(0);
-  let [selectedTag, setSelectedTag] = useState<string>();
+  const [totalRepos, setTotalRepos] = useState(0);
+  const [selectedTag, setSelectedTag] = useState<string>();
   const [selectedFilter, setSelectedFilter] = useState<string>();
   let [pageFormInput, setPageFormInput] = useState<string | number | undefined>(
     0
   );
+  const [trainingSummary, setTrainingSummary] = useState<{
+    [key: string]: GFITrainingSummary;
+  }>();
 
   const pageNums = () => {
     if (totalRepos % repoCapacity === 0) {
@@ -137,6 +140,34 @@ export function MainPage() {
   useEffect(() => {
     fetchRepoInfoList(pageIdx, selectedTag, selectedFilter);
   }, [pageIdx]);
+
+  const generateTrainingSummaryKey = (name: string, owner: string) =>
+    owner + name;
+
+  useEffect(() => {
+    if (displayRepoInfo) {
+      Promise.all(
+        displayRepoInfo.map((repoInfo) =>
+          getTrainingSummary(repoInfo.name, repoInfo.owner)
+        )
+      ).then((values) => {
+        if (values) {
+          const res = values.flat();
+          if (res) {
+            const trainingSummary: { [key: string]: GFITrainingSummary } = {};
+            for (const summary of res) {
+              if (summary) {
+                trainingSummary[
+                  generateTrainingSummaryKey(summary.name, summary.owner)
+                ] = summary;
+              }
+            }
+            setTrainingSummary(trainingSummary);
+          }
+        }
+      });
+    }
+  }, [displayRepoInfo]);
 
   const fetchRepoInfoList = (
     pageNum: number,
@@ -207,14 +238,20 @@ export function MainPage() {
   const renderInfoComponent = () => {
     if (displayRepoInfo && displayRepoInfo.length) {
       return displayRepoInfo.map((item, _) => {
+        const summary = trainingSummary
+          ? trainingSummary[generateTrainingSummaryKey(item.name, item.owner)]
+          : undefined;
         return (
           <GFIRepoDisplayView
             key={`repo-display-main-${item.name}-${item.owner}`}
             repoInfo={item}
             tags={['GFI', 'Repo Data']}
             panels={[
-              <GFIIssueMonitor repoInfo={item} />,
-              <GFIRepoStaticsDemonstrator repoInfo={item} />,
+              <GFIIssueMonitor repoInfo={item} trainingSummary={summary} />,
+              <GFIRepoStaticsDemonstrator
+                repoInfo={item}
+                trainingSummary={summary}
+              />,
             ]}
             style={{
               border: '1px solid var(--color-border-default)',
@@ -270,7 +307,16 @@ export function MainPage() {
               <div className="flex-col align-center">
                 <GFIDadaKanban
                   onTagClicked={(tag) => {
-                    setSelectedTag(tag);
+                    if (tag) {
+                      setSelectedTag(tag);
+                    } else {
+                      setSelectedTag(undefined);
+                      dispatch(
+                        createMainPageLangTagSelectedAction({
+                          tagSelected: 'None',
+                        })
+                      );
+                    }
                   }}
                 />
                 <GFITrainingSummaryDisplayView />
@@ -371,7 +417,7 @@ export function MainPage() {
 }
 
 interface GFIDadaKanban {
-  onTagClicked: (tag: string) => void;
+  onTagClicked: (tag?: string) => void;
 }
 
 const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
@@ -417,8 +463,13 @@ const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
           className={`gfi-rounded ${selected}`}
           key={`lang-tag ${index}`}
           onClick={(e) => {
-            setSelectedIdx(index);
-            onTagClicked(val);
+            if (index !== selectedIdx) {
+              setSelectedIdx(index);
+              onTagClicked(val);
+            } else {
+              setSelectedIdx(-1);
+              onTagClicked();
+            }
           }}
         >
           {val}

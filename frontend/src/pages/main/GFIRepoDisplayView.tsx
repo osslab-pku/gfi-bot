@@ -26,11 +26,16 @@ import {
   GFIInfo,
   GFIRepoInfo,
   GetRepoDetailedInfo,
+  GFITrainingSummary,
 } from '../../module/data/dataModel';
 import { getIssueByRepoInfo } from '../../api/githubApi';
 import { GFIRootReducers } from '../../module/storage/configureStorage';
 import { createPopoverAction } from '../../module/storage/reducers';
-import { getGFIByRepoName, getRepoDetailedInfo } from '../../api/api';
+import {
+  getGFIByRepoName,
+  getRepoDetailedInfo,
+  getTrainingSummary,
+} from '../../api/api';
 import { useIsMobile } from '../app/windowContext';
 import { RepoGraphContainer } from '../repositories/repoDataDemonstrator';
 import { checkHasUndefinedProperty, checkIsNumber } from '../../utils';
@@ -233,10 +238,12 @@ function PanelTag(props: {
   );
 }
 
-export type GFIIssueMonitor = GFIRepoBasicProp;
+export interface GFIIssueMonitor extends GFIRepoBasicProp {
+  trainingSummary?: GFITrainingSummary;
+}
 
 export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
-  const { repoInfo } = props;
+  const { repoInfo, trainingSummary } = props;
   const [displayIssueList, setDisplayIssueList] = useState<
     GFIInfo[] | undefined
   >();
@@ -270,7 +277,8 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
             repoInfo={repoInfo}
             issue={issue}
             key={`gfi-issue-${repoInfo.name}-${issue}-${i}`}
-            useTips={!i}
+            useTips={!(i % maxPageItems)}
+            trainingSummary={trainingSummary}
           />
         );
       }
@@ -329,6 +337,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
 export interface GFIIssueListItem extends GFIRepoBasicProp {
   issue: GFIInfo;
   useTips: boolean;
+  trainingSummary?: GFITrainingSummary;
 }
 
 type IssueState = 'closed' | 'open' | 'resolved';
@@ -338,12 +347,13 @@ interface IssueDisplayData {
   body: string;
   state: IssueState;
   url: string;
+  gfi: GFIInfo;
 }
 
 function GFIIssueListItem(props: GFIIssueListItem) {
   const dispatch = useDispatch();
   const overlayID = useOverlayID();
-  const { repoInfo, issue, useTips } = props;
+  const { repoInfo, issue, useTips, trainingSummary } = props;
   const [displayData, setDisplayData] = useState<IssueDisplayData>();
 
   useEffect(() => {
@@ -364,6 +374,7 @@ function GFIIssueListItem(props: GFIIssueListItem) {
               body: res.data.body as string,
               state: issueState as IssueState,
               url: res.data.html_url as string,
+              gfi: issue,
             });
           }
         } else {
@@ -392,6 +403,7 @@ function GFIIssueListItem(props: GFIIssueListItem) {
           repoInfo={repoInfo}
           issueBtn={issueBtn}
           displayData={displayData}
+          trainingSummary={trainingSummary}
         />
       ),
       popoverID: overlayID,
@@ -418,11 +430,12 @@ function GFIIssueListItem(props: GFIIssueListItem) {
       {displayData && (
         <div
           style={{
-            width: '5%',
-            minWidth: '60px',
+            width: '6%',
+            minWidth: '65px',
             marginLeft: 'auto',
             paddingLeft: '0.3rem',
           }}
+          className="flex-row justify-content-center align-center"
         >
           <div
             className={`issue-display-item-prob-tag ${
@@ -445,12 +458,36 @@ function GFIIssueListItem(props: GFIIssueListItem) {
 interface IssueOverlayItem extends GFIRepoBasicProp {
   issueBtn: () => ReactElement;
   displayData?: IssueDisplayData;
+  trainingSummary?: GFITrainingSummary;
 }
 
 function IssueOverlayItem(props: IssueOverlayItem) {
-  const { repoInfo, issueBtn, displayData } = props;
+  const { repoInfo, issueBtn, displayData, trainingSummary } = props;
   const isMobile = useIsMobile();
   const flexDirection = isMobile ? 'col' : 'row';
+  const probability = displayData
+    ? (displayData.gfi.probability * 100).toFixed(2)
+    : 0;
+  const simpleTrainDataProps: SimpleTrainInfoTagProp[] | [] = trainingSummary
+    ? [
+        {
+          title: 'Issues Resolved',
+          data: trainingSummary.n_resolved_issues,
+        },
+        {
+          title: 'Resolved By Newcomers',
+          data: trainingSummary.n_newcomer_resolved,
+        },
+        {
+          title: 'AUC',
+          data: parseFloat(trainingSummary.auc.toFixed(2)),
+        },
+        {
+          title: 'ACC',
+          data: parseFloat(trainingSummary.accuracy.toFixed(2)),
+        },
+      ]
+    : [];
 
   return (
     <div
@@ -459,46 +496,90 @@ function IssueOverlayItem(props: IssueOverlayItem) {
         margin: '1rem 1.5rem',
       }}
     >
-      <div className={`repo-display-info-title flex-${flexDirection}`}>
-        <p> {repoInfo.owner} </p>
-        {!isMobile && <p> {' / '} </p>}
-        <p style={{ margin: '0' }}> {repoInfo.name} </p>
-      </div>
-      <div style={{ fontFamily: 'var(--default-font-family)' }}>
-        {repoInfo?.description}
+      <div className="gfi-overlay-info-title">
+        <div className={`repo-display-info-title flex-${flexDirection}`}>
+          <p> {repoInfo.owner} </p>
+          {!isMobile && <p> {' / '} </p>}
+          <p style={{ margin: '0' }}> {repoInfo.name} </p>
+        </div>
+        <div style={{ fontFamily: 'var(--default-font-family)' }}>
+          {repoInfo?.description}
+        </div>
+        <div
+          className="flex-row align-center justify-content-start flex-wrap"
+          style={{ marginBottom: '0.2rem' }}
+        >
+          {repoInfo.topics?.map((item) => (
+            <div className="repo-display-info-repo-tag">{item}</div>
+          ))}
+        </div>
+        {simpleTrainDataProps && (
+          <div className="flex-row issue-demo-data-container-overlay">
+            {simpleTrainDataProps.map((prop) => (
+              <SimpleTrainInfoTag title={prop.title} data={prop.data} />
+            ))}
+          </div>
+        )}
       </div>
       <div
         className="flex-row align-center"
         style={{
-          fontWeight: 'bold',
-          fontSize: 'larger',
           margin: '1rem 0',
         }}
       >
         {issueBtn()}
         <div
           style={{
+            fontWeight: 'bold',
+            fontSize: 'larger',
             marginLeft: '0.7rem',
           }}
         >
           {displayData?.title}
         </div>
+        <div className="gfi-issue-overlay-item-tag">
+          Probability {`${probability}%`}
+        </div>
       </div>
-      <ReactMarkdown
-        children={displayData ? displayData.body : ''}
-        remarkPlugins={[remarkGfm, remarkGemoji]}
-        className="markdown"
-      />
+      {displayData && displayData.body && (
+        <ReactMarkdown
+          children={displayData.body}
+          remarkPlugins={[remarkGfm, remarkGemoji]}
+          className="markdown markdown-gfi-overlay"
+        />
+      )}
     </div>
   );
 }
 
-export type GFIRepoStaticsDemonstrator = GFIRepoBasicProp;
+export interface GFIRepoStaticsDemonstrator extends GFIRepoBasicProp {
+  trainingSummary?: GFITrainingSummary;
+}
 
 export const GFIRepoStaticsDemonstrator = forwardRef(
   (props: GFIRepoStaticsDemonstrator, ref) => {
-    const { repoInfo } = props;
+    const { repoInfo, trainingSummary } = props;
     const [displayInfo, setDisplayInfo] = useState<GetRepoDetailedInfo>();
+    const simpleTrainDataProps: SimpleTrainInfoTagProp[] | [] = trainingSummary
+      ? [
+          {
+            title: 'Issues Resolved',
+            data: trainingSummary.n_resolved_issues,
+          },
+          {
+            title: 'Resolved By Newcomers',
+            data: trainingSummary.n_newcomer_resolved,
+          },
+          {
+            title: 'AUC',
+            data: parseFloat(trainingSummary.auc.toFixed(2)),
+          },
+          {
+            title: 'ACC',
+            data: parseFloat(trainingSummary.accuracy.toFixed(2)),
+          },
+        ]
+      : [];
 
     type DataTag =
       | 'monthly_stars'
@@ -567,18 +648,48 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
     };
 
     return (
-      <div className="issue-demo-container">
-        {RenderGraphs()}
-        <div className="flex-row page-footer-container">
-          <GFISimplePagination
-            nums={displayData ? Object.keys(displayData).length : 1}
-            onClick={(idx) => {
-              setSelectedIdx(idx);
-            }}
-            title={title}
-          />
+      <>
+        {simpleTrainDataProps && (
+          <div className="flex-row issue-demo-data-container">
+            {simpleTrainDataProps.map((prop) => (
+              <SimpleTrainInfoTag title={prop.title} data={prop.data} />
+            ))}
+          </div>
+        )}
+        <div className="issue-demo-container">
+          {RenderGraphs()}
+          <div className="flex-row page-footer-container">
+            {displayData && Object.keys(displayData).length && (
+              <GFISimplePagination
+                nums={Object.keys(displayData).length}
+                onClick={(idx) => {
+                  setSelectedIdx(idx);
+                }}
+                title={title}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 );
+
+interface SimpleTrainInfoTagProp {
+  title: string;
+  data: number;
+}
+
+function SimpleTrainInfoTag(props: SimpleTrainInfoTagProp) {
+  const { title, data } = props;
+
+  return (
+    <div
+      className="simple-train-info-tag flex-row align-items-stretch"
+      style={{ marginRight: '0.4rem' }}
+    >
+      <div>{title}</div>
+      <div>{data}</div>
+    </div>
+  );
+}
