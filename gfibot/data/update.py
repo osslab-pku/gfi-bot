@@ -497,8 +497,11 @@ if __name__ == "__main__":
     failed_tokens = check_tokens()
     valid_tokens = list(set(TOKENS) - failed_tokens)
 
+    logger.info("data update started at {}".format(datetime.now()))
+
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         owner, name = project.split("/")
         update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
 
+    logger.info("data update finished at {}".format(datetime.now()))
     logger.info("Done!")
