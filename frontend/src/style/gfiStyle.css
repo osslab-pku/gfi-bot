@@ -13,6 +13,7 @@
     --color-bg-pending: #bacbe6;
     --color-fg-pending: #084298;
     --default-font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,'Helvetica Neue',sans-serif;
+    --default-monospace-family: Consolas, monospace;
 }
 
 body {
@@ -217,15 +218,17 @@ code {
 .gfi-wrapper.kanban {
     flex-flow: column wrap;
     align-items: center;
-    border-color: black;
+    border: 0;
+    padding: 0 8px 0.7rem;
 }
 
 .kanban.wrapper {
     color: black;
-    width: 90%;
+    width: 100%;
     display: flex;
-    flex-flow: row-reverse wrap;
+    flex-flow: row wrap;
     justify-content: space-evenly;
+    margin: 0;
 }
 
 .kanban.wrapper > .kanban div {
@@ -253,11 +256,12 @@ code {
 .gfi-wrapper.tags {
     display: flex;
     flex-flow: column wrap;
-    width: 95%;
+    width: 100%;
     margin-bottom: 10px;
     padding: 5px 10px;
+    border: 1px solid var(--color-border-default);
     color: black;
-    border-color: black;
+    background-color: var(--color-canvas-subtle);
 }
 
 .tags.wrapper {
@@ -285,12 +289,18 @@ button.gfi-rounded  {
     box-sizing: border-box;
     color: black;
     transition: 0.1s ease-in-out;
+    font-size: 0.9rem;
 }
 
 button.gfi-rounded:hover {
     color: white;
     background-color: black;
     transition: 0.1s ease-in-out;
+}
+
+button.gfi-rounded.selected {
+    color: white;
+    background-color: black;
 }
 
 button.gfi-rounded:active {
@@ -614,7 +624,7 @@ a.account-nav {
     margin-top: 10px;
 }
 
-#portal-side-bar-userinfo {
+.portal-side-bar-userinfo {
     border: 1px solid var(--color-border-default);
     padding: 0.7rem;
     border-radius: 7px;
@@ -622,19 +632,19 @@ a.account-nav {
     margin-bottom: 1rem;
 }
 
-#portal-side-bar-userinfo > img {
+.portal-side-bar-userinfo > img {
     border-radius: 999px;
     width: 4.5rem;
     height: 4.5rem;
     margin-left: auto;
 }
 
-#portal-side-bar-userinfo-name > div:first-child {
+.portal-side-bar-userinfo-name > div:first-child {
     font-size: 1.1rem;
     font-weight: lighter;
 }
 
-#portal-side-bar-userinfo-name > div:last-child {
+.portal-side-bar-userinfo-name > div:last-child {
     font-size: 1.3rem;
 }
 
@@ -644,11 +654,11 @@ a.account-nav {
     color: var(--color-fg-default);
 }
 
-#project-add-comp-tips > p {
+.project-add-comp-tips > p {
     margin: 0;
 }
 
-#project-add-comp-tips {
+.project-add-comp-tips {
     background-color: var(--color-bg-succeed);
     color: var(--color-fg-succeed);
     padding: 0.5rem 0.7rem;
@@ -658,38 +668,38 @@ a.account-nav {
     margin-top: 0.7rem;
 }
 
-#project-adder {
+.project-adder {
     padding: 0.3rem 0.7rem;
     border: 2px solid var(--color-border-default);
     border-radius: 5px;
     margin-top: 1rem;
 }
 
-#project-adder-label {
+.project-adder-label {
     color: #7a7d81;
     font-weight: bold;
 }
 
-#project-adder-form {
+.project-adder-form {
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
 }
 
-#project-add-comp-added {
+.project-add-comp-added{
     margin-top: 1rem;
 }
 
-#project-add-comp-tutorial {
+.project-add-comp-tutorial {
     margin-top: 0.3rem;
 }
 
-#project-add-alarm {
+.project-add-alarm {
     font-size: 0.9rem;
     color: var(--color-default-closed);
     text-decoration: underline;
 }
 
-#project-add-overlay-warn-tip {
+.project-add-overlay-warn-tip {
     height: 7rem;
 }
 
@@ -714,7 +724,7 @@ a.account-nav {
     .account-page-sub-container-row {
         flex-direction: column;
     }
-    #project-add-comp-title {
+    .project-add-comp-title {
         margin-top: 1rem;
     }
 }
@@ -756,16 +766,16 @@ a.account-nav {
     color: var(--color-fg-succeed);
 }
 
-#account-page-panel-tutorial {
+.account-page-panel-tutorial {
     margin-top: 0.5rem;
     margin-bottom: 2rem;
 }
 
-#account-page-panel-tutorial > p {
+.account-page-panel-tutorial > p {
     margin: 0;
 }
 
-#gfi-issue-monitor-empty {
+.gfi-issue-monitor-empty {
     margin: 0 0.7rem 1rem 1rem;
     background-color: var(--color-bg-pending);
     color: var(--color-fg-pending);
@@ -774,7 +784,7 @@ a.account-nav {
     border-radius: 5px;
 }
 
-#issue-display-item-prob-tag {
+.issue-display-item-prob-tag {
     font-size: small;
     font-family: var(--default-font-family);
     color: var(--color-fg-pending);
@@ -782,4 +792,195 @@ a.account-nav {
     text-align: center;
     padding: 0.2rem 0.2rem;
     border-radius: 5px;
+
+    width: 56px;
+    height: 26px;
+}
+
+.tool-tips .tool-tips-text-top {
+    opacity: 0;
+
+    position: absolute;
+    transform: translate(-27px, -58px);
+    width: 110px;
+    height: 30px;
+    background-color: var(--color-canvas-subtle);
+    border: 1px solid var(--color-border-default);
+    color: var(--color-fg-default);
+    border-radius: 5px;
+
+    transition: 0.1s;
+}
+
+.tool-tips:hover .tool-tips-text-top {
+    opacity: 1;
+    transition: 0.1s;
+}
+
+.issue-display-item:hover div:last-child .tool-tips .tool-tips-text-top {
+    opacity: 1;
+    transition: 0.1s;
+}
+
+.tool-tips .tool-tips-text-top::after {
+    content: " ";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--color-border-default) transparent transparent transparent;
+}
+
+.make-top {
+    z-index: 999;
+}
+
+.gfi-training-summary-container {
+    /*border: 1px solid var(--color-border-default);*/
+    border-radius: 5px;
+    font-family: var(--default-font-family);
+    padding-bottom: 0.7rem;
+    width: 100%;
+}
+
+.gfi-training-summary-title {
+    padding: 0 0.5rem 0 0.5rem;
+    font-size: 1.4rem;
+    font-weight: 300;
+    margin-bottom: 0.5rem;
+}
+
+.gfi-training-summary-subtitle {
+    padding: 0.3rem 0.5rem 0 0.5rem;
+    margin-bottom: 0.3rem;
+    color: var(--color-fg-pending);
+}
+
+.gfi-training-summary-subtitle > p {
+    margin: 0;
+    padding: 0 0.3rem 0 0.3rem;
+    font-weight: bold;
+}
+
+.gfi-training-summary-full-chart {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+    width: 100%;
+}
+
+.gfi-training-auc-displayer-label {
+    fill: white;
+    font-family: var(--default-font-family);
+    font-weight: lighter;
+    font-size: 0.9rem;
+}
+
+.gfi-training-auc-displayer-label-val {
+    fill: white;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.gfi-training-auc-displayer-label-title {
+    fill: rgba(255, 255, 255, 0.9);
+    font-weight: bold;
+    font-size: larger;
+}
+
+.gfi-training-num-info-num {
+    position: absolute;
+    width: 100px;
+    height: 50px;
+    fill: white;
+    font-size: x-large;
+    font-weight: bold;
+}
+
+.gfi-training-num-info-title {
+    dominant-baseline: middle;
+    text-anchor: middle;
+    fill: white;
+    font-weight: lighter;
+    font-family: var(--default-font-family);
+}
+
+.gfi-training-nums-displayer-item {
+    margin-bottom: 0.3rem;
+}
+
+.gfi-training-activity-displayer-label {
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.gfi-training-activity-displayer-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    fill: rgba(255, 255, 255, 0.9);
+}
+
+.gfi-issue-overlay-item-tag {
+    border: 1px solid var(--color-fg-pending);
+    background-color: var(--color-bg-pending);
+    padding: 0.2rem 0.4rem;
+    color: var(--color-fg-pending);
+    border-radius: 5px;
+    width: fit-content;
+    font-weight: bolder;
+    font-size: smaller;
+
+    margin-left: auto;
+}
+
+.gfi-overlay-info-title {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 7px;
+    padding: 0.4rem 0.7rem;
+    box-shadow: 4px 3px 3px var(--color-border-default);
+}
+
+.markdown-gfi-overlay {
+    padding: 0.7rem 1rem;
+    box-shadow: 4px 3px 3px var(--color-border-default);
+    margin-bottom: 1rem;
+    background-color: rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+    box-sizing: content-box;
+}
+
+.simple-train-info-tag {
+    border: 1px solid var(--color-fg-pending);
+    color: var(--color-fg-pending);
+    border-radius: 5px;
+    font-size: smaller;
+    font-weight: bold;
+}
+
+.simple-train-info-tag > div:last-child {
+    background-color: var(--color-bg-pending);
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    padding: 0 0.4rem;
+    font-family: var(--default-font-family);
+}
+
+.simple-train-info-tag > div:first-child {
+    color: #43474f;
+    font-family: var(--default-monospace-family);
+    padding: 1px 0.3rem 0 0.3rem;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.issue-demo-data-container {
+    margin-left: 1rem;
+    margin-bottom: 1rem;
+}
+
+.issue-demo-data-container-overlay {
+    margin: 0.5rem 0 0.3rem 0;
+    font-size: small;
 }
