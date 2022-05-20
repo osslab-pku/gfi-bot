@@ -5,25 +5,25 @@ from . import TOKENS
 from pprint import pformat
 from datetime import datetime
 
-from typing import Set
+from typing import Set, List
 
 
 def _mask_token(token: str) -> str:
     return "*" * (len(token) - 5) + token[-5:]
 
 
-def check_tokens() -> Set[str]:
+def check_tokens(tokens: List[str]) -> Set[str]:
     """
     Check if the tokens are valid.
     :return: A set of invalid tokens.
     """
     failed_tokens = set()
 
-    if len(TOKENS) == 0:
+    if len(tokens) == 0:
         logging.error("No tokens found")
         exit(1)
 
-    for token in TOKENS:
+    for token in tokens:
         url = "https://api.github.com/"
         r = requests.get(url, headers={"Authorization": "token " + token})
         logging.info("Token: %s", _mask_token(token))

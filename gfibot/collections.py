@@ -489,19 +489,27 @@ class GfiUsers(Document):
     """User statictics for GFI-Bot Web App Users"""
 
     github_id: int = IntField(required=True)
-    github_access_token: str = StringField(required=True)
+    github_access_token: str = StringField(required=False)
+    github_app_token: str = StringField(required=False)
     github_login: str = StringField(required=True)
     github_name: str = StringField(required=True)
-    is_github_app_user: bool = BooleanField(required=True)
+
     github_avatar_url: str = StringField(required=False)
     github_url: str = StringField(required=False)
     github_email: str = StringField(required=False)
     twitter_user_name = StringField(required=False)
 
+    class UserQuery(EmbeddedDocument):
+        repo: str = StringField(required=True)
+        owner: str = StringField(required=True)
+        created_at: datetime = DateTimeField(required=True)
+
+    user_queries: List[UserQuery] = EmbeddedDocumentListField(UserQuery, default=[])
+
     meta = {
         "indexes": [
-            {"fields": ["github_id", "is_github_app_user"], "unique": True},
-            {"fields": ["github_login", "is_github_app_user"], "unique": True},
+            {"fields": ["github_id"], "unique": True},
+            {"fields": ["github_login"], "unique": True},
             {"fields": ["github_email"]},
             {"fields": ["twitter_user_name"]},
         ]
@@ -513,17 +521,25 @@ class GfiQueries(Document):
 
     name: str = StringField(required=True)
     owner: str = StringField(required=True)
-    user_github_login: str = StringField(required=True)
 
     is_pending: bool = BooleanField(required=True)
     is_finished: bool = BooleanField(required=True)
+    is_updating: bool = BooleanField(required=False)
 
     _created_at: datetime = DateTimeField(required=True)
     _finished_at: datetime = DateTimeField(required=False)
 
+    class GfiUpdateConfig(EmbeddedDocument):
+        task_id: str = StringField(required=True)
+        interval: int = IntField(required=True)
+        begin_time: datetime = DateTimeField(required=False)
+
+    update_config: GfiUpdateConfig = EmbeddedDocumentField(
+        GfiUpdateConfig, required=False
+    )
+
     mata = {
         "indexes": [
             {"fields": ["name", "owner"], "unique": True},
-            {"fields": ["user_github_login"]},
         ]
     }
