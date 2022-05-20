@@ -3,6 +3,8 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import requests
 
+import logging
+
 import pymongo
 import json
 from bson import ObjectId
@@ -21,9 +23,9 @@ from datetime import datetime, timezone
 
 from gfibot.collections import *
 from gfibot.data.update import update_repo
+from gfibot.backend.deamon import start_scheduler
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 executor = ThreadPoolExecutor(max_workers=10)
 
@@ -37,6 +39,10 @@ db_gfi_email: Final = "gmail-email"
 
 WEB_APP_NAME = "gfibot-webapp"
 GITHUB_APP_NAME = "gfibot-githubapp"
+
+logger = logging.getLogger(__name__)
+
+demon_scheduler = start_scheduler()
 
 
 def generate_update_msg(dict: Dict) -> Dict:
@@ -192,28 +198,37 @@ def add_repo_to_bot():
                 )
             )
             if len(GfiUsers.objects(github_login=user_name)):
+                user = GfiUsers.objects(github_login=user_name).first()
                 repo_info = {
                     "name": repo_name,
                     "owner": repo_owner,
                 }
                 queries = [
                     {
-                        "name": query.name,
+                        "name": query.repo,
                         "owner": query.owner,
                     }
-                    for query in GfiQueries.objects()
+                    for query in user.user_queries
                 ]
-                if repo_info not in queries:
-                    new_query = GfiQueries(
+
+                if len(GfiQueries.objects(**repo_info)) == 0:
+                    GfiQueries(
                         name=repo_name,
                         owner=repo_owner,
-                        user_github_login=user_name,
                         is_pending=True,
                         is_finished=False,
                         _created_at=datetime.utcnow(),
-                    )
-                    new_query.save()
+                    ).save()
                     executor.submit(update_repo, user_token, repo_owner, repo_name)
+
+                if repo_info not in queries:
+                    user.update(
+                        push__user_queries={
+                            "repo": repo_name,
+                            "owner": repo_owner,
+                            "created_at": datetime.utcnow(),
+                        }
+                    )
                     return {"code": 200, "result": "is being processed by GFI-Bot"}
                 else:
                     return {"code": 200, "result": "already exists"}
@@ -350,20 +365,28 @@ def github_login_redirect(name: str, code: str):
                 )
                 if r.status_code == 200:
                     user_res = json.loads(r.text)
-                    GfiUsers.objects(
-                        Q(is_github_app_user=is_github_app)
-                        & Q(github_id=user_res["id"])
-                    ).upsert_one(
-                        github_id=user_res["id"],
-                        github_login=user_res["login"],
-                        is_github_app_user=is_github_app,
-                        github_name=user_res["name"],
-                        github_avatar_url=user_res["avatar_url"],
-                        github_access_token=access_token,
-                        github_email=user_res["email"],
-                        github_url=user_res["url"],
-                        twitter_user_name=user_res["twitter_username"],
-                    )
+                    if not is_github_app:
+                        GfiUsers.objects(github_id=user_res["id"]).upsert_one(
+                            github_id=user_res["id"],
+                            github_login=user_res["login"],
+                            github_name=user_res["name"],
+                            github_avatar_url=user_res["avatar_url"],
+                            github_access_token=access_token,
+                            github_email=user_res["email"],
+                            github_url=user_res["url"],
+                            twitter_user_name=user_res["twitter_username"],
+                        )
+                    else:
+                        GfiUsers.objects(github_id=user_res["id"]).upsert_one(
+                            github_id=user_res["id"],
+                            github_login=user_res["login"],
+                            github_name=user_res["name"],
+                            github_avatar_url=user_res["avatar_url"],
+                            github_app_token=access_token,
+                            github_email=user_res["email"],
+                            github_url=user_res["url"],
+                            twitter_user_name=user_res["twitter_username"],
+                        )
                     return redirect(
                         "/login/redirect?github_login={}&github_name={}&github_id={}&github_token={}&github_avatar_url={}".format(
                             user_res["login"],
@@ -451,7 +474,6 @@ def get_user_queries():
             {
                 "name": query.name,
                 "owner": query.owner,
-                "user_github_login": query.user_github_login,
                 "is_pending": query.is_pending,
                 "is_finished": query.is_finished,
                 "created_at": query._created_at,
@@ -462,12 +484,19 @@ def get_user_queries():
 
     user_name = request.args.get("user")
     if user_name != None:
-        queries = GfiQueries.objects(user_github_login=user_name)
+        user_queries = GfiUsers.objects(github_login=user_name).first().user_queries
+        actual_queries = []
+        for query in user_queries:
+            actual_query = GfiQueries.objects(
+                Q(name=query.repo) & Q(owner=query.owner)
+            ).first()
+            if actual_query:
+                actual_queries.append(actual_query)
         pending_queries = list(
-            filter(lambda query: query.is_pending, [q for q in queries])
+            filter(lambda query: query.is_pending, [q for q in actual_queries])
         )
         finished_queries = list(
-            filter(lambda query: query.is_finished, [q for q in queries])
+            filter(lambda query: query.is_finished, [q for q in actual_queries])
         )
         return {
             "code": 200,
@@ -486,6 +515,57 @@ def github_app_install():
     return github_login_redirect(name=GITHUB_APP_NAME, code=code)
 
 
+def update_repos(token: str, repo_info):
+    for repo in repo_info:
+        name = repo["name"]
+        owner = repo["owner"]
+        is_updating = (
+            GfiQueries.objects(Q(name=name) & Q(owner=owner)).first().is_updating
+        )
+        if not is_updating:
+            logger.info(f"updating repo {repo['name']}")
+            GfiQueries.objects(Q(name=name) & Q(owner=owner)).update(is_updating=True)
+            update_repo(token, owner, name)
+
+
+def add_repo_from_github_app(user_collection, repositories):
+    repo_info = []
+    for repo in repositories:
+        repo_full_name = repo["full_name"]
+        repo_name = repo["name"]
+        last_idx = repo_full_name.rfind("/")
+        owner = repo_full_name[:last_idx]
+        repo_info.append(
+            {
+                "name": repo_name,
+                "owner": owner,
+            }
+        )
+
+        queries = [[q.repo, q.owner] for q in user_collection.user_queries]
+        if [repo_name, owner] not in queries:
+            user_collection.update(
+                push__user_queries={
+                    "repo": repo_name,
+                    "owner": owner,
+                    "created_at": datetime.utcnow(),
+                }
+            )
+
+        if len(GfiQueries.objects(Q(name=repo_name) & Q(owner=owner))) == 0:
+            GfiQueries(
+                name=repo_name,
+                owner=owner,
+                is_pending=True,
+                is_finished=False,
+                is_updating=False,
+                _created_at=datetime.utcnow(),
+            ).save()
+    user_token = user_collection.github_app_token
+    if user_token:
+        executor.submit(update_repos, user_token, repo_info)
+
+
 @app.route("/api/github/actions/webhook", methods=["POST"])
 def github_app_webhook_process():
     """
@@ -493,18 +573,99 @@ def github_app_webhook_process():
     """
     event = request.headers.get("X-Github-Event")
     data = request.get_json()
-    if event == "installation":
-        action = data["action"]
-        if action == "created":
-            None
-        elif action == "deleted":
-            None
-    elif event == "issues":
-        action = data["action"]
-    elif event == "issue_comment":
-        None
 
-    return {"code": 200, "result": "callback succeed for event {}".format(event)}
+    sender_id = data["sender"]["id"]
+    user_collection = GfiUsers.objects(github_id=sender_id).first()
+
+    if user_collection:
+        if event == "installation":
+            action = data["action"]
+            if action == "created":
+                repositories = data["repositories"]
+                add_repo_from_github_app(user_collection, repositories)
+            elif action == "deleted":
+                repositories = data["repositories"]
+                None
+            elif action == "suspend":
+                None
+            elif action == "unsuspend":
+                None
+        elif event == "installation_repositories":
+            action = data["action"]
+            if action == "added":
+                repositories = data["repositories_added"]
+                add_repo_from_github_app(user_collection, repositories)
+            elif action == "removed":
+                repositories = data["repositories_removed"]
+                # TODO: REMOVE
+        elif event == "issues":
+            action = data["action"]
+        return {"code": 200, "result": "callback succeed for event {}".format(event)}
+    else:
+        return {"code": 404, "result": "user not found"}
+
+
+@app.route("/api/repo/badge")
+def get_repo_badge():
+    """
+    Generate GitHub README badge for certain repository
+    """
+    owner = request.args.get("owner")
+    name = request.args.get("name")
+    if owner != None and name != None:
+        query = Repo.objects(Q(name=name) & Q(owner=owner))
+        if len(query):
+            gfi_num = Prediction.objects(
+                Q(name=name) & Q(owner=owner) & Q(probability__gte=0.5)
+            ).count()
+            img_src = "https://img.shields.io/badge/{}-{}-{}".format(
+                "good first issues", gfi_num, "success"
+            )
+            svg = requests.get(img_src).content
+            return app.response_class(svg, mimetype="image/svg+xml")
+        else:
+            abort(404)
+    else:
+        abort(400)
+
+
+def add_comment_to_github_issue(
+    user_github_id, repo_name, repo_owner, issue_number, comment
+):
+    """
+    Add comment to GitHub issue
+    """
+    user_token = GfiUsers.objects(Q(github_id=user_github_id)).first().github_app_token
+    if user_token:
+        headers = {
+            "Authorization": "token {}".format(user_token),
+            "Content-Type": "application/json",
+        }
+        url = "https://api.github.com/repos/{}/{}/issues/{}/comments".format(
+            repo_owner, repo_name, issue_number
+        )
+        r = requests.post(url, headers=headers, data=json.dumps({"body": comment}))
+        return r.status_code
+    else:
+        return 403
+
+
+def add_gfi_label_to_github_issue(
+    user_github_id, repo_name, repo_owner, issue_number, label_name="good first issue"
+):
+    """
+    Add label to Github issue
+    """
+    user_token = GfiUsers.objects(Q(github_id=user_github_id)).first().github_app_token
+    if user_token:
+        headers = {"Authorization": "token {}".format(user_token)}
+        url = "https://api.github.com/repos/{}/{}/issues/{}/labels".format(
+            repo_owner, repo_name, issue_number
+        )
+        r = requests.post(url, headers=headers, json=["{}".format(label_name)])
+        return r.status_code
+    else:
+        return 403
 
 
 def send_email(user_github_id, subject, body):
@@ -525,27 +686,3 @@ def send_email(user_github_id, subject, body):
         yag = yagmail.SMTP(email, password)
         yag.send(user_email, subject, body)
         yag.close()
-
-
-# using websocket to handle user query
-
-
-@socketio.on("connect", namespace="/gfi_process")
-def connect_gfi_process():
-    """
-    Process socketio connection
-    """
-    app.logger.info("gfi_process connected")
-    emit("socket_connected", {"data": "Connected"})
-
-
-@socketio.on("disconnect", namespace="/gfi_process")
-def disconnect_gfi_process():
-    """
-    Process socketio disconnection
-    """
-    app.logger.info("gfi_process disconnected")
-
-
-if __name__ == "__main__":
-    socketio.run(app, debug=True)
