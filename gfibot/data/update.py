@@ -217,7 +217,10 @@ def locate_resolved_issues(
             text = "\n".join([t for t in text if t is not None])
             commits_before = set()
             for c in author2commits[pr.user]:
-                if c.authored_at < pr.merged_at and c.sha not in pr_details["commits"]:
+                if (
+                    c.authored_at < pr.merged_at - timedelta(days=1)
+                    and c.sha not in pr_details["commits"]
+                ):
                     commits_before.add(c.sha)
             if issue.number in match_issue_numbers(text):
                 logger.debug(
