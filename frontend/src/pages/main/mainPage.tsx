@@ -216,15 +216,16 @@ export function MainPage() {
   const handleSearchBtn = (s: string) => {
     let repoURL: string | undefined = s;
     let repoName;
-    if (checkIsGitRepoURL(s)) {
+    if (!checkIsGitRepoURL(s)) {
       repoURL = undefined;
       repoName = s;
     }
+    console.log(repoName, repoURL);
     dispatch(createGlobalProgressBarAction({ hidden: false }));
     searchRepoInfoByNameOrURL(repoName, repoURL).then((res) => {
       if (res) {
         setTotalRepos(1);
-        setDisplayRepoInfo([res]);
+        setDisplayRepoInfo(res);
         setShowSearchMsg(true);
       } else {
         showAlarm(
@@ -244,6 +245,7 @@ export function MainPage() {
         return (
           <GFIRepoDisplayView
             key={`repo-display-main-${item.name}-${item.owner}`}
+            className="default-box-shadow"
             repoInfo={item}
             tags={['GFI', 'Repo Data']}
             panels={[

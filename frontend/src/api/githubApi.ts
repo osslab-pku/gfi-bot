@@ -13,8 +13,10 @@ export const gitHubLogin = () => {
     window.location.reload();
     return;
   }
-  gitHubOAuthLogin().then((url: string) => {
-    window.location.assign(url);
+  gitHubOAuthLogin().then((url) => {
+    if (url) {
+      window.location.assign(url);
+    }
   });
 };
 

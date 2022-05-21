@@ -39,6 +39,10 @@ body {
     color: #61DAFBFF;
 }
 
+.default-box-shadow {
+    box-shadow: 4px 3px 3px var(--color-border-default);
+}
+
 .pageContainer {
     width: 100%;
     position: absolute;
@@ -983,4 +987,88 @@ a.account-nav {
 .issue-demo-data-container-overlay {
     margin: 0.5rem 0 0.3rem 0;
     font-size: small;
+}
+
+.gfi-repo-setting-item-container {
+    background-color: var(--color-canvas-subtle);
+    margin: 0 1rem 1rem 1rem;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 5px;
+}
+
+.gfi-repo-setting-item-title {
+    font-size: large;
+    font-weight: bolder;
+    margin-bottom: 0.3rem;
+}
+
+.gfi-repo-setting-form-col {
+    width: 47%;
+    min-width: 240px;
+    margin-bottom: 0.2rem;
+}
+
+.gfi-repo-setting-form-label {
+    font-weight: bold;
+    color: #505050;
+}
+
+.gfi-repo-setting-item {
+    margin-bottom: 0.3rem;
+}
+
+.gfi-portal-overlay, .gfi-search-history-overlay {
+    background-color: white !important;
+}
+
+.gfi-portal-overlay-panel {
+    border-radius: 0;
+    border: none;
+}
+
+.gfi-search-history-item > div:last-child {
+    margin-left: auto;
+}
+
+.gfi-list-first {
+    border-top-left-radius: 5px !important;
+    border-top-right-radius: 5px !important;
+}
+
+.gfi-list-last {
+    border-bottom-left-radius: 5px !important;
+    border-bottom-right-radius: 5px !important;
+}
+
+.gfi-repo-setting-btns {
+    margin-left: 1rem;
+    margin-bottom: 1rem;
+}
+
+.gfi-repo-setting-btns > button {
+    margin-right: 0.5rem;
+}
+
+.alert.no-btn > .btn-close {
+    display: none;
+}
+
+.gfi-repo-setting-alarm {
+    padding: 0.5rem 1rem;
+}
+
+.gfi-repo-setting-alarm-btn {
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    margin-top: 0.3rem;
+    margin-right: 0.4rem;
+}
+
+.gfi-repo-setting-alarm-btns > button:first-child {
+    margin-left: auto;
+}
+
+.gfi-repo-setting-alarm-btns > button:last-child {
+    margin-right: 0;
 }

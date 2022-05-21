@@ -191,6 +191,8 @@ export interface GFIAlarmProps {
   onClose?: () => void;
   title?: string;
   variant?: AlarmPanelVariants;
+  className?: string;
+  children?: React.ReactNode;
 }
 
 export class GFIAlarm extends React.Component<GFIAlarmProps> {
@@ -239,8 +241,10 @@ export class GFIAlarm extends React.Component<GFIAlarmProps> {
         style={{
           borderRadius: '5px',
         }}
+        className={this.props?.className}
       >
         {title}
+        {this.props?.children}
       </Alert>
     );
   }
@@ -345,6 +349,7 @@ export interface GFIOverlay {
   id: string;
   callback?: () => void;
   animation?: boolean;
+  className?: string;
 }
 
 export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>(
@@ -360,6 +365,7 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>(
       hidden,
       callback,
       animation,
+      className,
     } = props;
     const hide = hidden ? 'hidden' : '';
 
@@ -385,7 +391,7 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>(
         currentRef.style.display = 'block';
 
         // animation
-        // currently only for direction = right
+        // currently only for direction = right & left
         if (
           animation &&
           selfRef.current &&
@@ -402,11 +408,27 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>(
               ease: 'power3.out',
             })
             .play();
+        } else if (
+          animation &&
+          selfRef.current &&
+          direction === 'left' &&
+          width &&
+          checkIsPercentage(width)
+        ) {
+          selfRef.current.style.left = `${0 - parseFloat(width)}%`;
+          currentRef.style.overflowX = 'hidden';
+          gsap
+            .to(selfRef.current, {
+              duration: 0.4,
+              left: `0`,
+              ease: 'power3.out',
+            })
+            .play();
         }
       } else if (currentRef) {
         currentRef.style.display = 'none';
       }
-    }, [hidden, children]);
+    }, [hidden]);
 
     return (
       <div
@@ -431,7 +453,7 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>(
         }}
       >
         <div
-          className={`full-overlay-${direction}`}
+          className={`full-overlay-${direction} ${className}`}
           style={{
             width: width || '100%',
             height: height || '100%',

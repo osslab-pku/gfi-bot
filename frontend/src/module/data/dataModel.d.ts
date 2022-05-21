@@ -32,7 +32,7 @@ export type RepoPermissions = {
   pull: boolean;
 };
 
-export type GFIUserSearchHistoryItem = {
+export type GFIUserQueryHistoryItem = {
   pending: boolean;
   repo: GFIRepoInfo;
 };
@@ -64,4 +64,23 @@ export type GFITrainingSummary = {
   accuracy: number;
   auc: number;
   last_updated: string;
+};
+
+export type GFIRepoConfig = {
+  newcomer_threshold: number;
+  gfi_threshold: number;
+  need_comment: boolean;
+  issue_tag: string;
+};
+
+export type GFIRepoUpdateConfig = {
+  interval: number;
+  begin_time: string;
+};
+
+export type GFIUserSearch = {
+  name: string;
+  owner: string;
+  created_at: string;
+  increment: number;
 };
