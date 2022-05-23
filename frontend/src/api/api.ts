@@ -209,3 +209,17 @@ export const deleteRepoQuery = async (name: string, owner: string) => {
     baseURL: BASE_URL,
   });
 };
+
+export const updateRepoInfo = async (name: string, owner: string) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<string>({
+    method: 'POST',
+    url: '/api/repos/update/',
+    data: {
+      github_login: githubLogin,
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};

@@ -4,7 +4,7 @@ import { GFIRepoBasicProp } from '../main/GFIRepoDisplayView';
 
 import '../../style/gfiStyle.css';
 import { GFIAlarm } from '../GFIComponents';
-import { deleteRepoQuery } from '../../api/api';
+import { deleteRepoQuery, updateRepoInfo } from '../../api/api';
 
 export type RepoSettingPops = GFIRepoBasicProp;
 
@@ -13,7 +13,8 @@ export function RepoSetting(props: RepoSettingPops) {
 
   const gfiThresholdRef = useRef<HTMLInputElement>(null);
   const gfiTagNameRef = useRef<HTMLInputElement>(null);
-  const [showComment, setShowComment] = useState<boolean>(false);
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [showComment, setShowComment] = useState(false);
   const [newcomerThresholdSelected, setNewcomerThresholdSelected] = useState(1);
   const [showDeleteAlarm, setShowDeleteAlarm] = useState(false);
 
@@ -30,8 +31,24 @@ export function RepoSetting(props: RepoSettingPops) {
     });
   };
 
+  const updateGFIInfo = () => {
+    updateRepoInfo(repoInfo.name, repoInfo.owner).then((res) => {
+      setShowUpdateBanner(true);
+    });
+  };
+
   return (
     <div className="gfi-repo-setting-container flex-col flex-wrap align-items-stretch">
+      <div style={{ margin: '0 1rem' }}>
+        {showUpdateBanner && (
+          <GFIAlarm
+            variant="success"
+            title={`Updating ${repoInfo.owner} / ${repoInfo.name}, we'll send you an email after successfully updated `}
+            onClose={() => setShowUpdateBanner(false)}
+          />
+        )}
+      </div>
+
       <div className="gfi-repo-setting-item-container">
         <div className="gfi-repo-setting-item-title">GFI-Bot Settings</div>
         <div className="gfi-repo-setting-item flex-col">
@@ -108,7 +125,13 @@ export function RepoSetting(props: RepoSettingPops) {
         </div>
       </div>
       <div className="flex-row gfi-repo-setting-btns">
-        <Button variant="outline-success" size="sm">
+        <Button
+          variant="outline-success"
+          size="sm"
+          onClick={() => {
+            updateGFIInfo();
+          }}
+        >
           Update GFI Info
         </Button>
         <Button
