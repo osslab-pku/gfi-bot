@@ -1,10 +1,8 @@
 from flask import Flask, redirect, request, abort
 from flask_cors import CORS
 import requests
-
 import logging
 
-import pymongo
 import json
 from bson import ObjectId
 from datetime import datetime, date
@@ -17,11 +15,17 @@ import urllib.parse
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from functools import cmp_to_key
 
 from gfibot.collections import *
 from gfibot.data.update import update_repo
 from gfibot.backend.daemon import start_scheduler, update_gfi_update_job
-from gfibot.backend.utils import update_repos
+from gfibot.backend.utils import (
+    update_repos,
+    get_repo_stars,
+    get_repo_gfi_num,
+    get_newcomer_resolved_issue_rate,
+)
 
 app = Flask(__name__)
 
@@ -126,10 +130,63 @@ def get_repo_detailed_info():
     return {"code": 404, "result": "repo not found"}
 
 
-REPO_FILTER_TYPES = ["None", "Popularity", "Activity", "Recommended", "Time"]
+REPO_FILTER_TYPES = [
+    "popularity",
+    "median_issue_resolve_time",
+    "newcomer_friendly",
+    "gfis",
+]
 
 
-@app.route("/api/repos/info/paged")
+def repo_stars_comp(repo_x: Repo, repo_y: Repo):
+    delta = get_repo_stars(repo_x.owner, repo_x.name) - get_repo_stars(
+        repo_y.owner, repo_y.name
+    )
+    if delta < 0:
+        return 1
+    elif delta > 0:
+        return -1
+    return 0
+
+
+def repo_issue_close_time_comp(repo_x: Repo, repo_y: Repo):
+    median_close_time_x = repo_x.median_issue_close_time
+    if repo_x.median_issue_close_time == None:
+        median_close_time_x = float("inf")
+    median_close_time_y = repo_y.median_issue_close_time
+    if repo_y.median_issue_close_time == None:
+        median_close_time_y = float("inf")
+    delta = median_close_time_x - median_close_time_y
+    if delta < 0:
+        return -1
+    elif delta > 0:
+        return 1
+    return repo_stars_comp(repo_x, repo_y)
+
+
+def repo_gfi_num_camp(repo_x: Repo, repo_y: Repo):
+    gfi_num_x = get_repo_gfi_num(repo_x.owner, repo_x.name)
+    gfi_num_y = get_repo_gfi_num(repo_y.owner, repo_y.name)
+    delta = gfi_num_x - gfi_num_y
+    if delta < 0:
+        return 1
+    elif delta > 0:
+        return -1
+    return repo_stars_comp(repo_x, repo_y)
+
+
+def repo_newcomer_resolved_camp(repo_x: Repo, repo_y: Repo):
+    new_comer_res_x = get_newcomer_resolved_issue_rate(repo_x.owner, repo_x.name)
+    new_comer_res_y = get_newcomer_resolved_issue_rate(repo_y.owner, repo_y.name)
+    delta = new_comer_res_x - new_comer_res_y
+    if delta < 0:
+        return 1
+    elif delta > 0:
+        return -1
+    return repo_stars_comp(repo_x, repo_y)
+
+
+@app.route("/api/repos/info/")
 def get_paged_repo_detailed_info():
     start_idx = request.args.get("start")
     req_size = request.args.get("length")
@@ -142,11 +199,23 @@ def get_paged_repo_detailed_info():
         repos_query = []
         count = 0
         if lang != None and lang != "":
-            repos_query = Repo.objects(language=lang).order_by("name")
+            repos_query = [
+                repo for repo in Repo.objects(language=lang).order_by("name")
+            ]
             count = len(repos_query)
         else:
-            repos_query = Repo.objects().order_by("name")
+            repos_query = [repo for repo in Repo.objects().order_by("name")]
             count = len(repos_query)
+
+        if filter != None and filter in REPO_FILTER_TYPES:
+            if filter == "popularity":
+                repos_query.sort(key=cmp_to_key(repo_stars_comp))
+            elif filter == "median_issue_resolve_time":
+                repos_query.sort(key=cmp_to_key(repo_issue_close_time_comp))
+            elif filter == "newcomer_friendly":
+                repos_query.sort(key=cmp_to_key(repo_newcomer_resolved_camp))
+            elif filter == "gfis":
+                repos_query.sort(key=cmp_to_key(repo_gfi_num_camp))
 
         start_idx = max(0, start_idx)
         req_size = min(req_size, count)
@@ -283,8 +352,13 @@ def get_recommend_repo():
 
 @app.route("/api/repos/language")
 def get_deduped_repo_languages():
-    languages = Repo.objects().distinct(field="language")
-    return {"code": 200, "result": languages}
+    languages = list(
+        filter(
+            lambda l: l != None,
+            [lang for lang in Repo.objects().distinct(field="language")],
+        )
+    )
+    return {"code": 200, "result": list(languages)}
 
 
 @app.route("/api/repos/update/config")

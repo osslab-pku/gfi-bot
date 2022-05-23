@@ -27,7 +27,6 @@ import { checkIsGitRepoURL } from '../../utils';
 import importTips from '../../assets/git-add-demo.png';
 import { checkHasRepoPermissions } from '../../api/githubApi';
 import { GFIAlarm, GFIAlarmPanelVariants, GFIOverlay } from '../GFIComponents';
-import { RepoSetting } from './RepoSetting';
 import { addRepoToGFIBot, getAddRepoHistory } from '../../api/api';
 import {
   GFIRepoInfo,
@@ -41,6 +40,7 @@ import {
 import { GFIRepoSearchingFilterType } from '../main/mainHeader';
 import { useIsMobile } from '../app/windowContext';
 import { SearchHistory } from './SearchHistory';
+import { RepoSetting } from './RepoSetting';
 
 export interface GFIPortal {}
 
@@ -357,9 +357,9 @@ function AddProjectComponent() {
   const filters: FilterType[] = [
     'None',
     'Popularity',
-    'Activity',
-    'Recommended',
-    'Time',
+    'GFIs',
+    'Median Issue Resolve Time',
+    'Newcomer Friendliness',
   ];
 
   const onRepoHistoryClicked = (repoInfo: GFIRepoInfo) => {

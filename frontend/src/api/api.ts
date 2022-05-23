@@ -7,6 +7,7 @@ import {
   GFIUserSearch,
 } from '../module/data/dataModel';
 import { store } from '../module/storage/configureStorage';
+import { GFIRepoSearchingFilterType } from '../pages/main/mainHeader';
 
 export const userInfo = () => {
   return [
@@ -40,13 +41,41 @@ export const getPagedRepoDetailedInfo = async (
   lang?: string,
   filter?: string
 ) => {
+
+  const repoFilters = [
+    'popularity',
+    'median_issue_resolve_time',
+    'newcomer_friendly',
+    'gfis',
+  ]
+
+  let filterConverted: string | undefined = undefined;
+  if (filter) {
+    switch (filter as GFIRepoSearchingFilterType) {
+      case 'Popularity':
+        filterConverted = repoFilters[0];
+        break;
+      case 'Median Issue Resolve Time':
+        filterConverted = repoFilters[1];
+        break;
+      case 'Newcomer Friendliness':
+        filterConverted = repoFilters[2];
+        break;
+      case 'GFIs':
+        filterConverted = repoFilters[3];
+        break
+      default:
+        break;
+    }
+  }
+
   return await asyncRequest<GetRepoDetailedInfo>({
-    url: '/api/repos/info/paged',
+    url: '/api/repos/info/',
     params: {
       start: beginIdx,
       length: capacity,
-      lang,
-      filter,
+      lang: lang,
+      filter: filterConverted,
     },
     baseURL: BASE_URL,
   });
