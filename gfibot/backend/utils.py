@@ -67,6 +67,58 @@ def add_gfi_label_to_github_issue(
         return 403
 
 
+def get_repo_stars(owner, name):
+    """
+    Get number of stars for a repo
+    """
+    repo = Repo.objects(Q(name=name) & Q(owner=owner)).first()
+    if repo:
+        stars = 0
+        for monthly_star in repo.monthly_stars:
+            stars += monthly_star.count
+        return stars
+    return 0
+
+
+def get_repo_gfi_num(owner, name):
+    """
+    Get number of GFIs for a repo
+    """
+    repo = Repo.objects(Q(name=name) & Q(owner=owner)).first()
+    repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    if repo:
+        gfi_threshold = 0.5
+        if repo_query and repo_query.repo_config:
+            gfi_threshold = repo_query.repo_config.gfi_threshold
+        gfi_list = Prediction.objects(
+            Q(name=name) & Q(owner=owner) & Q(probability__gte=gfi_threshold)
+        )
+        if gfi_list:
+            return len(gfi_list)
+    return 0
+
+
+def get_newcomer_resolved_issue_rate(owner, name):
+    repo = Repo.objects(Q(name=name) & Q(owner=owner)).first()
+    repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    if repo:
+        newcomer_threshold = 5
+        if repo_query and repo_query.repo_config:
+            newcomer_threshold = repo_query.repo_config.newcomer_threshold
+        summary = TrainingSummary.objects(Q(name=name) & Q(owner=owner))
+        if len(summary):
+            newcommer_summary = TrainingSummary.objects(
+                Q(name=name) & Q(owner=owner) & Q(threshold=newcomer_threshold)
+            )
+            newcomer_issues = len(
+                TrainingSummary.objects(
+                    Q(name=name) & Q(owner=owner) & Q(threshold=newcomer_threshold)
+                )
+            )
+            return newcomer_issues / len(summary)
+    return 0
+
+
 def send_email(user_github_login, subject, body):
     """
     Send email to user
