@@ -9,6 +9,7 @@ import pymongo
 import json
 from bson import ObjectId
 from datetime import datetime, date
+import dateutil
 from urllib import parse
 import numpy as np
 
@@ -100,6 +101,26 @@ def get_repo_info_from_engine(repo):
     }
 
 
+@app.route("/api/repos/info")
+def get_repo_info():
+    repo_name = request.args.get("name")
+    repo_owner = request.args.get("owner")
+    if repo_name != None and repo_owner != None:
+        repos = Repo.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+        return {
+            "code": 200,
+            "result": {
+                "name": repos.name,
+                "owner": repos.owner,
+                "description": repos.description,
+                "language": repos.language,
+                "topics": repos.topics,
+            },
+        }
+    else:
+        return {"code": 400, "result": "invalid params"}
+
+
 @app.route("/api/repos/info/detail")
 def get_repo_detailed_info():
     """Get repo info by name/owner"""
@@ -152,7 +173,9 @@ def get_paged_repo_detailed_info():
 @app.route("/api/repos/info/search")
 def search_repo_info_by_name_or_url():
     repo_name = request.args.get("repo")
-    repo_url = parse.unquote(request.args.get("url"))
+    repo_url = request.args.get("url")
+    if repo_url:
+        repo_url = parse.unquote(repo_url)
     app.logger.info(repo_url)
     user_name = request.args.get("user")
 
@@ -168,8 +191,25 @@ def search_repo_info_by_name_or_url():
     if repo_name:
         repos_query = Repo.objects(name=repo_name)
         if len(repos_query) > 0:
-            repo = repos_query[0]
-            return {"code": 200, "result": get_repo_info_from_engine(repo)}
+            if user_name:
+                date_time = datetime.now(timezone.utc)
+                user = GfiUsers.objects(github_login=user_name).first()
+                if user:
+                    [
+                        user.update(
+                            push__user_searches={
+                                "repo": repo.name,
+                                "owner": repo.owner,
+                                "created_at": datetime.utcnow(),
+                                "increment": len(user.user_searches) + 1,
+                            }
+                        )
+                        for repo in repos_query
+                    ]
+            return {
+                "code": 200,
+                "result": [get_repo_info_from_engine(repo) for repo in repos_query],
+            }
         elif repo_url == "":
             return {"code": 404, "result": "Repo not found"}
 
@@ -226,6 +266,7 @@ def add_repo_to_bot():
                         push__user_queries={
                             "repo": repo_name,
                             "owner": repo_owner,
+                            "increment": len(user.user_queries) + 1,
                             "created_at": datetime.utcnow(),
                         }
                     )
@@ -251,6 +292,28 @@ def get_recommend_repo():
 def get_deduped_repo_languages():
     languages = Repo.objects().distinct(field="language")
     return {"code": 200, "result": languages}
+
+
+@app.route("/api/repos/update/config")
+def get_repo_query_config():
+    repo_name = request.args.get("name")
+    repo_owner = request.args.get("owner")
+    if repo_name != None and repo_owner != None:
+        repo_query = GfiQueries.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+        if repo_query:
+            return {
+                "code": 200,
+                "result": {
+                    "update_config": repo_query.update_config,
+                    "repo_config": repo_query.repo_config,
+                },
+            }
+        else:
+            return {
+                "code": 404,
+                "result": "repo not found",
+            }
+    abort(400)
 
 
 GITHUB_LOGIN_URL: Final = "https://github.com/login/oauth/authorize"
@@ -467,8 +530,10 @@ def github_login_redirect_web():
     return github_login_redirect(name=WEB_APP_NAME, code=code)
 
 
-@app.route("/api/user/queries")
+@app.route("/api/user/queries", methods=["GET", "DELETE"])
 def get_user_queries():
+    method = request.method
+
     def get_user_query(queries):
         return [
             {
@@ -484,35 +549,94 @@ def get_user_queries():
 
     user_name = request.args.get("user")
     if user_name != None:
-        user_queries = GfiUsers.objects(github_login=user_name).first().user_queries
-        actual_queries = []
-        for query in user_queries:
-            actual_query = GfiQueries.objects(
-                Q(name=query.repo) & Q(owner=query.owner)
-            ).first()
-            if actual_query:
-                actual_queries.append(actual_query)
-        pending_queries = list(
-            filter(lambda query: query.is_pending, [q for q in actual_queries])
-        )
-        finished_queries = list(
-            filter(lambda query: query.is_finished, [q for q in actual_queries])
-        )
-        return {
-            "code": 200,
-            "result": {
-                "nums": len(pending_queries) + len(finished_queries),
-                "queries": get_user_query(pending_queries),
-                "finished_queries": get_user_query(finished_queries),
-            },
-        }
+        if method == "GET":
+            user_queries = GfiUsers.objects(github_login=user_name).first().user_queries
+            actual_queries = []
+            for query in user_queries:
+                actual_query = GfiQueries.objects(
+                    Q(name=query.repo) & Q(owner=query.owner)
+                ).first()
+                if actual_query:
+                    actual_queries.append(actual_query)
+            pending_queries = list(
+                filter(lambda query: query.is_pending, [q for q in actual_queries])
+            )
+            finished_queries = list(
+                filter(lambda query: query.is_finished, [q for q in actual_queries])
+            )
+            return {
+                "code": 200,
+                "result": {
+                    "nums": len(pending_queries) + len(finished_queries),
+                    "queries": get_user_query(pending_queries),
+                    "finished_queries": get_user_query(finished_queries),
+                },
+            }
+        elif method == "DELETE":
+            name = request.args.get("name")
+            owner = request.args.get("owner")
+            user_queries = GfiUsers.objects(github_login=user_name).first().user_queries
+            if name != None and owner != None:
+                for query in user_queries:
+                    if query.repo == name and query.owner == owner:
+                        user_queries.remove(query)
+                        GfiUsers.objects(github_login=user_name).update(
+                            user_queries=user_queries
+                        )
+                        return {"code": 200, "result": "success"}
+                return {"code": 200, "result": "delete query successfully"}
+            else:
+                return {"code": 400, "result": "no query name or owner provided"}
     return {"code": 404, "result": "user not found"}
+
+
+@app.route("/api/user/searches", methods=["GET", "DELETE"])
+def get_user_searches():
+    method = request.method
+    github_login = request.args.get("user")
+    user_searches = GfiUsers.objects(github_login=github_login).first().user_searches
+
+    def get_search_result(searches):
+        return [
+            {
+                "name": search.repo,
+                "owner": search.owner,
+                "created_at": search.created_at,
+                "increment": search.increment,
+            }
+            for search in searches
+        ]
+
+    if user_searches != None:
+        if method == "GET":
+            return {"code": 200, "result": get_search_result(user_searches)}
+        elif method == "DELETE":
+            id = request.args.get("id")
+            if id != None:
+                """delete user search with increment = id"""
+                GfiUsers.objects(github_login=github_login).update_one(
+                    pull__user_searches__increment=int(id)
+                )
+                user_searches = (
+                    GfiUsers.objects(github_login=github_login).first().user_searches
+                )
+                return {"code": 200, "result": get_search_result(user_searches)}
+            else:
+                return {"code": 404, "result": "id not found"}
+    else:
+        return {"code": 404, "result": "user not found"}
 
 
 @app.route("/api/github/app/installation")
 def github_app_install():
     code = request.args.get("code")
     return github_login_redirect(name=GITHUB_APP_NAME, code=code)
+
+
+def delete_repo(name, owner):
+    repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    if repo_query:
+        repo_query.delete()
 
 
 def update_repos(token: str, repo_info):
