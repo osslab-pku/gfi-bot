@@ -1,6 +1,5 @@
 from flask import Flask, redirect, request, abort
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit
 import requests
 
 import logging
@@ -9,7 +8,6 @@ import pymongo
 import json
 from bson import ObjectId
 from datetime import datetime, date
-import dateutil
 from urllib import parse
 import numpy as np
 
@@ -17,33 +15,24 @@ from typing import Dict, Final
 
 import urllib.parse
 
-import yagmail
-
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from gfibot.collections import *
 from gfibot.data.update import update_repo
-from gfibot.backend.deamon import start_scheduler
+from gfibot.backend.daemon import start_scheduler, update_gfi_update_job
+from gfibot.backend.utils import update_repos
 
 app = Flask(__name__)
 
 executor = ThreadPoolExecutor(max_workers=10)
-
-MONGO_URI = "mongodb://mongodb:27017/"
-if app.debug:
-    MONGO_URI = "mongodb://localhost:27017/"
-
-db_client = pymongo.MongoClient(MONGO_URI)
-gfi_db = db_client["gfibot"]
-db_gfi_email: Final = "gmail-email"
 
 WEB_APP_NAME = "gfibot-webapp"
 GITHUB_APP_NAME = "gfibot-githubapp"
 
 logger = logging.getLogger(__name__)
 
-demon_scheduler = start_scheduler()
+daemon_scheduler = start_scheduler()
 
 
 def generate_update_msg(dict: Dict) -> Dict:
@@ -62,6 +51,10 @@ class JSONEncoder(json.JSONEncoder):
         elif isinstance(o, (datetime, date)):
             return o.isoformat()
         return json.JSONEncoder.default(self, o)
+
+
+def generate_repo_update_task_id(owner, name):
+    return f"{owner}-{name}-update"
 
 
 @app.route("/api/repos/num")
@@ -314,6 +307,41 @@ def get_repo_query_config():
                 "result": "repo not found",
             }
     abort(400)
+
+
+@app.route("/api/repos/update/", methods=["POST"])
+def update_repo_info():
+    body = request.get_json()
+    name = body["name"]
+    owner = body["owner"]
+    github_login = body["github_login"]
+    user = GfiUsers.objects(github_login=github_login).first()
+    if name != None and owner != None and user != None:
+        query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+        if query != None and query.is_updating != True:
+            query.update(
+                is_updating=True,
+                is_finished=False,
+            )
+            update_config = query.update_config
+            if update_config != None:
+                task_id = update_config.task_id
+                interval = update_config.interval
+            else:
+                task_id = generate_repo_update_task_id(owner, name)
+                interval = 24 * 3600
+                query.update(
+                    update_config={
+                        "task_id": task_id,
+                        "interval": interval,
+                    }
+                )
+            update_repository_gfi_info(task_id=task_id, repo=name, owner=owner)
+            return {"code": 200, "result": "query updating"}
+        else:
+            return {"code": 404, "result": "repo not found"}
+    else:
+        abort(400)
 
 
 GITHUB_LOGIN_URL: Final = "https://github.com/login/oauth/authorize"
@@ -633,23 +661,8 @@ def github_app_install():
     return github_login_redirect(name=GITHUB_APP_NAME, code=code)
 
 
-def delete_repo(name, owner):
-    repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
-    if repo_query:
-        repo_query.delete()
-
-
-def update_repos(token: str, repo_info):
-    for repo in repo_info:
-        name = repo["name"]
-        owner = repo["owner"]
-        is_updating = (
-            GfiQueries.objects(Q(name=name) & Q(owner=owner)).first().is_updating
-        )
-        if not is_updating:
-            logger.info(f"updating repo {repo['name']}")
-            GfiQueries.objects(Q(name=name) & Q(owner=owner)).update(is_updating=True)
-            update_repo(token, owner, name)
+def update_repository_gfi_info(task_id: str, owner: str, repo: str):
+    update_gfi_update_job(daemon_scheduler, task_id, repo, owner)
 
 
 def add_repo_from_github_app(user_collection, repositories):
@@ -751,62 +764,3 @@ def get_repo_badge():
             abort(404)
     else:
         abort(400)
-
-
-def add_comment_to_github_issue(
-    user_github_id, repo_name, repo_owner, issue_number, comment
-):
-    """
-    Add comment to GitHub issue
-    """
-    user_token = GfiUsers.objects(Q(github_id=user_github_id)).first().github_app_token
-    if user_token:
-        headers = {
-            "Authorization": "token {}".format(user_token),
-            "Content-Type": "application/json",
-        }
-        url = "https://api.github.com/repos/{}/{}/issues/{}/comments".format(
-            repo_owner, repo_name, issue_number
-        )
-        r = requests.post(url, headers=headers, data=json.dumps({"body": comment}))
-        return r.status_code
-    else:
-        return 403
-
-
-def add_gfi_label_to_github_issue(
-    user_github_id, repo_name, repo_owner, issue_number, label_name="good first issue"
-):
-    """
-    Add label to Github issue
-    """
-    user_token = GfiUsers.objects(Q(github_id=user_github_id)).first().github_app_token
-    if user_token:
-        headers = {"Authorization": "token {}".format(user_token)}
-        url = "https://api.github.com/repos/{}/{}/issues/{}/labels".format(
-            repo_owner, repo_name, issue_number
-        )
-        r = requests.post(url, headers=headers, json=["{}".format(label_name)])
-        return r.status_code
-    else:
-        return 403
-
-
-def send_email(user_github_id, subject, body):
-    """
-    Send email to user
-    """
-
-    app.logger.info("send email to user {}".format(user_github_id))
-
-    user_email = GfiUsers.objects(github_id=user_github_id).first().github_email
-
-    email = gfi_db.get_collection(db_gfi_email).find_one({})["email"]
-    password = gfi_db.get_collection(db_gfi_email).find_one({})["password"]
-
-    app.logger.info("Sending email to {} using {}".format(user_email, email))
-
-    if user_email != None:
-        yag = yagmail.SMTP(email, password)
-        yag.send(user_email, subject, body)
-        yag.close()

@@ -332,6 +332,37 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
     return data
 
 
+def get_dataset_with_issues(
+    resolved_issues: List[ResolvedIssue], open_issues: List[OpenIssue]
+):
+    for i in resolved_issues:
+        get_dataset(i, i.created_at)
+        get_dataset(i, i.resolved_at)
+
+    for i in open_issues:
+        # determine whether this issue needs to be updated
+        if len(i.events) > 0:
+            last_updated = max(e.time for e in i.events)
+        else:
+            last_updated = i.created_at
+        existing = Dataset.objects(name=i.name, owner=i.owner, number=i.number)
+        if existing.count() > 0 and existing.first().before >= last_updated:
+            logger.info(f"{i.owner}/{i.name}#{i.number}): no need to update")
+            continue
+
+        get_dataset(i, i.updated_at)
+
+
+def get_dataset_for_repo(owner: str, name: str, since: datetime):
+    """
+    Update the Dataset collection with latest resolved and open issues for a single repo.
+    """
+    repo_query = Q(owner=owner) & Q(name=name)
+    resolved_issues = ResolvedIssue.objects(repo_query & Q(resolved_at__gte=since))
+    open_issues = OpenIssue.objects(repo_query & Q(created_at__gte=since))
+    get_dataset_with_issues(resolved_issues, open_issues)
+
+
 def get_dataset_all(since: datetime = None):
     """Update the Dataset collection with latest resolved and open issues.
 
@@ -344,22 +375,9 @@ def get_dataset_all(since: datetime = None):
     else:
         q_resolved, q_open = Q(resolved_at__gte=since), Q(created_at__gte=since)
 
-    for i in ResolvedIssue.objects(q_resolved):
-        get_dataset(i, i.created_at)
-        get_dataset(i, i.resolved_at)
-
-    for i in OpenIssue.objects(q_open):
-        # determine whether this issue needs to be updated
-        if len(i.events) > 0:
-            last_updated = max(e.time for e in i.events)
-        else:
-            last_updated = i.created_at
-        existing = Dataset.objects(name=i.name, owner=i.owner, number=i.number)
-        if existing.count() > 0 and existing.first().before >= last_updated:
-            logger.info(f"{i.owner}/{i.name}#{i.number}): no need to update")
-            continue
-
-        get_dataset(i, i.updated_at)
+    resolved_issues = ResolvedIssue.objects(q_resolved)
+    open_issues = OpenIssue.objects(q_open)
+    get_dataset_with_issues(resolved_issues, open_issues)
 
 
 if __name__ == "__main__":

@@ -557,3 +557,16 @@ class GfiQueries(Document):
             {"fields": ["name", "owner"], "unique": True},
         ]
     }
+
+
+class GfiEmail(Document):
+    """Emails for GFI-Bot backend"""
+
+    email: str = StringField(required=True)
+    password: str = StringField(required=True)
+
+    meta = {
+        "indexes": [
+            {"fields": ["email"], "unique": True},
+        ]
+    }
