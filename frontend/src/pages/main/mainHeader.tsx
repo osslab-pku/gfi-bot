@@ -17,9 +17,9 @@ import { MainPageLangTagSelectedState } from '../../module/storage/reducers';
 export type GFIRepoSearchingFilterType =
   | 'None'
   | 'Popularity'
-  | 'Activity'
-  | 'Recommended'
-  | 'Time';
+  | 'Median Issue Resolve Time'
+  | 'Newcomer Friendliness'
+  | 'GFIs';
 export const GFI_REPO_FILTER_NONE: GFIRepoSearchingFilterType & string = 'None';
 
 export interface GFIMainPageHeader {
@@ -38,9 +38,9 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
   const sortedBy: GFIRepoSearchingFilterType[] = [
     'None',
     'Popularity',
-    'Activity',
-    'Recommended',
-    'Time',
+    'GFIs',
+    'Median Issue Resolve Time',
+    'Newcomer Friendliness',
   ];
 
   const renderDropDownItem = (
