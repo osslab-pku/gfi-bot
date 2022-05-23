@@ -4,6 +4,7 @@ import {
   GFIInfo,
   GFIRepoInfo,
   GFITrainingSummary,
+  GFIUserSearch,
 } from '../module/data/dataModel';
 import { store } from '../module/storage/configureStorage';
 
@@ -62,24 +63,35 @@ export const getRepoDetailedInfo = async (name: string, owner: string) => {
   });
 };
 
+export const getRepoInfo = async (name: string, owner: string) => {
+  return await asyncRequest<GFIRepoInfo>({
+    url: '/api/repos/info',
+    params: {
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
 export const searchRepoInfoByNameOrURL = async (
   repoName?: string,
   repoURL?: string
 ) => {
-  const [hasLogin, userName] = userInfo();
-  return await asyncRequest<GFIRepoInfo>({
+  const [hasLogin, _, userLogin] = userInfo();
+  return await asyncRequest<[GFIRepoInfo]>({
     url: '/api/repos/info/search',
     params: {
       repo: repoName,
       url: repoURL,
-      user: userName,
+      user: userLogin,
     },
     baseURL: BASE_URL,
   });
 };
 
 export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
-  return await asyncRequest<GFIInfo | undefined>({
+  return await asyncRequest<GFIInfo>({
     url: '/api/issue/gfi',
     params: {
       repo: repoName,
@@ -101,7 +113,7 @@ export const getGFINum = async (repoName?: string, repoOwner?: string) => {
 };
 
 export const getLanguageTags = async () => {
-  return await asyncRequest<string[] | undefined>({
+  return await asyncRequest<string[]>({
     url: '/api/repos/language',
     baseURL: BASE_URL,
   });
@@ -140,9 +152,57 @@ export const getAddRepoHistory = async () => {
 };
 
 export const getTrainingSummary = async (name?: string, owner?: string) => {
-  return await asyncRequest<GFITrainingSummary[] | undefined>({
+  return await asyncRequest<GFITrainingSummary[]>({
     url: '/api/model/training/result',
     params: {
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const getUserSearches = async () => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<GFIUserSearch[]>({
+    url: '/api/user/searches',
+    params: {
+      user: githubLogin,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const deleteUserSearch = async (
+  name: string,
+  owner: string,
+  id: number
+) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<GFIUserSearch[]>({
+    method: 'DELETE',
+    url: '/api/user/searches',
+    params: {
+      user: githubLogin,
+      name,
+      owner,
+      id,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const deleteRepoQuery = async (name: string, owner: string) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<{
+    nums?: number;
+    queries: GFIRepoInfo[];
+    finished_queries?: GFIRepoInfo[];
+  }>({
+    method: 'DELETE',
+    url: '/api/user/queries',
+    params: {
+      user: githubLogin,
       name,
       owner,
     },

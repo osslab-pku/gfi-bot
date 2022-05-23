@@ -1,6 +1,8 @@
 from typing import List, Union
 from datetime import datetime
+from xmlrpc.client import Boolean
 from mongoengine import *
+from numpy import require
 from regex import F
 
 
@@ -503,8 +505,12 @@ class GfiUsers(Document):
         repo: str = StringField(required=True)
         owner: str = StringField(required=True)
         created_at: datetime = DateTimeField(required=True)
+        increment: int = IntField(required=False, min_value=0)
 
+    # repos added by user
     user_queries: List[UserQuery] = EmbeddedDocumentListField(UserQuery, default=[])
+    # user's searches
+    user_searches: List[UserQuery] = EmbeddedDocumentListField(UserQuery, default=[])
 
     meta = {
         "indexes": [
@@ -534,9 +540,17 @@ class GfiQueries(Document):
         interval: int = IntField(required=True)
         begin_time: datetime = DateTimeField(required=False)
 
+    class GfiRepoConfig(EmbeddedDocument):
+        newcomer_threshold: int = IntField(required=False)
+        gfi_threshold: float = FloatField(required=False)
+        need_comment: Boolean = BooleanField(required=False)
+        issue_tag: str = StringField(required=False)
+
     update_config: GfiUpdateConfig = EmbeddedDocumentField(
         GfiUpdateConfig, required=False
     )
+
+    repo_config: GfiRepoConfig = EmbeddedDocumentField(GfiRepoConfig, required=False)
 
     mata = {
         "indexes": [

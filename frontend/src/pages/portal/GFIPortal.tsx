@@ -15,8 +15,6 @@ import { LinkContainer } from 'react-router-bootstrap';
 import { withRouter } from 'react-router-dom';
 import KeepAlive from 'react-activation';
 
-import { gsap } from 'gsap';
-
 import '../../style/gfiStyle.css';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -28,11 +26,12 @@ import { checkIsGitRepoURL } from '../../utils';
 
 import importTips from '../../assets/git-add-demo.png';
 import { checkHasRepoPermissions } from '../../api/githubApi';
-import { GFIAlarm, GFIAlarmPanelVariants } from '../GFIComponents';
+import { GFIAlarm, GFIAlarmPanelVariants, GFIOverlay } from '../GFIComponents';
+import { RepoSetting } from './RepoSetting';
 import { addRepoToGFIBot, getAddRepoHistory } from '../../api/api';
 import {
   GFIRepoInfo,
-  GFIUserSearchHistoryItem,
+  GFIUserQueryHistoryItem,
 } from '../../module/data/dataModel';
 import {
   GFIIssueMonitor,
@@ -40,6 +39,8 @@ import {
   GFIRepoStaticsDemonstrator,
 } from '../main/GFIRepoDisplayView';
 import { GFIRepoSearchingFilterType } from '../main/mainHeader';
+import { useIsMobile } from '../app/windowContext';
+import { SearchHistory } from './SearchHistory';
 
 export interface GFIPortal {}
 
@@ -69,7 +70,7 @@ export function GFIPortal(props: GFIPortal) {
       );
     }
     if (currentPanelID === 'Search History') {
-      return <></>;
+      return <SearchHistory />;
     }
     if (currentPanelID === 'My Account') {
       return <></>;
@@ -209,23 +210,23 @@ function AddProjectComponent() {
     dispatch(createGlobalProgressBarAction({ hidden: true }));
   };
 
-  const [addedRepos, setAddedRepos] = useState<GFIUserSearchHistoryItem[]>();
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [addedRepos, setAddedRepos] = useState<GFIUserQueryHistoryItem[]>();
   const fetchAddedRepos = (onComplete?: () => void) => {
     getAddRepoHistory().then((res) => {
-      const finishedQueries: GFIUserSearchHistoryItem[] | undefined =
-        res?.finished_queries?.map((info) => {
-          return {
-            pending: false,
-            repo: info,
-          };
-        });
-      const pendingQueries: GFIUserSearchHistoryItem[] | undefined =
-        res?.queries?.map((info) => {
-          return {
-            pending: true,
-            repo: info,
-          };
-        });
+      const finishedQueries: GFIUserQueryHistoryItem[] | undefined =
+        res?.finished_queries?.map((info) => ({
+          pending: false,
+          repo: info,
+        }));
+      let pendingQueries: GFIUserQueryHistoryItem[] | undefined =
+        res?.queries?.map((info) => ({
+          pending: true,
+          repo: info,
+        }));
+      if (!Array.isArray(pendingQueries)) {
+        pendingQueries = [];
+      }
 
       let completeQueries = '';
       if (finishedQueries && addedRepos) {
@@ -348,10 +349,8 @@ function AddProjectComponent() {
 
   const repoInfoPanelRef = useRef<HTMLDivElement>(null);
   const [addedRepoDisplayPanelConfig, setAddedRepoDisplayPanelConfig] =
-    useState<{
-      show: boolean;
-      info?: GFIRepoInfo;
-    }>({ show: false });
+    useState<GFIRepoInfo>();
+  const [showPopover, setShowPopover] = useState(false);
 
   type FilterType = GFIRepoSearchingFilterType;
   const [filterSelected, setFilterSelected] = useState<FilterType>('None');
@@ -364,21 +363,12 @@ function AddProjectComponent() {
   ];
 
   const onRepoHistoryClicked = (repoInfo: GFIRepoInfo) => {
-    if (repoInfo !== addedRepoDisplayPanelConfig.info) {
-      setAddedRepoDisplayPanelConfig({
-        show: true,
-        info: repoInfo,
-      });
-    } else {
-      setAddedRepoDisplayPanelConfig({
-        show: !addedRepoDisplayPanelConfig.show,
-        info: repoInfo,
-      });
-    }
+    setAddedRepoDisplayPanelConfig(repoInfo);
+    setShowPopover(true);
   };
 
   const renderRepoHistory = () => {
-    if (addedRepos) {
+    if (addedRepos && addedRepos.length) {
       return addedRepos.map((item) => {
         return (
           <RepoHistoryTag
@@ -405,6 +395,8 @@ function AddProjectComponent() {
   const onFilterSelected = (filter: FilterType) => {
     setFilterSelected(filter);
   };
+
+  const isMobile = useIsMobile();
 
   return (
     <div className="flex-col">
@@ -550,27 +542,40 @@ function AddProjectComponent() {
       >
         {renderRepoHistory()}
       </div>
-      {addedRepoDisplayPanelConfig.info && (
-        <GFIRepoDisplayView
-          key={`added-repo-panel-${addedRepoDisplayPanelConfig.info.owner}-${addedRepoDisplayPanelConfig.info.name}`}
-          repoInfo={addedRepoDisplayPanelConfig.info}
-          tags={['GFI', 'Repo Data']}
-          panels={[
-            <GFIIssueMonitor repoInfo={addedRepoDisplayPanelConfig.info} />,
-            <GFIRepoStaticsDemonstrator
-              repoInfo={addedRepoDisplayPanelConfig.info}
-            />,
-          ]}
-          style={{
-            border: '1px solid var(--color-border-default)',
-            borderRadius: '7px',
-            marginBottom: '0.5rem',
-            transition: '0.2s',
-            display: addedRepoDisplayPanelConfig.show ? '' : 'none',
-          }}
-          ref={repoInfoPanelRef}
-        />
-      )}
+
+      <GFIOverlay
+        className="gfi-portal-overlay"
+        callback={() => setShowPopover(false)}
+        hidden={!showPopover}
+        ref={overlayRef}
+        width={isMobile ? '90%' : '40%'}
+        id="gfi-portal-overlay"
+        direction="right"
+        animation
+      >
+        {addedRepoDisplayPanelConfig && (
+          <GFIRepoDisplayView
+            className="gfi-portal-overlay-panel"
+            key={`added-repo-panel-${addedRepoDisplayPanelConfig.owner}-${addedRepoDisplayPanelConfig.name}`}
+            repoInfo={addedRepoDisplayPanelConfig}
+            tags={['Settings', 'GFI', 'Repo Data']}
+            panels={[
+              <RepoSetting repoInfo={addedRepoDisplayPanelConfig} />,
+              <GFIIssueMonitor repoInfo={addedRepoDisplayPanelConfig} />,
+              <GFIRepoStaticsDemonstrator
+                repoInfo={addedRepoDisplayPanelConfig}
+                paging={false}
+              />,
+            ]}
+            style={{
+              marginBottom: '0.5rem',
+              transition: '0.2s',
+              display: showPopover ? '' : 'none',
+            }}
+            ref={repoInfoPanelRef}
+          />
+        )}
+      </GFIOverlay>
       <div className="account-page-panel-title project-add-comp-tutorial">
         Tutorial
       </div>

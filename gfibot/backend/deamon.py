@@ -1,3 +1,4 @@
+import argparse
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import random
@@ -22,16 +23,19 @@ def start_scheduler():
         if query.update_config:
             task_id = query.update_config.task_id
             interval = query.update_config.interval
-            begin_time = query.update_config.begin_time
             tokens = [user.github_access_token for user in GfiUsers.objects()]
+            valid_tokens = list(set(tokens) - check_tokens(tokens))
             scheduler.add_job(
                 update_repo,
                 "interval",
-                args=[random.choice(tokens), query.owner, query.name],
+                args=[random.choice(valid_tokens), query.owner, query.name],
                 seconds=interval,
-                next_run_time=begin_time,
+                next_run_time=datetime.utcnow(),
                 id=task_id,
             )
+            """update query begin time"""
+            query.update_config.begin_time = datetime.utcnow()
+            query.update_config.save()
             logger.info("Scheduled task: " + task_id + " added.")
     scheduler.start()
     logger.info("Scheduler started.")
@@ -52,7 +56,9 @@ def demon(init=False):
                 .update_config
             )
             if not update_config:
-                update_repo(valid_tokens[i % len(avaliable_tokens)], repo.owner, repo.name)
+                update_repo(
+                    valid_tokens[i % len(avaliable_tokens)], repo.owner, repo.name
+                )
     else:
         failed_tokens = check_tokens(TOKENS)
         valid_tokens = list(set(TOKENS) - failed_tokens)
@@ -72,8 +78,14 @@ def demon(init=False):
         update_prediction(threshold)
 
 
+def initialize():
+    logger.info("Initializing...")
+    demon(init=True)
+
+
 if __name__ == "__main__":
-    if Repo.objects().count() == 0:
-        logger.info("No repo found in database.")
-        logger.info("Initializing...")
-        demon(init=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--init", action="store_true", default=False)
+    should_init = parser.parse_args().init
+    if should_init:
+        initialize()
