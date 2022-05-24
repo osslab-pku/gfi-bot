@@ -124,26 +124,27 @@ def start_scheduler():
     scheduler = BackgroundScheduler()
     scheduler.add_job(daemon, "cron", hour=0, minute=0, id=DEFAULT_JOB_ID)
     tokens = [user.github_access_token for user in GfiUsers.objects()]
-    valid_tokens = list(set(tokens) - check_tokens(tokens))
-    for query in GfiQueries.objects():
-        if query.update_config:
-            update_config = query.update_config
-            task_id = update_config.task_id
-            interval = update_config.interval
-            scheduler.add_job(
-                update_gfi_info,
-                "interval",
-                args=[random.choice(valid_tokens), query.owner, query.name],
-                seconds=interval,
-                next_run_time=datetime.utcnow(),
-                id=task_id,
-            )
-            """update query begin time"""
-            update_config.begin_time = datetime.utcnow()
-            query.update(
-                update_config=update_config,
-            )
-            logger.info("Scheduled task: " + task_id + " added.")
+    if tokens:
+        valid_tokens = list(set(tokens) - check_tokens(tokens))
+        for query in GfiQueries.objects():
+            if query.update_config:
+                update_config = query.update_config
+                task_id = update_config.task_id
+                interval = update_config.interval
+                scheduler.add_job(
+                    update_gfi_info,
+                    "interval",
+                    args=[random.choice(valid_tokens), query.owner, query.name],
+                    seconds=interval,
+                    next_run_time=datetime.utcnow(),
+                    id=task_id,
+                )
+                """update query begin time"""
+                update_config.begin_time = datetime.utcnow()
+                query.update(
+                    update_config=update_config,
+                )
+                logger.info("Scheduled task: " + task_id + " added.")
     scheduler.start()
     logger.info("Scheduler started.")
     return scheduler
@@ -167,11 +168,12 @@ def daemon(init=False):
                     valid_tokens[i % len(avaliable_tokens)], repo.owner, repo.name
                 )
     else:
-        failed_tokens = check_tokens(TOKENS)
-        valid_tokens = list(set(TOKENS) - failed_tokens)
-        for i, project in enumerate(CONFIG["gfibot"]["projects"]):
-            owner, name = project.split("/")
-            update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
+        if TOKENS:
+            failed_tokens = check_tokens(TOKENS)
+            valid_tokens = list(set(TOKENS) - failed_tokens)
+            for i, project in enumerate(CONFIG["gfibot"]["projects"]):
+                owner, name = project.split("/")
+                update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
 
     get_dataset_all("2008.01.01")
 
