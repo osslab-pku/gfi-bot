@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { KeyMap } from '../module/data/dataModel';
 
-type HTTPMethods = 'GET' | 'POST' | 'DELETE';
+type HTTPMethods = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
 type ErrorFunc = null | ((error: Error) => void);
 
 type RequestParams = {

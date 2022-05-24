@@ -212,8 +212,9 @@ function AddProjectComponent() {
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const [addedRepos, setAddedRepos] = useState<GFIUserQueryHistoryItem[]>();
+  const [addedRepoIncrement, setAddedRepoIncrement] = useState(false);
   const fetchAddedRepos = (onComplete?: () => void) => {
-    getAddRepoHistory().then((res) => {
+    getAddRepoHistory(filterSelected).then((res) => {
       const finishedQueries: GFIUserQueryHistoryItem[] | undefined =
         res?.finished_queries?.map((info) => ({
           pending: false,
@@ -258,6 +259,7 @@ function AddProjectComponent() {
       if (onComplete) {
         onComplete();
       }
+      setAddedRepoIncrement(!addedRepoIncrement);
     });
   };
 
@@ -276,7 +278,7 @@ function AddProjectComponent() {
         clearInterval(intervalID);
       }
     };
-  }, [addedRepos]);
+  }, [addedRepos, addedRepoIncrement]);
 
   const addGFIRepo = () => {
     let shouldDisplayAlarm = true;
@@ -393,8 +395,14 @@ function AddProjectComponent() {
   };
 
   const onFilterSelected = (filter: FilterType) => {
-    setFilterSelected(filter);
+    if (filter !== filterSelected) {
+      setFilterSelected(filter);
+    }
   };
+
+  useEffect(() => {
+    fetchAddedRepos();
+  }, [filterSelected]);
 
   const isMobile = useIsMobile();
 
