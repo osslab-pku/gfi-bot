@@ -26,6 +26,10 @@ class Prediction(Document):
     threshold: int = IntField(required=True, min_value=1, max_value=5)
     probability: float = FloatField(required=True)
     last_updated: datetime = DateTimeField(required=True)
+
+    tagged: Boolean = BooleanField(default=False)
+    commented: Boolean = BooleanField(default=False)
+
     meta = {
         "indexes": [
             {"fields": ["owner", "name", "number", "threshold"], "unique": True},

@@ -7,7 +7,7 @@ import {
   GFIUserSearch,
 } from '../module/data/dataModel';
 import { store } from '../module/storage/configureStorage';
-import { GFIRepoSearchingFilterType } from '../pages/main/mainHeader';
+import { convertFilter } from '../utils';
 
 export const userInfo = () => {
   return [
@@ -28,54 +28,19 @@ export const getRepoNum = async (lang?: string) => {
   });
 };
 
-export const getIssueNum = async () => {
-  return await asyncRequest<number | undefined>({
-    url: '/api/issue/num',
-    baseURL: BASE_URL,
-  });
-};
-
 export const getPagedRepoDetailedInfo = async (
   beginIdx: string | number,
   capacity: string | number,
   lang?: string,
   filter?: string
 ) => {
-
-  const repoFilters = [
-    'popularity',
-    'median_issue_resolve_time',
-    'newcomer_friendly',
-    'gfis',
-  ]
-
-  let filterConverted: string | undefined = undefined;
-  if (filter) {
-    switch (filter as GFIRepoSearchingFilterType) {
-      case 'Popularity':
-        filterConverted = repoFilters[0];
-        break;
-      case 'Median Issue Resolve Time':
-        filterConverted = repoFilters[1];
-        break;
-      case 'Newcomer Friendliness':
-        filterConverted = repoFilters[2];
-        break;
-      case 'GFIs':
-        filterConverted = repoFilters[3];
-        break
-      default:
-        break;
-    }
-  }
-
   return await asyncRequest<GetRepoDetailedInfo>({
     url: '/api/repos/info/',
     params: {
       start: beginIdx,
       length: capacity,
-      lang: lang,
-      filter: filterConverted,
+      lang,
+      filter: convertFilter(filter),
     },
     baseURL: BASE_URL,
   });
@@ -165,7 +130,7 @@ export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
   });
 };
 
-export const getAddRepoHistory = async () => {
+export const getAddRepoHistory = async (filter?: string) => {
   const [_, __, loginName] = userInfo();
   return await asyncRequest<{
     nums?: number;
@@ -175,6 +140,7 @@ export const getAddRepoHistory = async () => {
     url: '/api/user/queries',
     params: {
       user: loginName,
+      filter: convertFilter(filter),
     },
     baseURL: BASE_URL,
   });
@@ -242,7 +208,7 @@ export const deleteRepoQuery = async (name: string, owner: string) => {
 export const updateRepoInfo = async (name: string, owner: string) => {
   const [_, __, githubLogin] = userInfo();
   return await asyncRequest<string>({
-    method: 'POST',
+    method: 'PUT',
     url: '/api/repos/update/',
     data: {
       github_login: githubLogin,

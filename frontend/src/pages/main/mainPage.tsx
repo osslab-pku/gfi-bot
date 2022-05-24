@@ -220,7 +220,6 @@ export function MainPage() {
       repoURL = undefined;
       repoName = s;
     }
-    console.log(repoName, repoURL);
     dispatch(createGlobalProgressBarAction({ hidden: false }));
     searchRepoInfoByNameOrURL(repoName, repoURL).then((res) => {
       if (res) {

@@ -1,3 +1,5 @@
+import { GFIRepoSearchingFilterType } from './pages/main/mainHeader';
+
 export const checkIsNumber = (val: string | number | undefined) => {
   const reg = /^\d+.?\d*/;
   if (typeof val === 'number') {
@@ -28,4 +30,34 @@ export const checkHasUndefinedProperty = (obj: any) => {
     if (obj[key] === undefined) return true;
   }
   return false;
+};
+
+const repoFilters = [
+  'popularity',
+  'median_issue_resolve_time',
+  'newcomer_friendly',
+  'gfis',
+];
+
+export const convertFilter = (filter: string | undefined) => {
+  let filterConverted: string | undefined;
+  if (filter) {
+    switch (filter as GFIRepoSearchingFilterType) {
+      case 'Popularity':
+        filterConverted = repoFilters[0];
+        break;
+      case 'Median Issue Resolve Time':
+        filterConverted = repoFilters[1];
+        break;
+      case 'Newcomer Friendliness':
+        filterConverted = repoFilters[2];
+        break;
+      case 'GFIs':
+        filterConverted = repoFilters[3];
+        break;
+      default:
+        break;
+    }
+  }
+  return filterConverted;
 };
