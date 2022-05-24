@@ -7,13 +7,18 @@ import datetime
 from gfibot.data.update import update_repo
 from gfibot.collections import *
 from gfibot.check_tokens import check_tokens
-from gfibot.data.dataset import get_dataset_for_repo
+from gfibot.data.dataset import get_dataset_for_repo, get_dataset_all
 from gfibot.model.predictor import (
     update_training_summary,
     update_prediction,
     update_repo_prediction,
 )
-from gfibot.backend.utils import send_email
+from gfibot.backend.utils import (
+    send_email,
+    executor,
+    add_comment_to_github_issue,
+    add_gfi_label_to_github_issue,
+)
 
 from gfibot import CONFIG, TOKENS
 
@@ -22,7 +27,52 @@ logger = logging.getLogger(__name__)
 DEFAULT_JOB_ID = "gfi_daemon"
 
 
-def update_gfi_info(token: str, owner: str, name: str, user_github_login: str = None):
+def tag_and_comment(github_login, owner, name):
+    repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    threshold = repo_query.repo_config.gfi_threshold
+    newcomer_threshold = repo_query.repo_config.newcomer_threshold
+    issue_tag = repo_query.repo_config.issue_tag
+    if repo_query and repo_query.is_github_app_repo:
+        predicts = Prediction.objects(
+            Q(owner=owner)
+            & Q(name=name)
+            & Q(probability__gte=threshold)
+            & Q(threshold=newcomer_threshold)
+        )
+        should_comment = repo_query.repo_config.need_comment
+        for predict in predicts:
+            if predict.tagged != True:
+                if (
+                    add_gfi_label_to_github_issue(
+                        github_login=github_login,
+                        repo_name=predict.name,
+                        repo_owner=predict.owner,
+                        issue_number=predict.number,
+                        label_name=issue_tag,
+                    )
+                    == 200
+                ):
+                    predict.tagged = True
+                    predict.save()
+            if predict.commented != True and should_comment:
+                comment = "[GFI-Bot] Predicted as Good First Issue with probability {}%.".format(
+                    round((predict.probability) * 100, 2)
+                )
+                if (
+                    add_comment_to_github_issue(
+                        github_login=github_login,
+                        repo_name=predict.name,
+                        repo_owner=predict.owner,
+                        issue_number=predict.number,
+                        comment=comment,
+                    )
+                    == 200
+                ):
+                    predict.commented = True
+                    predict.save()
+
+
+def update_gfi_info(token: str, owner: str, name: str):
     logger.info(
         "Updating gfi info for " + owner + "/" + name + " at {}.".format(datetime.now())
     )
@@ -31,6 +81,12 @@ def update_gfi_info(token: str, owner: str, name: str, user_github_login: str = 
     begin_datetime = datetime.strptime(begin_time, "%Y.%m.%d")
     get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
     update_repo_prediction(owner, name)
+    user_github_login = None
+    query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    if query.is_github_app_repo and query.app_user_github_login:
+        user_github_login = query.app_user_github_login
+    if user_github_login:
+        executor.submit(tag_and_comment, user_github_login, owner, name)
     logger.info(
         "Update gfi info for "
         + owner
@@ -52,6 +108,8 @@ def update_gfi_update_job(scheduler, job_id, name, owner):
         interval = query.update_config.interval
         tokens = [user.github_access_token for user in GfiUsers.objects()]
         valid_tokens = list(set(tokens) - check_tokens(tokens))
+        if scheduler.get_job(job_id):
+            scheduler.remove_job(job_id)
         scheduler.add_job(
             update_gfi_info,
             "interval",
@@ -59,8 +117,6 @@ def update_gfi_update_job(scheduler, job_id, name, owner):
             next_run_time=datetime.utcnow(),
             id=job_id,
             args=[random.choice(valid_tokens), query.owner, query.name],
-            max_instances=1,
-            replace_existing=True,
         )
 
 

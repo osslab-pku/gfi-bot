@@ -458,6 +458,8 @@ def update_repo(token: str, owner: str, name: str) -> None:
 
     repo.save()
 
+    update_gfi_repo_add_query(owner, name)
+
     resolved_issues = update_resolved_issues(fetcher, since)
 
     open_issue_nums = [
@@ -479,8 +481,6 @@ def update_repo(token: str, owner: str, name: str) -> None:
             if "commenter" in event:
                 all_users.add(event["commenter"])
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
-
-    update_gfi_repo_add_query(owner, name)
 
     for user in all_users:
         update_user(token, user)
