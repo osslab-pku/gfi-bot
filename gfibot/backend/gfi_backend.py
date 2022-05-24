@@ -1,3 +1,4 @@
+from ast import Pass
 from flask import Flask, redirect, request, abort
 from flask_cors import CORS
 import requests
@@ -280,6 +281,7 @@ def add_repo_to_bot():
                         is_pending=True,
                         is_finished=False,
                         _created_at=datetime.utcnow(),
+                        repo_config=GfiQueries.GfiRepoConfig(),
                     ).save()
                     executor.submit(update_repo, user_token, repo_owner, repo_name)
 
@@ -410,8 +412,12 @@ def get_gfi_info():
     repo_owner = request.args.get("owner")
     app.logger.info
     if repo_name != None and repo_owner != None:
+        gfi_query = GfiQueries.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+        threshold = 0.5
+        if gfi_query != None and gfi_query.repo_config != None:
+            threshold = gfi_query.repo_config.gfi_threshold
         gfi_list = Prediction.objects(
-            Q(name=repo_name) & Q(owner=repo_owner) & Q(probability__gte=0.5)
+            Q(name=repo_name) & Q(owner=repo_owner) & Q(probability__gte=threshold)
         ).order_by("-probability")
         res = get_predicted_info_from_engine(gfi_list)
         if len(gfi_list):
@@ -671,6 +677,64 @@ def get_user_queries():
     return {"code": 404, "result": "user not found"}
 
 
+@app.route("/api/user/queries/config", methods=["GET", "PUT"])
+def user_queries_config():
+    method = request.method
+    user_login = request.args.get("user")
+    name = request.args.get("name")
+    owner = request.args.get("owner")
+    if user_login != None and name != None and owner != None:
+        user = GfiUsers.objects(github_login=user_login).first()
+        repo_info = {
+            "name": name,
+            "owner": owner,
+        }
+        user_queries = [
+            {"name": query.repo, "owner": query.owner} for query in user.user_queries
+        ]
+        if repo_info in user_queries:
+            repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+        if method == "GET":
+            if repo_query != None:
+                return {
+                    "code": 200,
+                    "result": {
+                        "newcomer_threshold": repo_query.repo_config.newcomer_threshold,
+                        "gfi_threshold": repo_query.repo_config.gfi_threshold,
+                        "need_comment": repo_query.repo_config.need_comment,
+                        "issue_tag": repo_query.repo_config.issue_tag,
+                    },
+                }
+            else:
+                return {"code": 404, "result": "no query found"}
+        elif method == "PUT":
+            req_body = request.get_json()
+            if req_body != None:
+                newcomer_threshold = req_body["newcomer_threshold"]
+                gfi_threshold = req_body["gfi_threshold"]
+                need_comment = req_body["need_comment"]
+                issue_tag = req_body["issue_tag"]
+                if (
+                    newcomer_threshold != None
+                    and gfi_threshold != None
+                    and need_comment != None
+                    and issue_tag != None
+                ):
+                    """replace repo_query.repo_config with new config"""
+                    repo_query.repo_config = GfiQueries.GfiRepoConfig(
+                        newcomer_threshold=newcomer_threshold,
+                        gfi_threshold=gfi_threshold,
+                        need_comment=need_comment,
+                        issue_tag=issue_tag,
+                    )
+                    repo_query.save()
+                    return {"code": 200, "result": "success"}
+                return {"code": 400, "result": "invalid config"}
+            return {"code": 400, "result": "no config provided"}
+    else:
+        return {"code": 404, "result": "user not found"}
+
+
 @app.route("/api/user/searches", methods=["GET", "DELETE"])
 def get_user_searches():
     method = request.method
@@ -755,6 +819,7 @@ def add_repo_from_github_app(user_collection, repositories):
                 is_finished=False,
                 is_updating=False,
                 _created_at=datetime.utcnow(),
+                repo_config=GfiQueries.GfiRepoConfig(),
             ).save()
     user_token = user_collection.github_app_token
     if user_token:
