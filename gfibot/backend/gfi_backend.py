@@ -1,4 +1,5 @@
 from flask import Flask, redirect, request, abort
+from pandas import Interval
 import requests
 import logging
 
@@ -821,6 +822,10 @@ def add_repo_from_github_app(user_collection, repositories):
                 app_user_github_login=user_collection.github_login,
                 _created_at=datetime.utcnow(),
                 repo_config=GfiQueries.GfiRepoConfig(),
+                update_config=GfiQueries.GfiUpdateConfig(
+                    task_id=generate_repo_update_task_id(owner, repo_name),
+                    interval=24 * 3600,
+                ),
             ).save()
         else:
             logger.info(f"update new query {repo_name}/{owner}")
@@ -829,6 +834,17 @@ def add_repo_from_github_app(user_collection, repositories):
                 app_user_github_login=user_collection.github_login,
                 is_updating=False,
             )
+            if (
+                not GfiQueries.objects(Q(name=repo_name) & Q(owner=owner))
+                .first()
+                .update_config
+            ):
+                GfiQueries.objects(Q(name=repo_name) & Q(owner=owner)).update(
+                    update_config=GfiQueries.GfiUpdateConfig(
+                        task_id=generate_repo_update_task_id(owner, repo_name),
+                        interval=24 * 3600,
+                    )
+                )
     user_token = user_collection.github_app_token
     if user_token:
         update_repos(repo_info)

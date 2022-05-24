@@ -1,3 +1,4 @@
+from email.policy import default
 from typing import List, Union
 from datetime import datetime
 from xmlrpc.client import Boolean
@@ -544,7 +545,7 @@ class GfiQueries(Document):
 
     class GfiUpdateConfig(EmbeddedDocument):
         task_id: str = StringField(required=True)
-        interval: int = IntField(required=True)
+        interval: int = IntField(required=True, default=24 * 3600)
         begin_time: datetime = DateTimeField(required=False)
 
     class GfiRepoConfig(EmbeddedDocument):
@@ -558,7 +559,7 @@ class GfiQueries(Document):
         issue_tag: str = StringField(required=True, default="good first issue")
 
     update_config: GfiUpdateConfig = EmbeddedDocumentField(
-        GfiUpdateConfig, required=False
+        GfiUpdateConfig, required=True
     )
 
     repo_config: GfiRepoConfig = EmbeddedDocumentField(GfiRepoConfig, required=True)
