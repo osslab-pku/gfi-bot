@@ -9,7 +9,30 @@ from gfibot.data.update import update_repo
 logger = logging.getLogger(__name__)
 
 
-def delete_repo(name, owner):
+def get_repo_info_detailed(repo: Repo):
+    def get_month_count(mounth_counts):
+        return [
+            {
+                "month": item.month,
+                "count": item.count,
+            }
+            for item in mounth_counts
+        ]
+
+    return {
+        "name": repo.name,
+        "owner": repo.owner,
+        "description": repo.description,
+        "language": repo.language,
+        "topics": repo.topics,
+        "monthly_stars": get_month_count(repo.monthly_stars),
+        "monthly_commits": get_month_count(repo.monthly_commits),
+        "monthly_issues": get_month_count(repo.monthly_issues),
+        "monthly_pulls": get_month_count(repo.monthly_pulls),
+    }
+
+
+def delete_repo_from_query(name, owner):
     repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if repo_query:
         repo_query.delete()
@@ -105,17 +128,14 @@ def get_newcomer_resolved_issue_rate(owner, name):
         newcomer_threshold = 5
         if repo_query and repo_query.repo_config:
             newcomer_threshold = repo_query.repo_config.newcomer_threshold
-        summary = TrainingSummary.objects(Q(name=name) & Q(owner=owner))
-        if len(summary):
-            newcommer_summary = TrainingSummary.objects(
-                Q(name=name) & Q(owner=owner) & Q(threshold=newcomer_threshold)
-            )
-            newcomer_issues = len(
-                TrainingSummary.objects(
-                    Q(name=name) & Q(owner=owner) & Q(threshold=newcomer_threshold)
-                )
-            )
-            return newcomer_issues / len(summary)
+        summary = TrainingSummary.objects(
+            Q(name=name) & Q(owner=owner) & Q(threshold=newcomer_threshold)
+        ).first()
+        if summary:
+            all_issues = summary.n_resolved_issues
+            new_comer_resolved = summary.n_newcomer_resolved
+            if all_issues > 0:
+                return new_comer_resolved / all_issues
     return 0
 
 
