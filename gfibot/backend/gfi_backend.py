@@ -1,7 +1,6 @@
 from flask import Flask, redirect, request, abort
 import requests
 import logging
-from concurrent.futures import ThreadPoolExecutor
 
 import json
 from datetime import datetime
@@ -25,11 +24,10 @@ from gfibot.backend.utils import (
     get_newcomer_resolved_issue_rate,
     get_repo_info_detailed,
     generate_repo_update_task_id,
+    executor,
 )
 
 app = Flask(__name__)
-
-executor = ThreadPoolExecutor(max_workers=10)
 
 WEB_APP_NAME = "gfibot-webapp"
 GITHUB_APP_NAME = "gfibot-githubapp"
