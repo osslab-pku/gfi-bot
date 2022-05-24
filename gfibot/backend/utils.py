@@ -1,12 +1,14 @@
-from lib2to3.pgen2.pgen import generate_grammar
 import requests
 import yagmail
 import logging
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 from gfibot.collections import *
 
 logger = logging.getLogger(__name__)
+
+executor = ThreadPoolExecutor(max_workers=10)
 
 
 def generate_repo_update_task_id(owner, name):
