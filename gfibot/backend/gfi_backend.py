@@ -1,12 +1,10 @@
-from ast import Pass
 from flask import Flask, redirect, request, abort
-from flask_cors import CORS
 import requests
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import json
-from bson import ObjectId
-from datetime import datetime, date
+from datetime import datetime
 from urllib import parse
 import numpy as np
 
@@ -14,7 +12,6 @@ from typing import Dict, Final
 
 import urllib.parse
 
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from functools import cmp_to_key
 
@@ -23,11 +20,11 @@ from gfibot.data.update import update_repo
 from gfibot.backend.daemon import start_scheduler, update_gfi_update_job
 from gfibot.backend.utils import (
     delete_repo_from_query,
-    update_repos,
     get_repo_stars,
     get_repo_gfi_num,
     get_newcomer_resolved_issue_rate,
     get_repo_info_detailed,
+    generate_repo_update_task_id,
 )
 
 app = Flask(__name__)
@@ -40,10 +37,6 @@ GITHUB_APP_NAME = "gfibot-githubapp"
 logger = logging.getLogger(__name__)
 
 daemon_scheduler = start_scheduler()
-
-
-def generate_repo_update_task_id(owner, name):
-    return f"{owner}-{name}-update"
 
 
 @app.route("/api/repos/num")
@@ -215,7 +208,6 @@ def search_repo_info_by_name_or_url():
         repos_query = Repo.objects(name=repo_name)
         if len(repos_query) > 0:
             if user_name:
-                date_time = datetime.now(timezone.utc)
                 user = GfiUsers.objects(github_login=user_name).first()
                 if user:
                     [
@@ -281,6 +273,7 @@ def add_repo_to_bot():
                         is_pending=True,
                         is_finished=False,
                         _created_at=datetime.utcnow(),
+                        is_github_app_repo=False,
                         repo_config=GfiQueries.GfiRepoConfig(),
                     ).save()
                     executor.submit(update_repo, user_token, repo_owner, repo_name)
@@ -778,6 +771,14 @@ def github_app_install():
     return github_login_redirect(name=GITHUB_APP_NAME, code=code)
 
 
+def update_repos(repo_info):
+    for repo in repo_info:
+        name = repo["name"]
+        owner = repo["owner"]
+        task_id = generate_repo_update_task_id(owner, name)
+        update_repository_gfi_info(task_id, owner=owner, repo=name)
+
+
 def update_repository_gfi_info(task_id: str, owner: str, repo: str):
     update_gfi_update_job(daemon_scheduler, task_id, repo, owner)
 
@@ -818,12 +819,21 @@ def add_repo_from_github_app(user_collection, repositories):
                 is_pending=True,
                 is_finished=False,
                 is_updating=False,
+                is_github_app_repo=True,
+                app_user_github_login=user_collection.github_login,
                 _created_at=datetime.utcnow(),
                 repo_config=GfiQueries.GfiRepoConfig(),
             ).save()
+        else:
+            logger.info(f"update new query {repo_name}/{owner}")
+            GfiQueries.objects(Q(name=repo_name) & Q(owner=owner)).update(
+                is_github_app_repo=True,
+                app_user_github_login=user_collection.github_login,
+                is_updating=False,
+            )
     user_token = user_collection.github_app_token
     if user_token:
-        executor.submit(update_repos, user_token, repo_info)
+        update_repos(repo_info)
 
 
 def delete_repo_from_github_app(repositories):

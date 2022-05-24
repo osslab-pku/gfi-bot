@@ -536,6 +536,9 @@ class GfiQueries(Document):
     is_finished: bool = BooleanField(required=True)
     is_updating: bool = BooleanField(required=False)
 
+    is_github_app_repo: bool = BooleanField(required=True, default=False)
+    app_user_github_login: str = StringField(required=False)
+
     _created_at: datetime = DateTimeField(required=True)
     _finished_at: datetime = DateTimeField(required=False)
 
@@ -558,7 +561,7 @@ class GfiQueries(Document):
         GfiUpdateConfig, required=False
     )
 
-    repo_config: GfiRepoConfig = EmbeddedDocumentField(GfiRepoConfig, required=False)
+    repo_config: GfiRepoConfig = EmbeddedDocumentField(GfiRepoConfig, required=True)
 
     mata = {
         "indexes": [

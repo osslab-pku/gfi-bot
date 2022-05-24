@@ -1,12 +1,16 @@
+from lib2to3.pgen2.pgen import generate_grammar
 import requests
 import yagmail
 import logging
-
+import json
 
 from gfibot.collections import *
-from gfibot.data.update import update_repo
 
 logger = logging.getLogger(__name__)
+
+
+def generate_repo_update_task_id(owner, name):
+    return f"{owner}-{name}-update"
 
 
 def get_repo_info_detailed(repo: Repo):
@@ -38,26 +42,13 @@ def delete_repo_from_query(name, owner):
         repo_query.delete()
 
 
-def update_repos(token: str, repo_info):
-    for repo in repo_info:
-        name = repo["name"]
-        owner = repo["owner"]
-        is_updating = (
-            GfiQueries.objects(Q(name=name) & Q(owner=owner)).first().is_updating
-        )
-        if not is_updating:
-            logger.info(f"updating repo {repo['name']}")
-            GfiQueries.objects(Q(name=name) & Q(owner=owner)).update(is_updating=True)
-            update_repo(token, owner, name)
-
-
 def add_comment_to_github_issue(
-    user_github_id, repo_name, repo_owner, issue_number, comment
+    github_login, repo_name, repo_owner, issue_number, comment
 ):
     """
     Add comment to GitHub issue
     """
-    user_token = GfiUsers.objects(Q(github_id=user_github_id)).first().github_app_token
+    user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
     if user_token:
         headers = {
             "Authorization": "token {}".format(user_token),
@@ -73,12 +64,12 @@ def add_comment_to_github_issue(
 
 
 def add_gfi_label_to_github_issue(
-    user_github_id, repo_name, repo_owner, issue_number, label_name="good first issue"
+    github_login, repo_name, repo_owner, issue_number, label_name="good first issue"
 ):
     """
     Add label to Github issue
     """
-    user_token = GfiUsers.objects(Q(github_id=user_github_id)).first().github_app_token
+    user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
     if user_token:
         headers = {"Authorization": "token {}".format(user_token)}
         url = "https://api.github.com/repos/{}/{}/issues/{}/labels".format(
