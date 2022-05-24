@@ -2,6 +2,7 @@ import { asyncRequest, BASE_URL } from './query';
 import {
   GetRepoDetailedInfo,
   GFIInfo,
+  GFIRepoConfig,
   GFIRepoInfo,
   GFITrainingSummary,
   GFIUserSearch,
@@ -214,6 +215,43 @@ export const updateRepoInfo = async (name: string, owner: string) => {
       github_login: githubLogin,
       name,
       owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const getRepoConfig = async (name: string, owner: string) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<GFIRepoConfig>({
+    url: '/api/user/queries/config',
+    params: {
+      user: githubLogin,
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const updateRepoConfig = async (
+  name: string,
+  owner: string,
+  config: GFIRepoConfig
+) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<string>({
+    method: 'PUT',
+    url: '/api/user/queries/config',
+    params: {
+      user: githubLogin,
+      name,
+      owner,
+    },
+    data: {
+      newcomer_threshold: config.newcomer_threshold,
+      gfi_threshold: config.gfi_threshold,
+      need_comment: config.need_comment,
+      issue_tag: config.issue_tag,
     },
     baseURL: BASE_URL,
   });
