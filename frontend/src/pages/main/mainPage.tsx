@@ -20,6 +20,7 @@ import {
   searchRepoInfoByNameOrURL,
   getPagedRepoDetailedInfo,
   getTrainingSummary,
+  getRepoInfo,
 } from '../../api/api';
 import { checkGithubLogin } from '../../api/githubApi';
 
@@ -91,20 +92,32 @@ export function MainPage() {
   const location = useLocation() as LocationStateLoginType;
 
   useEffect(() => {
-    fetchRepoInfoList(1);
-    getRepoNum(selectedTag).then((res) => {
-      if (res && Number.isInteger(res)) {
-        setTotalRepos(res);
-      }
-    });
-
+    const query = window.location.search;
+    const urlParams = new URLSearchParams(query);
+    const name = urlParams.get('name');
+    const owner = urlParams.get('owner');
+    if (name && owner) {
+      getRepoInfo(name, owner).then((res) => {
+        if (res) {
+          handleSearchBtn(name);
+        }
+      });
+    } else {
+      fetchRepoInfoList(1);
+      setPageIdx(1);
+      getRepoNum(selectedTag).then((res) => {
+        if (res && Number.isInteger(res)) {
+          setTotalRepos(res);
+        }
+      });
+    }
     if ('state' in location && location.state && location.state.justLogin) {
       setShowLoginMsg(true);
     }
   }, []);
 
   const repoCapacity = 5;
-  const [pageIdx, setPageIdx] = useState(1);
+  const [pageIdx, setPageIdx] = useState(0);
   const [totalRepos, setTotalRepos] = useState(0);
   const [selectedTag, setSelectedTag] = useState<string>();
   const [selectedFilter, setSelectedFilter] = useState<string>();
@@ -129,16 +142,21 @@ export function MainPage() {
   };
 
   useEffect(() => {
-    fetchRepoInfoList(1, selectedTag, selectedFilter);
-    dispatch(
-      createMainPageLangTagSelectedAction({
-        tagSelected: selectedTag,
-      })
-    );
+    if (selectedTag || selectedFilter) {
+      fetchRepoInfoList(1, selectedTag, selectedFilter);
+      setPageIdx(1);
+      dispatch(
+        createMainPageLangTagSelectedAction({
+          tagSelected: selectedTag,
+        })
+      );
+    }
   }, [selectedTag, selectedFilter]);
 
   useEffect(() => {
-    fetchRepoInfoList(pageIdx, selectedTag, selectedFilter);
+    if (pageIdx) {
+      fetchRepoInfoList(pageIdx, selectedTag, selectedFilter);
+    }
   }, [pageIdx]);
 
   const generateTrainingSummaryKey = (name: string, owner: string) =>
