@@ -12,7 +12,7 @@ from typing import Dict, Final
 
 import urllib.parse
 
-from datetime import datetime, timezone
+from datetime import datetime
 from functools import cmp_to_key
 
 from gfibot.collections import *
@@ -274,6 +274,11 @@ def add_repo_to_bot():
                         _created_at=datetime.utcnow(),
                         is_github_app_repo=False,
                         repo_config=GfiQueries.GfiRepoConfig(),
+                        update_config=GfiQueries.GfiUpdateConfig(
+                            task_id=generate_repo_update_task_id(
+                                owner=repo_owner, name=repo_name
+                            ),
+                        ),
                     ).save()
                     executor.submit(update_repo, user_token, repo_owner, repo_name)
 
@@ -630,7 +635,6 @@ def get_user_queries():
             finished_queries = list(
                 filter(lambda query: query.is_finished, [q for q in actual_queries])
             )
-
             if query_filter != None and query_filter in REPO_FILTER_TYPES:
                 if query_filter == "popularity":
                     finished_queries.sort(key=cmp_to_key(repo_stars_comp))
@@ -905,12 +909,19 @@ def get_repo_badge():
     name = request.args.get("name")
     if owner != None and name != None:
         query = Repo.objects(Q(name=name) & Q(owner=owner))
+        threshold = 0.5
+        repo_config = (
+            GfiQueries.objects(Q(name=name) & Q(owner=owner)).first().repo_config
+        )
+        if repo_config.gfi_threshold:
+            threshold = repo_config.gfi_threshold
         if len(query):
             gfi_num = Prediction.objects(
-                Q(name=name) & Q(owner=owner) & Q(probability__gte=0.5)
+                Q(name=name) & Q(owner=owner) & Q(probability__gte=threshold)
             ).count()
-            img_src = "https://img.shields.io/badge/{}-{}-{}".format(
-                "good first issues", gfi_num, "success"
+            print(gfi_num)
+            img_src = "https://img.shields.io/badge/{}-{}".format(
+                "Using - GFIBot", "success"
             )
             svg = requests.get(img_src).content
             return app.response_class(svg, mimetype="image/svg+xml")

@@ -553,7 +553,7 @@ class GfiQueries(Document):
             required=True, min_value=0, max_value=5, default=5
         )
         gfi_threshold: float = FloatField(
-            required=True, min_value=0.0, max_value=0.5, default=0.5
+            required=True, min_value=0.0, max_value=1, default=0.5
         )
         need_comment: Boolean = BooleanField(required=True, default=True)
         issue_tag: str = StringField(required=True, default="good first issue")
