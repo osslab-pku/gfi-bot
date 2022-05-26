@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Form, Button, Alert } from 'react-bootstrap';
+import { Form, Button } from 'react-bootstrap';
 import { GFIRepoBasicProp } from '../main/GFIRepoDisplayView';
 
 import '../../style/gfiStyle.css';
