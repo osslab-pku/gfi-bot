@@ -1,7 +1,8 @@
+import gfibot.data.dataset as d
+
 from datetime import datetime, timezone
 from bson.json_util import DEFAULT_JSON_OPTIONS
 from gfibot.collections import *
-from gfibot.data.dataset import *
 
 
 gfi_labels = [
@@ -541,43 +542,44 @@ triaged_labels = [
 
 
 def test_utils():
-    assert count_code_snippets(None) == 0
-    assert count_code_snippets("") == 0
-    assert count_code_snippets("```code```") == 1
-    assert count_code_snippets("```code```\n```code```") == 2
-    assert count_code_snippets("```code``````code``````code```") == 3
+    assert d._count_code_snippets(None) == 0
+    assert d._count_code_snippets("") == 0
+    assert d._count_code_snippets("```code```") == 1
+    assert d._count_code_snippets("```code```\n```code```") == 2
+    assert d._count_code_snippets("```code``````code``````code```") == 3
 
-    assert delete_code_snippets(None) == ""
-    assert delete_code_snippets("") == ""
-    assert delete_code_snippets("```code```") == ""
-    assert delete_code_snippets("```code```\n```code```") == "\n"
-    assert delete_code_snippets("```code``````code``````code```") == ""
+    assert d._delete_code_snippets(None) == ""
+    assert d._delete_code_snippets("") == ""
+    assert d._delete_code_snippets("```code```") == ""
+    assert d._delete_code_snippets("```code```\n```code```") == "\n"
+    assert d._delete_code_snippets("```code``````code``````code```") == ""
 
-    assert count_urls(None) == 0
-    assert count_urls("") == 0
-    assert count_urls("http://example.com") == 1
-    assert count_urls("https://example.com\nhttp://example.com") == 2
-    assert count_urls("https://example.com jpeg\nhttp://example.com/a.jpeg") == 1
+    assert d._count_urls(None) == 0
+    assert d._count_urls("") == 0
+    assert d._count_urls("http://example.com") == 1
+    assert d._count_urls("https://example.com\nhttp://example.com") == 2
+    assert d._count_urls("https://example.com jpeg\nhttp://example.com/a.jpeg") == 1
 
-    assert delete_urls(None) == ""
-    assert delete_urls("") == ""
-    assert delete_urls("http://example.com") == ""
-    assert delete_urls("https://example.com\nhttp://example.com") == "\n"
+    assert d._delete_urls(None) == ""
+    assert d._delete_urls("") == ""
+    assert d._delete_urls("http://example.com") == ""
+    assert d._delete_urls("https://example.com\nhttp://example.com") == "\n"
     assert (
-        delete_urls("https://example.com jpeg\nhttp://example.com/a.jpeg") == " jpeg\n"
+        d._delete_urls("https://example.com jpeg\nhttp://example.com/a.jpeg")
+        == " jpeg\n"
     )
 
-    assert count_imgs(None) == 0
-    assert count_imgs("") == 0
-    assert count_imgs("http://example.com") == 0
-    assert count_imgs("https://example.com\nhttp://example.com") == 0
-    assert count_imgs("https://example.com jpeg\nhttp://example.com/a.jpeg") == 1
+    assert d._count_imgs(None) == 0
+    assert d._count_imgs("") == 0
+    assert d._count_imgs("http://example.com") == 0
+    assert d._count_imgs("https://example.com\nhttp://example.com") == 0
+    assert d._count_imgs("https://example.com jpeg\nhttp://example.com/a.jpeg") == 1
 
-    assert count_text_len(None) == 0
-    assert count_text_len("") == 0
-    assert count_text_len("abc") == 1
-    assert count_text_len("abc abc") == 2
-    assert count_text_len("abc   abc") == 2
+    assert d._count_text_len(None) == 0
+    assert d._count_text_len("") == 0
+    assert d._count_text_len("abc") == 1
+    assert d._count_text_len("abc abc") == 2
+    assert d._count_text_len("abc   abc") == 2
 
 
 def test_label_categorization():
@@ -597,12 +599,12 @@ def test_label_categorization():
     }
     for cat, labels in label_cats.items():
         for label in labels:
-            assert getattr(get_categorized_labels([label]), cat) == 1
-        assert getattr(get_categorized_labels(labels), cat) == len(labels)
+            assert getattr(d._get_categorized_labels([label]), cat) == 1
+        assert getattr(d._get_categorized_labels(labels), cat) == len(labels)
 
 
 def test_get_user_data(mock_mongodb):
-    user = get_user_data("owner", "name", "a1", datetime.now(timezone.utc))
+    user = d._get_user_data("owner", "name", "a1", datetime.now(timezone.utc))
     assert user.name == "a1"
     assert user.n_commits == 1
     assert user.n_issues == 2
@@ -611,7 +613,7 @@ def test_get_user_data(mock_mongodb):
 
 
 def test_get_background_data(mock_mongodb):
-    contribs, n_closed, n_open, cls_time = get_background_data(
+    contribs, n_closed, n_open, cls_time = d._get_background_data(
         "owner", "name", datetime.now(timezone.utc)
     )
     assert contribs == {"a1"}
@@ -619,7 +621,7 @@ def test_get_background_data(mock_mongodb):
     assert n_open == 1
     assert cls_time == [86400.0, 86400.0]
 
-    contribs, n_closed, n_open, cls_time = get_background_data(
+    contribs, n_closed, n_open, cls_time = d._get_background_data(
         "owner", "name", datetime(2022, 1, 3, tzinfo=timezone.utc)
     )
     assert n_closed == 1 and n_open == 1
@@ -628,7 +630,7 @@ def test_get_background_data(mock_mongodb):
 def test_get_dynamics_data(mock_mongodb):
     issue = ResolvedIssue.objects(name="name", owner="owner", number=2).first()
     print(issue.to_json(indent=2, json_options=DEFAULT_JSON_OPTIONS))
-    labels, comments, comment_users, event_users = get_dynamics_data(
+    labels, comments, comment_users, event_users = d._get_dynamics_data(
         "owner", "name", issue.events, datetime.now(timezone.utc)
     )
     print(labels, comments, comment_users, event_users)
@@ -640,7 +642,7 @@ def test_get_dynamics_data(mock_mongodb):
 
 def test_get_dataset(mock_mongodb):
     for resolved_issue in ResolvedIssue.objects():
-        d1 = get_dataset(resolved_issue, resolved_issue.resolved_at)
-        d2 = get_dataset(resolved_issue, resolved_issue.created_at)
+        d1 = d.get_dataset(resolved_issue, resolved_issue.resolved_at)
+        d2 = d.get_dataset(resolved_issue, resolved_issue.created_at)
         print(d1.to_json(indent=2, json_options=DEFAULT_JSON_OPTIONS))
         print(d2.to_json(indent=2, json_options=DEFAULT_JSON_OPTIONS))

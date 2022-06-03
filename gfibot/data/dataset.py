@@ -14,14 +14,14 @@ from mongoengine.queryset.visitor import Q
 logger = logging.getLogger(__name__)
 
 
-def count_code_snippets(s: str) -> int:
+def _count_code_snippets(s: str) -> int:
     p = re.compile(r"```.+?```", flags=re.S)
     if s is None:
         return 0
     return len(p.findall(s))
 
 
-def delete_code_snippets(s: str) -> str:
+def _delete_code_snippets(s: str) -> str:
     if s is None:
         return ""
     p = re.compile(r"```.+?```", flags=re.S)
@@ -30,7 +30,7 @@ def delete_code_snippets(s: str) -> str:
     return s
 
 
-def count_urls(s: str) -> int:
+def _count_urls(s: str) -> int:
     if s is None:
         return 0
     p = re.compile(r"http[:/\w\.]+")
@@ -45,7 +45,7 @@ def count_urls(s: str) -> int:
     return len(lst)
 
 
-def delete_urls(s: str) -> str:
+def _delete_urls(s: str) -> str:
     if s == None:
         return ""
     p = re.compile(r"http[:/\w\.]+")
@@ -54,7 +54,7 @@ def delete_urls(s: str) -> str:
     return s
 
 
-def count_imgs(s: str) -> int:
+def _count_imgs(s: str) -> int:
     if s is None:
         return 0
     p = re.compile(r"http[:/\w\.]+")
@@ -67,13 +67,13 @@ def count_imgs(s: str) -> int:
     return len(lst)
 
 
-def count_text_len(s: str) -> int:
+def _count_text_len(s: str) -> int:
     if s == None:
         return 0
     return len(s.split())
 
 
-def get_categorized_labels(labels: List[str]) -> Dataset.LabelCategory:
+def _get_categorized_labels(labels: List[str]) -> Dataset.LabelCategory:
     keyword_rules = {
         "bug": ["bug"],
         "feature": ["feature"],
@@ -148,7 +148,9 @@ def get_categorized_labels(labels: List[str]) -> Dataset.LabelCategory:
     return Dataset.LabelCategory(**label_cat)
 
 
-def get_user_data(owner: str, name: str, user: str, t: datetime) -> Dataset.UserFeature:
+def _get_user_data(
+    owner: str, name: str, user: str, t: datetime
+) -> Dataset.UserFeature:
     """Get user data before a certain time t"""
 
     if user == "ghost":  # The name of deleted GitHub account
@@ -197,7 +199,7 @@ def get_user_data(owner: str, name: str, user: str, t: datetime) -> Dataset.User
     )
 
 
-def get_background_data(owner: str, name: str, t: datetime):
+def _get_background_data(owner: str, name: str, t: datetime):
     """Retrieve additional data for computing background related features"""
     all_issues: List[RepoIssue] = list(
         RepoIssue.objects(owner=owner, name=name, is_pull=False, created_at__lte=t)
@@ -222,7 +224,7 @@ def get_background_data(owner: str, name: str, t: datetime):
     return contributors, n_closed_issues, n_open_issues, issue_close_times
 
 
-def get_dynamics_data(owner: str, name: str, events: List[IssueEvent], t: datetime):
+def _get_dynamics_data(owner: str, name: str, events: List[IssueEvent], t: datetime):
     """Retrieve additional data for computing dynamics related features"""
     labels, comments, comment_users, event_users = [], [], set(), set()
     for event in events:
@@ -240,8 +242,8 @@ def get_dynamics_data(owner: str, name: str, events: List[IssueEvent], t: dateti
                 comments.append(event.comment)
                 if event.actor is not None and event.actor != "ghost":
                     comment_users.add(event.actor)
-    comment_users = [get_user_data(owner, name, user, t) for user in comment_users]
-    event_users = [get_user_data(owner, name, user, t) for user in event_users]
+    comment_users = [_get_user_data(owner, name, user, t) for user in comment_users]
+    event_users = [_get_user_data(owner, name, user, t) for user in event_users]
     return labels, comments, comment_users, event_users
 
 
@@ -267,7 +269,7 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
     logger.info(f"{issue.owner}/{issue.name}#{issue.number} (before {before}) start")
 
     repo: Repo = Repo.objects(owner=issue.owner, name=issue.name).first()
-    contribs, n_closed, n_open, close_times = get_background_data(
+    contribs, n_closed, n_open, close_times = _get_background_data(
         issue.owner, issue.name, before
     )
     prev_resolver_commits = [
@@ -276,10 +278,10 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
             name=issue.name, owner=issue.owner, resolved_at__lte=before
         )
     ]
-    labels, comments, comment_users, event_users = get_dynamics_data(
+    labels, comments, comment_users, event_users = _get_dynamics_data(
         issue.owner, issue.name, issue.events, before
     )
-    clean_body = delete_urls(delete_code_snippets(repo_issue.body))
+    clean_body = _delete_urls(_delete_code_snippets(repo_issue.body))
 
     data = Dataset()
 
@@ -296,21 +298,23 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
     # ---------- Content ----------
     data.title = repo_issue.title
     data.body = clean_body
-    data.len_title = count_text_len(repo_issue.title)
-    data.len_body = count_text_len(clean_body)
-    data.n_code_snips = count_code_snippets(repo_issue.body)
-    data.n_urls = count_urls(repo_issue.body)
-    data.n_imgs = count_imgs(repo_issue.body)
+    data.len_title = _count_text_len(repo_issue.title)
+    data.len_body = _count_text_len(clean_body)
+    data.n_code_snips = _count_code_snippets(repo_issue.body)
+    data.n_urls = _count_urls(repo_issue.body)
+    data.n_imgs = _count_imgs(repo_issue.body)
     data.coleman_liau_index = textstat.coleman_liau_index(clean_body)
     data.flesch_reading_ease = textstat.flesch_reading_ease(clean_body)
     data.flesch_kincaid_grade = textstat.flesch_kincaid_grade(clean_body)
     data.automated_readability_index = textstat.automated_readability_index(clean_body)
     data.labels = labels
-    data.label_category = get_categorized_labels(labels)
+    data.label_category = _get_categorized_labels(labels)
 
     # ---------- Background ----------
-    data.reporter_feat = get_user_data(issue.owner, issue.name, repo_issue.user, before)
-    data.owner_feat = get_user_data(issue.owner, issue.name, issue.owner, before)
+    data.reporter_feat = _get_user_data(
+        issue.owner, issue.name, repo_issue.user, before
+    )
+    data.owner_feat = _get_user_data(issue.owner, issue.name, issue.owner, before)
     data.prev_resolver_commits = prev_resolver_commits
     data.n_stars = sum(x.count for x in repo.monthly_stars if x.month <= before)
     data.n_pulls = sum(x.count for x in repo.monthly_pulls if x.month <= before)
