@@ -2,10 +2,13 @@ import { asyncRequest, BASE_URL } from './query';
 import {
   GetRepoDetailedInfo,
   GFIInfo,
+  GFIRepoConfig,
   GFIRepoInfo,
   GFITrainingSummary,
+  GFIUserSearch,
 } from '../module/data/dataModel';
 import { store } from '../module/storage/configureStorage';
+import { convertFilter } from '../utils';
 
 export const userInfo = () => {
   return [
@@ -26,13 +29,6 @@ export const getRepoNum = async (lang?: string) => {
   });
 };
 
-export const getIssueNum = async () => {
-  return await asyncRequest<number | undefined>({
-    url: '/api/issue/num',
-    baseURL: BASE_URL,
-  });
-};
-
 export const getPagedRepoDetailedInfo = async (
   beginIdx: string | number,
   capacity: string | number,
@@ -40,12 +36,12 @@ export const getPagedRepoDetailedInfo = async (
   filter?: string
 ) => {
   return await asyncRequest<GetRepoDetailedInfo>({
-    url: '/api/repos/info/paged',
+    url: '/api/repos/info/',
     params: {
       start: beginIdx,
       length: capacity,
       lang,
-      filter,
+      filter: convertFilter(filter),
     },
     baseURL: BASE_URL,
   });
@@ -62,24 +58,35 @@ export const getRepoDetailedInfo = async (name: string, owner: string) => {
   });
 };
 
+export const getRepoInfo = async (name: string, owner: string) => {
+  return await asyncRequest<GFIRepoInfo>({
+    url: '/api/repos/info',
+    params: {
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
 export const searchRepoInfoByNameOrURL = async (
   repoName?: string,
   repoURL?: string
 ) => {
-  const [hasLogin, userName] = userInfo();
-  return await asyncRequest<GFIRepoInfo>({
+  const [hasLogin, _, userLogin] = userInfo();
+  return await asyncRequest<[GFIRepoInfo]>({
     url: '/api/repos/info/search',
     params: {
       repo: repoName,
       url: repoURL,
-      user: userName,
+      user: userLogin,
     },
     baseURL: BASE_URL,
   });
 };
 
 export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
-  return await asyncRequest<GFIInfo | undefined>({
+  return await asyncRequest<GFIInfo>({
     url: '/api/issue/gfi',
     params: {
       repo: repoName,
@@ -101,7 +108,7 @@ export const getGFINum = async (repoName?: string, repoOwner?: string) => {
 };
 
 export const getLanguageTags = async () => {
-  return await asyncRequest<string[] | undefined>({
+  return await asyncRequest<string[]>({
     url: '/api/repos/language',
     baseURL: BASE_URL,
   });
@@ -124,7 +131,7 @@ export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
   });
 };
 
-export const getAddRepoHistory = async () => {
+export const getAddRepoHistory = async (filter?: string) => {
   const [_, __, loginName] = userInfo();
   return await asyncRequest<{
     nums?: number;
@@ -134,17 +141,117 @@ export const getAddRepoHistory = async () => {
     url: '/api/user/queries',
     params: {
       user: loginName,
+      filter: convertFilter(filter),
     },
     baseURL: BASE_URL,
   });
 };
 
 export const getTrainingSummary = async (name?: string, owner?: string) => {
-  return await asyncRequest<GFITrainingSummary[] | undefined>({
+  return await asyncRequest<GFITrainingSummary[]>({
     url: '/api/model/training/result',
     params: {
       name,
       owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const getUserSearches = async () => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<GFIUserSearch[]>({
+    url: '/api/user/searches',
+    params: {
+      user: githubLogin,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const deleteUserSearch = async (
+  name: string,
+  owner: string,
+  id: number
+) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<GFIUserSearch[]>({
+    method: 'DELETE',
+    url: '/api/user/searches',
+    params: {
+      user: githubLogin,
+      name,
+      owner,
+      id,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const deleteRepoQuery = async (name: string, owner: string) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<{
+    nums?: number;
+    queries: GFIRepoInfo[];
+    finished_queries?: GFIRepoInfo[];
+  }>({
+    method: 'DELETE',
+    url: '/api/user/queries',
+    params: {
+      user: githubLogin,
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const updateRepoInfo = async (name: string, owner: string) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<string>({
+    method: 'PUT',
+    url: '/api/repos/update/',
+    data: {
+      github_login: githubLogin,
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const getRepoConfig = async (name: string, owner: string) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<GFIRepoConfig>({
+    url: '/api/user/queries/config',
+    params: {
+      user: githubLogin,
+      name,
+      owner,
+    },
+    baseURL: BASE_URL,
+  });
+};
+
+export const updateRepoConfig = async (
+  name: string,
+  owner: string,
+  config: GFIRepoConfig
+) => {
+  const [_, __, githubLogin] = userInfo();
+  return await asyncRequest<string>({
+    method: 'PUT',
+    url: '/api/user/queries/config',
+    params: {
+      user: githubLogin,
+      name,
+      owner,
+    },
+    data: {
+      newcomer_threshold: config.newcomer_threshold,
+      gfi_threshold: config.gfi_threshold,
+      need_comment: config.need_comment,
+      issue_tag: config.issue_tag,
     },
     baseURL: BASE_URL,
   });

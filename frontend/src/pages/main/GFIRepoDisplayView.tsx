@@ -54,6 +54,7 @@ export interface GFIRepoDisplayView extends GFIRepoBasicProp {
   tags?: string[];
   panels?: ReactElement[];
   style?: any;
+  className?: string;
 }
 
 const RepoDisplayOverlayIDContext = createContext<string>({} as any);
@@ -75,8 +76,7 @@ const useOverlayID = () => {
 
 export const GFIRepoDisplayView = forwardRef(
   (props: GFIRepoDisplayView, ref: ForwardedRef<HTMLDivElement>) => {
-    const { repoInfo, tags, panels, style } = props;
-
+    const { repoInfo, tags, panels, style, className } = props;
     const [selectedTag, setSelectedTag] = useState<number>(0);
     const [selectedTagList, setSelectedTagList] = useState<boolean[]>();
 
@@ -192,7 +192,7 @@ export const GFIRepoDisplayView = forwardRef(
     return (
       <div className="repo-display-view-container" ref={ref}>
         {renderOverlay()}
-        <div style={style} className="flex-col repo-display">
+        <div style={style} className={`flex-col repo-display ${className}`}>
           <div className="flex-row repo-display-info-nav">{Tags()}</div>
           <Row>
             <Col>
@@ -240,14 +240,15 @@ function PanelTag(props: {
 
 export interface GFIIssueMonitor extends GFIRepoBasicProp {
   trainingSummary?: GFITrainingSummary;
+  paging?: number;
 }
 
 export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
-  const { repoInfo, trainingSummary } = props;
+  const { repoInfo, trainingSummary, paging } = props;
   const [displayIssueList, setDisplayIssueList] = useState<
     GFIInfo[] | undefined
   >();
-  const maxPageItems = 6;
+  const maxPageItems = paging || 6;
   const [shouldDisplayPagination, setShouldDisplayPagination] = useState(false);
   const [currentPageIdx, setCurrentPageIdx] = useState(1);
   const [pageInput, setPageInput] = useState<string>();
@@ -554,11 +555,13 @@ function IssueOverlayItem(props: IssueOverlayItem) {
 
 export interface GFIRepoStaticsDemonstrator extends GFIRepoBasicProp {
   trainingSummary?: GFITrainingSummary;
+  paging?: boolean;
 }
 
 export const GFIRepoStaticsDemonstrator = forwardRef(
   (props: GFIRepoStaticsDemonstrator, ref) => {
-    const { repoInfo, trainingSummary } = props;
+    const { repoInfo, trainingSummary, paging } = props;
+    const usePaging = !(paging === false && paging !== undefined);
     const [displayInfo, setDisplayInfo] = useState<GetRepoDetailedInfo>();
     const simpleTrainDataProps: SimpleTrainInfoTagProp[] | [] = trainingSummary
       ? [
@@ -634,7 +637,11 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
           availableIdx += 1;
           return (
             <div
-              style={availableIdx === selectedIdx ? {} : { display: 'none' }}
+              style={
+                availableIdx === selectedIdx || !usePaging
+                  ? {}
+                  : { display: 'none' }
+              }
             >
               <RepoGraphContainer
                 title={dataTitle[idx]}
@@ -658,17 +665,19 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
         )}
         <div className="issue-demo-container">
           {RenderGraphs()}
-          <div className="flex-row page-footer-container">
-            {displayData && Object.keys(displayData).length && (
-              <GFISimplePagination
-                nums={Object.keys(displayData).length}
-                onClick={(idx) => {
-                  setSelectedIdx(idx);
-                }}
-                title={title}
-              />
-            )}
-          </div>
+          {usePaging && (
+            <div className="flex-row page-footer-container">
+              {displayData && Object.keys(displayData).length && (
+                <GFISimplePagination
+                  nums={Object.keys(displayData).length}
+                  onClick={(idx) => {
+                    setSelectedIdx(idx);
+                  }}
+                  title={title}
+                />
+              )}
+            </div>
+          )}
         </div>
       </>
     );

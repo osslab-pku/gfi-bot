@@ -472,6 +472,7 @@ def update_gfi_repo_add_query(owner: str, name: str) -> None:
     GfiQueries.objects(Q(owner=owner) & Q(name=name)).update_one(
         set__is_pending=False,
         set__is_finished=True,
+        set__is_updating=False,
         set___finished_at=datetime.now(timezone.utc),
     )
 
@@ -503,7 +504,9 @@ def update_repo(
 
     fetcher = RepoFetcher(token, owner, name)
 
+    logger.info("Fetching repo %s/%s", owner, name)
     repo = _update_repo_info(fetcher)
+
     if repo.updated_at is None:
         since = repo.repo_created_at
     else:
@@ -531,6 +534,8 @@ def update_repo(
     log.rate_resolved_issue = fetcher.rate_consumed - log.rate_repo_stat
     log.save()
 
+    update_gfi_repo_add_query(owner, name)
+
     open_issue_nums = [
         i["number"] for i in issues if i["state"] == "open" and not i["is_pull"]
     ]
@@ -544,10 +549,10 @@ def update_repo(
 
     update_gfi_repo_add_query(owner, name)
 
-    users = _find_users(owner, name, commits, issues, open_issues, resolved_issues)
-    for user in users:
+    all_users = _find_users(owner, name, commits, issues, open_issues, resolved_issues)
+    for user in all_users:
         update_user(token, user)
-    log.updated_users = len(users)
+    log.updated_users = len(all_users)
     log.rate_user = 0  # TODO: fix this
     log.rate = log.rate + log.rate_user
     log.update_end = datetime.now(timezone.utc)
@@ -563,7 +568,7 @@ def main():
         rest_logger.setLevel(logging.DEBUG)
 
     # run check_tokens before update
-    failed_tokens = check_tokens()
+    failed_tokens = check_tokens(TOKENS)
     valid_tokens = list(set(TOKENS) - failed_tokens)
 
     logger.info("Data update started at {}".format(datetime.now()))

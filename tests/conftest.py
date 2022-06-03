@@ -4,7 +4,7 @@ import mongoengine
 import mongoengine.context_managers
 
 from datetime import datetime, timezone
-from gfibot import CONFIG
+from gfibot import CONFIG, TOKENS
 from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
 from gfibot.data.dataset import *
@@ -14,7 +14,7 @@ from gfibot.data.dataset import *
 def execute_before_any_test():
     logging.basicConfig(level=logging.DEBUG)
 
-    check_tokens()
+    check_tokens(TOKENS)
 
     # Ensure that the production database is not touched in all tests
     CONFIG["mongodb"]["db"] = "gfibot-test"

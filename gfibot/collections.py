@@ -50,7 +50,6 @@ class Prediction(Document):
     """
     The GFI prediction result for an open issue.
     This collection will be updated periodically and used by backend and bot for GFI recommendation.
-
     Attributes:
         owner, name, number: uniquely identifies a GitHub issue.
         threshold: the number of in-repository commits that disqualify one as a newcomer,
@@ -66,6 +65,10 @@ class Prediction(Document):
     threshold: int = IntField(required=True, min_value=1, max_value=5)
     probability: float = FloatField(required=True)
     last_updated: datetime = DateTimeField(required=True)
+
+    tagged: bool = BooleanField(default=False)
+    commented: bool = BooleanField(default=False)
+
     meta = {
         "indexes": [
             {"fields": ["owner", "name", "number", "threshold"], "unique": True},
@@ -78,7 +81,6 @@ class TrainingSummary(Document):
     """
     Describes model training result for a specific repository and threshold.
     This collection will be used to communicate the effectiveness of our model to users.
-
     Attributes:
         owner, name, threshold: uniquely identifies a GitHub repository and a training setting.
             If owner="", name="", then this is a global summary result.
@@ -113,18 +115,14 @@ class Dataset(Document):
     """
     The final dataset involved for RecGFI training
     All attributes are restored at a given time
-
     Attributes:
         owner, name, number: uniquely identifies a GitHub issue
         created_at: The time when the issue is created
         closed_at: The time when the issue is closed
         before: The time when all features in this document is computed
-
         resolver_commit_num: Issue resolver's commits to this repo, before the issue is resolved
                                 if -1, means that the issue is still open
-
         ---------- Content ----------
-
         title: Issue title
         body: Issue description
         len_title: Length of issue title
@@ -137,12 +135,9 @@ class Dataset(Document):
         flesch_kincaid_grade: Readability index
         automated_readability_index: Readability index
         labels: The number of different labels
-
         ---------- Background ----------
-
         reporter_feat: Features for issue reporter
         owner_feat: Features for repository owner
-
         prev_resolver_commits: A list of the commits made by resolver for all previously resolved issues
         n_stars: Number of stars
         n_pulls: Number of pull requests
@@ -152,9 +147,7 @@ class Dataset(Document):
         n_open_issues: Number of open issues
         r_open_issues: Ratio of open issues over all issues
         issue_close_time: Median issue close time (in seconds)
-
         ---------- Dynamics ----------
-
         comments: All issue comments
         events: All issue events, excluding comments
         comment_users: Features for all involved commenters
@@ -183,7 +176,6 @@ class Dataset(Document):
 
     class UserFeature(EmbeddedDocument):
         """User features in a dataset
-
         Attributes:
             name: GitHub username
             n_commits: Number of commits the user made to this repository
@@ -326,19 +318,16 @@ class OpenIssue(Document):
 class Repo(Document):
     """
     Repository statistics for both RecGFI training and web app.
-
     Attributes:
         created_at: The time when the repository was created in database
         updated_at: The time when the repository was last updated in database
         repo_created_at: The time when this repository is created in GitHub
         owner, name: Uniquely identifies a GitHub repository
-
         topics: A list of topics associated with the repository
         language: Main programming language (as returned by GitHub), can be None
         languages: All programming languages and their lines of code
         description: Repository description
         readme: Repostiory README content
-
         median_issue_close_time: The median time it takes to close an issue (in seconds)
         monthly_stars, monthly_commits, monthly_issues, monthly_pulls:
             Four time series describing number of new stars, commits, issues, and pulls
@@ -442,7 +431,7 @@ class RepoStar(Document):
 
 
 class User(Document):
-    """User statistics for RecGFI training"""
+    """User statistics for RecGFI training (TODO: This documentation is not finalized yet)"""
 
     class Issue(EmbeddedDocument):
         # repo info
@@ -531,19 +520,31 @@ class GfiUsers(Document):
     """User statictics for GFI-Bot Web App Users"""
 
     github_id: int = IntField(required=True)
-    github_access_token: str = StringField(required=True)
+    github_access_token: str = StringField(required=False)
+    github_app_token: str = StringField(required=False)
     github_login: str = StringField(required=True)
     github_name: str = StringField(required=True)
-    is_github_app_user: bool = BooleanField(required=True)
+
     github_avatar_url: str = StringField(required=False)
     github_url: str = StringField(required=False)
     github_email: str = StringField(required=False)
     twitter_user_name = StringField(required=False)
 
+    class UserQuery(EmbeddedDocument):
+        repo: str = StringField(required=True)
+        owner: str = StringField(required=True)
+        created_at: datetime = DateTimeField(required=True)
+        increment: int = IntField(required=False, min_value=0)
+
+    # repos added by user
+    user_queries: List[UserQuery] = EmbeddedDocumentListField(UserQuery, default=[])
+    # user's searches
+    user_searches: List[UserQuery] = EmbeddedDocumentListField(UserQuery, default=[])
+
     meta = {
         "indexes": [
-            {"fields": ["github_id", "is_github_app_user"], "unique": True},
-            {"fields": ["github_login", "is_github_app_user"], "unique": True},
+            {"fields": ["github_id"], "unique": True},
+            {"fields": ["github_login"], "unique": True},
             {"fields": ["github_email"]},
             {"fields": ["twitter_user_name"]},
         ]
@@ -555,17 +556,53 @@ class GfiQueries(Document):
 
     name: str = StringField(required=True)
     owner: str = StringField(required=True)
-    user_github_login: str = StringField(required=True)
 
     is_pending: bool = BooleanField(required=True)
     is_finished: bool = BooleanField(required=True)
+    is_updating: bool = BooleanField(required=False)
+
+    is_github_app_repo: bool = BooleanField(required=True, default=False)
+    app_user_github_login: str = StringField(required=False)
 
     _created_at: datetime = DateTimeField(required=True)
     _finished_at: datetime = DateTimeField(required=False)
 
+    class GfiUpdateConfig(EmbeddedDocument):
+        task_id: str = StringField(required=True)
+        interval: int = IntField(required=True, default=24 * 3600)
+        begin_time: datetime = DateTimeField(required=False)
+
+    class GfiRepoConfig(EmbeddedDocument):
+        newcomer_threshold: int = IntField(
+            required=True, min_value=0, max_value=5, default=5
+        )
+        gfi_threshold: float = FloatField(
+            required=True, min_value=0.0, max_value=1, default=0.5
+        )
+        need_comment: bool = BooleanField(required=True, default=True)
+        issue_tag: str = StringField(required=True, default="good first issue")
+
+    update_config: GfiUpdateConfig = EmbeddedDocumentField(
+        GfiUpdateConfig, required=True
+    )
+
+    repo_config: GfiRepoConfig = EmbeddedDocumentField(GfiRepoConfig, required=True)
+
     mata = {
         "indexes": [
             {"fields": ["name", "owner"], "unique": True},
-            {"fields": ["user_github_login"]},
+        ]
+    }
+
+
+class GfiEmail(Document):
+    """Emails for GFI-Bot backend"""
+
+    email: str = StringField(required=True)
+    password: str = StringField(required=True)
+
+    meta = {
+        "indexes": [
+            {"fields": ["email"], "unique": True},
         ]
     }

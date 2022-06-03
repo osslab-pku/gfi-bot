@@ -10,6 +10,8 @@ from gfibot.collections import *
 
 logger = logging.getLogger(__name__)
 
+MODEL_ROOT_DIRECTORY = "production/models"
+
 
 def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
     update_set = []
@@ -108,13 +110,17 @@ def update_models(
         model_full_path = None
     model_full = utils.update_model(model_full_path, threshold, update_set, batch_size)
     if model_90 is not None:
-        if 1 - os.path.exists("gfi-bot/model"):
-            os.makedirs("gfi-bot/model")
-        model_90.save_model("gfi-bot/model/model_90_" + str(threshold) + ".model")
+        if 1 - os.path.exists(MODEL_ROOT_DIRECTORY):
+            os.makedirs(MODEL_ROOT_DIRECTORY)
+        model_90.save_model(
+            "{}/model_90_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
+        )
     if model_full is not None:
-        if 1 - os.path.exists("gfi-bot/model"):
-            os.makedirs("gfi-bot/model")
-        model_full.save_model("gfi-bot/model/model_full_" + str(threshold) + ".model")
+        if 1 - os.path.exists(MODEL_ROOT_DIRECTORY):
+            os.makedirs(MODEL_ROOT_DIRECTORY)
+        model_full.save_model(
+            "{}/model_full_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
+        )
     return model_90
 
 
@@ -132,8 +138,12 @@ def update_peformance_training_summary(
         if math.isnan(auc):
             auc = 0.0
 
-        i.model_90_file = "gfi-bot/model/model_90_" + str(threshold) + ".model"
-        i.model_full_file = "gfi-bot/model/model_full_" + str(threshold) + ".model"
+        i.model_90_file = (
+            "{}/model_90_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
+        )
+        i.model_full_file = (
+            "{}/model_full_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
+        )
         i.accuracy = accuracy_score(y_test, y_pred)
         i.auc = auc
         i.last_updated = datetime.now()
@@ -181,32 +191,42 @@ def update_training_summary(
         logger.info("No need to update performance.")
 
 
-def update_prediction(threshold: int):
+def update_prediction_for_issue(i: OpenIssue, threshold: int):
     model_full_path = TrainingSummary.objects(threshold=threshold)[0].model_full_file
     model_full = xgb.Booster()
     model_full.load_model(model_full_path)
+    query = Q(name=i.name, owner=i.owner, number=i.number)
+    iss = Dataset.objects(query)
+    iss = iss.first()
+    issue = utils.get_issue_data(iss, threshold)
+    issue_df = pd.DataFrame(issue, index=[0])
+    y_test = issue_df["is_gfi"]
+    X_test = issue_df.drop(["is_gfi", "owner", "name", "number"], axis=1)
+    xg_test = xgb.DMatrix(X_test, label=y_test)
+    y_prob = model_full.predict(xg_test)
+    # print(xg_test)
+    # print(y_prob)
+    Prediction.objects(
+        Q(owner=iss.owner) & Q(name=iss.name) & Q(number=iss.number)
+    ).upsert_one(
+        owner=iss.owner,
+        name=iss.name,
+        number=iss.number,
+        threshold=threshold,
+        probability=y_prob,
+        last_updated=datetime.now(),
+    )
+
+
+def update_repo_prediction(owner: str, name: str):
+    for threshold in [1, 2, 3, 4, 5]:
+        for i in OpenIssue.objects(Q(owner=owner) & Q(name=name)):
+            update_prediction_for_issue(i, threshold)
+
+
+def update_prediction(threshold: int):
     for i in OpenIssue.objects():
-        query = Q(name=i.name, owner=i.owner, number=i.number)
-        iss = Dataset.objects(query)
-        iss = iss.first()
-        issue = utils.get_issue_data(iss, threshold)
-        issue_df = pd.DataFrame(issue, index=[0])
-        y_test = issue_df["is_gfi"]
-        X_test = issue_df.drop(["is_gfi", "owner", "name", "number"], axis=1)
-        xg_test = xgb.DMatrix(X_test, label=y_test)
-        y_prob = model_full.predict(xg_test)
-        # print(xg_test)
-        # print(y_prob)
-        Prediction.objects(
-            Q(owner=iss.owner) & Q(name=iss.name) & Q(number=iss.number)
-        ).upsert_one(
-            owner=iss.owner,
-            name=iss.name,
-            number=iss.number,
-            threshold=threshold,
-            probability=y_prob,
-            last_updated=datetime.now(),
-        )
+        update_prediction_for_issue(i, threshold)
     logger.info(
         "Get predictions for open issues under threshold " + str(threshold) + "."
     )
