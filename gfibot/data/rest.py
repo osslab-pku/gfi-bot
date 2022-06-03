@@ -72,12 +72,27 @@ class RepoFetcher(object):
         self.repo = request_github(self.gh, lambda: self.gh.get_repo(f"{owner}/{name}"))
         self.owner = self.repo.owner.login
         self.name = self.repo.name
+        self.rate_remaining, self.rate_limit = request_github(
+            self.gh, lambda: self.gh.rate_limiting
+        )
+        self.rate_consumed = 0
 
-    def get_rate_limit(self) -> Tuple[int, int]:
-        return request_github(self.gh, lambda: self.gh.rate_limiting)
+    @property
+    def rate(self) -> Tuple[int, int, int]:
+        return (self.rate_remaining, self.rate_limit, self.rate_consumed)
+
+    def _update_rate_stats(self) -> None:
+        prev = self.rate_remaining
+        self.rate_remaining, self.rate_limit = request_github(
+            self.gh, lambda: self.gh.rate_limiting
+        )
+        if prev >= self.rate_remaining:
+            self.rate_consumed += prev - self.rate_remaining
+        else:
+            self.rate_consumed += prev + self.rate_limit - self.rate_remaining
 
     def get_stats(self) -> dict[str, Any]:
-        return request_github(
+        results = request_github(
             self.gh,
             lambda: {
                 "owner": self.repo.owner.login,
@@ -92,6 +107,8 @@ class RepoFetcher(object):
                 ),
             },
         )
+        self._update_rate_stats()
+        return results
 
     def get_stars(self, since: datetime) -> List[dict[str, Any]]:
         results = []
@@ -115,15 +132,18 @@ class RepoFetcher(object):
                 )
                 if starred_at < since:
                     return results
+        self._update_rate_stats()
         return results
 
     def get_commits_in_month(self, date: datetime) -> dict[str, Any]:
         since, until = get_month_interval(date)
-        return request_github(
+        results = request_github(
             self.gh,
             lambda: self.repo.get_commits(since=since, until=until).totalCount,
             default=0,
         )
+        self._update_rate_stats()
+        return results
 
     def get_commits(self, since: datetime) -> List[dict[str, Any]]:
         results = []
@@ -164,6 +184,7 @@ class RepoFetcher(object):
                         "message": commit.commit.message,
                     }
                 )
+        self._update_rate_stats()
         return results
 
     def get_issues(self, since: datetime) -> List[dict[str, Any]]:
@@ -210,6 +231,7 @@ class RepoFetcher(object):
                         "merged_at": merged_at,
                     }
                 )
+        self._update_rate_stats()
         return results
 
     def get_issue_detail(self, number: int) -> Dict[str, Any]:
@@ -255,6 +277,7 @@ class RepoFetcher(object):
                         **additional_props,
                     }
                 )
+        self._update_rate_stats()
         return {
             "owner": self.owner,
             "name": self.name,
@@ -266,7 +289,7 @@ class RepoFetcher(object):
         pull = request_github(self.gh, self.repo.get_pull, (number,))
         if pull is None:
             raise ValueError(f"pull request #{number} not found")
-        return {
+        results = {
             "owner": self.owner,
             "name": self.name,
             "number": number,
@@ -277,3 +300,5 @@ class RepoFetcher(object):
                 self.gh, lambda: [c.body for c in pull.get_issue_comments()], []
             ),
         }
+        self._update_rate_stats()
+        return results
