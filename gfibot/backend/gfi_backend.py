@@ -1,12 +1,10 @@
 from flask import Flask, redirect, request, abort
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from pandas import Interval
 import requests
+import logging
 
-import pymongo
 import json
-from bson import ObjectId
-from datetime import datetime, date
+from datetime import datetime
 from urllib import parse
 import numpy as np
 
@@ -14,47 +12,30 @@ from typing import Dict, Final
 
 import urllib.parse
 
-import yagmail
-
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime
+from functools import cmp_to_key
 
 from gfibot.collections import *
 from gfibot.data.update import update_repo
+from gfibot.backend.daemon import start_scheduler, update_gfi_update_job
+from gfibot.backend.utils import (
+    delete_repo_from_query,
+    get_repo_stars,
+    get_repo_gfi_num,
+    get_newcomer_resolved_issue_rate,
+    get_repo_info_detailed,
+    generate_repo_update_task_id,
+    executor,
+)
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-
-executor = ThreadPoolExecutor(max_workers=10)
-
-MONGO_URI = "mongodb://mongodb:27017/"
-if app.debug:
-    MONGO_URI = "mongodb://localhost:27017/"
-
-db_client = pymongo.MongoClient(MONGO_URI)
-gfi_db = db_client["gfibot"]
-db_gfi_email: Final = "gmail-email"
 
 WEB_APP_NAME = "gfibot-webapp"
 GITHUB_APP_NAME = "gfibot-githubapp"
 
+logger = logging.getLogger(__name__)
 
-def generate_update_msg(dict: Dict) -> Dict:
-    return {"$set": dict}
-
-
-class JSONEncoder(json.JSONEncoder):
-    """
-    A Modified JSON Encoder
-    Deal with datatypes that can't be encoded by default
-    """
-
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return str(o)
-        elif isinstance(o, (datetime, date)):
-            return o.isoformat()
-        return json.JSONEncoder.default(self, o)
+daemon_scheduler = start_scheduler()
 
 
 @app.route("/api/repos/num")
@@ -71,27 +52,24 @@ def get_repo_num():
     return {"code": 200, "result": res}
 
 
-def get_repo_info_from_engine(repo):
-    def get_month_count(mounth_counts):
-        return [
-            {
-                "month": item.month,
-                "count": item.count,
-            }
-            for item in mounth_counts
-        ]
-
-    return {
-        "name": repo.name,
-        "owner": repo.owner,
-        "description": repo.description,
-        "language": repo.language,
-        "topics": repo.topics,
-        "monthly_stars": get_month_count(repo.monthly_stars),
-        "monthly_commits": get_month_count(repo.monthly_commits),
-        "monthly_issues": get_month_count(repo.monthly_issues),
-        "monthly_pulls": get_month_count(repo.monthly_pulls),
-    }
+@app.route("/api/repos/info")
+def get_repo_info():
+    repo_name = request.args.get("name")
+    repo_owner = request.args.get("owner")
+    if repo_name != None and repo_owner != None:
+        repos = Repo.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+        return {
+            "code": 200,
+            "result": {
+                "name": repos.name,
+                "owner": repos.owner,
+                "description": repos.description,
+                "language": repos.language,
+                "topics": repos.topics,
+            },
+        }
+    else:
+        return {"code": 400, "result": "invalid params"}
 
 
 @app.route("/api/repos/info/detail")
@@ -99,17 +77,69 @@ def get_repo_detailed_info():
     """Get repo info by name/owner"""
     repo_name = request.args.get("name")
     repo_owner = request.args.get("owner")
-    repos = Repo.objects(Q(name=repo_name) & Q(owner=repo_owner))
-    if len(repos):
-        repo = repos[0]
-        return {"code": 200, "result": get_repo_info_from_engine(repo)}
+    repo = Repo.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+    if repo:
+        return {"code": 200, "result": get_repo_info_detailed(repo)}
     return {"code": 404, "result": "repo not found"}
 
 
-REPO_FILTER_TYPES = ["None", "Popularity", "Activity", "Recommended", "Time"]
+REPO_FILTER_TYPES = [
+    "popularity",
+    "median_issue_resolve_time",
+    "newcomer_friendly",
+    "gfis",
+]
 
 
-@app.route("/api/repos/info/paged")
+def repo_stars_comp(repo_x, repo_y):
+    delta = get_repo_stars(repo_x.owner, repo_x.name) - get_repo_stars(
+        repo_y.owner, repo_y.name
+    )
+    if delta < 0:
+        return 1
+    elif delta > 0:
+        return -1
+    return 0
+
+
+def repo_issue_close_time_comp(repo_x: Repo, repo_y: Repo):
+    median_close_time_x = repo_x.median_issue_close_time
+    if repo_x.median_issue_close_time == None:
+        median_close_time_x = float("inf")
+    median_close_time_y = repo_y.median_issue_close_time
+    if repo_y.median_issue_close_time == None:
+        median_close_time_y = float("inf")
+    delta = median_close_time_x - median_close_time_y
+    if delta < 0:
+        return -1
+    elif delta > 0:
+        return 1
+    return repo_stars_comp(repo_x, repo_y)
+
+
+def repo_gfi_num_camp(repo_x, repo_y):
+    gfi_num_x = get_repo_gfi_num(repo_x.owner, repo_x.name)
+    gfi_num_y = get_repo_gfi_num(repo_y.owner, repo_y.name)
+    delta = gfi_num_x - gfi_num_y
+    if delta < 0:
+        return 1
+    elif delta > 0:
+        return -1
+    return repo_stars_comp(repo_x, repo_y)
+
+
+def repo_newcomer_resolved_camp(repo_x, repo_y):
+    new_comer_res_x = get_newcomer_resolved_issue_rate(repo_x.owner, repo_x.name)
+    new_comer_res_y = get_newcomer_resolved_issue_rate(repo_y.owner, repo_y.name)
+    delta = new_comer_res_x - new_comer_res_y
+    if delta < 0:
+        return 1
+    elif delta > 0:
+        return -1
+    return repo_stars_comp(repo_x, repo_y)
+
+
+@app.route("/api/repos/info/")
 def get_paged_repo_detailed_info():
     start_idx = request.args.get("start")
     req_size = request.args.get("length")
@@ -122,11 +152,23 @@ def get_paged_repo_detailed_info():
         repos_query = []
         count = 0
         if lang != None and lang != "":
-            repos_query = Repo.objects(language=lang).order_by("name")
+            repos_query = [
+                repo for repo in Repo.objects(language=lang).order_by("name")
+            ]
             count = len(repos_query)
         else:
-            repos_query = Repo.objects().order_by("name")
+            repos_query = [repo for repo in Repo.objects().order_by("name")]
             count = len(repos_query)
+
+        if filter != None and filter in REPO_FILTER_TYPES:
+            if filter == "popularity":
+                repos_query.sort(key=cmp_to_key(repo_stars_comp))
+            elif filter == "median_issue_resolve_time":
+                repos_query.sort(key=cmp_to_key(repo_issue_close_time_comp))
+            elif filter == "newcomer_friendly":
+                repos_query.sort(key=cmp_to_key(repo_newcomer_resolved_camp))
+            elif filter == "gfis":
+                repos_query.sort(key=cmp_to_key(repo_gfi_num_camp))
 
         start_idx = max(0, start_idx)
         req_size = min(req_size, count)
@@ -134,7 +176,7 @@ def get_paged_repo_detailed_info():
         if start_idx < count:
             for i, repo in enumerate(repos_query):
                 if i >= start_idx and i - start_idx < req_size:
-                    res.append(get_repo_info_from_engine(repo))
+                    res.append(get_repo_info_detailed(repo))
         return {
             "code": 200,
             "result": res,
@@ -146,7 +188,9 @@ def get_paged_repo_detailed_info():
 @app.route("/api/repos/info/search")
 def search_repo_info_by_name_or_url():
     repo_name = request.args.get("repo")
-    repo_url = parse.unquote(request.args.get("url"))
+    repo_url = request.args.get("url")
+    if repo_url:
+        repo_url = parse.unquote(repo_url)
     app.logger.info(repo_url)
     user_name = request.args.get("user")
 
@@ -162,8 +206,24 @@ def search_repo_info_by_name_or_url():
     if repo_name:
         repos_query = Repo.objects(name=repo_name)
         if len(repos_query) > 0:
-            repo = repos_query[0]
-            return {"code": 200, "result": get_repo_info_from_engine(repo)}
+            if user_name:
+                user = GfiUsers.objects(github_login=user_name).first()
+                if user:
+                    [
+                        user.update(
+                            push__user_searches={
+                                "repo": repo.name,
+                                "owner": repo.owner,
+                                "created_at": datetime.utcnow(),
+                                "increment": len(user.user_searches) + 1,
+                            }
+                        )
+                        for repo in repos_query
+                    ]
+            return {
+                "code": 200,
+                "result": [get_repo_info_detailed(repo) for repo in repos_query],
+            }
         elif repo_url == "":
             return {"code": 404, "result": "Repo not found"}
 
@@ -192,28 +252,45 @@ def add_repo_to_bot():
                 )
             )
             if len(GfiUsers.objects(github_login=user_name)):
+                user = GfiUsers.objects(github_login=user_name).first()
                 repo_info = {
                     "name": repo_name,
                     "owner": repo_owner,
                 }
                 queries = [
                     {
-                        "name": query.name,
+                        "name": query.repo,
                         "owner": query.owner,
                     }
-                    for query in GfiQueries.objects()
+                    for query in user.user_queries
                 ]
-                if repo_info not in queries:
-                    new_query = GfiQueries(
+
+                if len(GfiQueries.objects(**repo_info)) == 0:
+                    GfiQueries(
                         name=repo_name,
                         owner=repo_owner,
-                        user_github_login=user_name,
                         is_pending=True,
                         is_finished=False,
                         _created_at=datetime.utcnow(),
-                    )
-                    new_query.save()
+                        is_github_app_repo=False,
+                        repo_config=GfiQueries.GfiRepoConfig(),
+                        update_config=GfiQueries.GfiUpdateConfig(
+                            task_id=generate_repo_update_task_id(
+                                owner=repo_owner, name=repo_name
+                            ),
+                        ),
+                    ).save()
                     executor.submit(update_repo, user_token, repo_owner, repo_name)
+
+                if repo_info not in queries:
+                    user.update(
+                        push__user_queries={
+                            "repo": repo_name,
+                            "owner": repo_owner,
+                            "increment": len(user.user_queries) + 1,
+                            "created_at": datetime.utcnow(),
+                        }
+                    )
                     return {"code": 200, "result": "is being processed by GFI-Bot"}
                 else:
                     return {"code": 200, "result": "already exists"}
@@ -229,13 +306,75 @@ def get_recommend_repo():
     """
     repos = Repo.objects()
     res = np.random.choice(repos, size=1).tolist()[0]
-    return {"code": 200, "result": get_repo_info_from_engine(res)}
+    return {"code": 200, "result": get_repo_info_detailed(res)}
 
 
 @app.route("/api/repos/language")
 def get_deduped_repo_languages():
-    languages = Repo.objects().distinct(field="language")
-    return {"code": 200, "result": languages}
+    languages = list(
+        filter(
+            lambda l: l != None,
+            [lang for lang in Repo.objects().distinct(field="language")],
+        )
+    )
+    return {"code": 200, "result": list(languages)}
+
+
+@app.route("/api/repos/update/config")
+def get_repo_query_config():
+    repo_name = request.args.get("name")
+    repo_owner = request.args.get("owner")
+    if repo_name != None and repo_owner != None:
+        repo_query = GfiQueries.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+        if repo_query:
+            return {
+                "code": 200,
+                "result": {
+                    "update_config": repo_query.update_config,
+                    "repo_config": repo_query.repo_config,
+                },
+            }
+        else:
+            return {
+                "code": 404,
+                "result": "repo not found",
+            }
+    abort(400)
+
+
+@app.route("/api/repos/update/", methods=["PUT"])
+def update_repo_info():
+    body = request.get_json()
+    name = body["name"]
+    owner = body["owner"]
+    github_login = body["github_login"]
+    user = GfiUsers.objects(github_login=github_login).first()
+    if name != None and owner != None and user != None:
+        query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+        if query != None and query.is_updating != True:
+            query.update(
+                is_updating=True,
+                is_finished=False,
+            )
+            update_config = query.update_config
+            if update_config != None:
+                task_id = update_config.task_id
+                interval = update_config.interval
+            else:
+                task_id = generate_repo_update_task_id(owner, name)
+                interval = 24 * 3600
+                query.update(
+                    update_config={
+                        "task_id": task_id,
+                        "interval": interval,
+                    }
+                )
+            update_repository_gfi_info(task_id=task_id, repo=name, owner=owner)
+            return {"code": 200, "result": "query updating"}
+        else:
+            return {"code": 404, "result": "repo not found"}
+    else:
+        abort(400)
 
 
 GITHUB_LOGIN_URL: Final = "https://github.com/login/oauth/authorize"
@@ -270,8 +409,12 @@ def get_gfi_info():
     repo_owner = request.args.get("owner")
     app.logger.info
     if repo_name != None and repo_owner != None:
+        gfi_query = GfiQueries.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+        threshold = 0.5
+        if gfi_query != None and gfi_query.repo_config != None:
+            threshold = gfi_query.repo_config.gfi_threshold
         gfi_list = Prediction.objects(
-            Q(name=repo_name) & Q(owner=repo_owner) & Q(probability__gte=0.5)
+            Q(name=repo_name) & Q(owner=repo_owner) & Q(probability__gte=threshold)
         ).order_by("-probability")
         res = get_predicted_info_from_engine(gfi_list)
         if len(gfi_list):
@@ -350,20 +493,28 @@ def github_login_redirect(name: str, code: str):
                 )
                 if r.status_code == 200:
                     user_res = json.loads(r.text)
-                    GfiUsers.objects(
-                        Q(is_github_app_user=is_github_app)
-                        & Q(github_id=user_res["id"])
-                    ).upsert_one(
-                        github_id=user_res["id"],
-                        github_login=user_res["login"],
-                        is_github_app_user=is_github_app,
-                        github_name=user_res["name"],
-                        github_avatar_url=user_res["avatar_url"],
-                        github_access_token=access_token,
-                        github_email=user_res["email"],
-                        github_url=user_res["url"],
-                        twitter_user_name=user_res["twitter_username"],
-                    )
+                    if not is_github_app:
+                        GfiUsers.objects(github_id=user_res["id"]).upsert_one(
+                            github_id=user_res["id"],
+                            github_login=user_res["login"],
+                            github_name=user_res["name"],
+                            github_avatar_url=user_res["avatar_url"],
+                            github_access_token=access_token,
+                            github_email=user_res["email"],
+                            github_url=user_res["url"],
+                            twitter_user_name=user_res["twitter_username"],
+                        )
+                    else:
+                        GfiUsers.objects(github_id=user_res["id"]).upsert_one(
+                            github_id=user_res["id"],
+                            github_login=user_res["login"],
+                            github_name=user_res["name"],
+                            github_avatar_url=user_res["avatar_url"],
+                            github_app_token=access_token,
+                            github_email=user_res["email"],
+                            github_url=user_res["url"],
+                            twitter_user_name=user_res["twitter_username"],
+                        )
                     return redirect(
                         "/login/redirect?github_login={}&github_name={}&github_id={}&github_token={}&github_avatar_url={}".format(
                             user_res["login"],
@@ -444,14 +595,15 @@ def github_login_redirect_web():
     return github_login_redirect(name=WEB_APP_NAME, code=code)
 
 
-@app.route("/api/user/queries")
+@app.route("/api/user/queries", methods=["GET", "DELETE"])
 def get_user_queries():
+    method = request.method
+
     def get_user_query(queries):
         return [
             {
                 "name": query.name,
                 "owner": query.owner,
-                "user_github_login": query.user_github_login,
                 "is_pending": query.is_pending,
                 "is_finished": query.is_finished,
                 "created_at": query._created_at,
@@ -460,30 +612,252 @@ def get_user_queries():
             for query in queries
         ]
 
+    def query_median_issue_resolve_time_comp(query_x, query_y):
+        repo_x = Repo.objects(name=query_x.name, owner=query_x.owner).first()
+        repo_y = Repo.objects(name=query_y.name, owner=query_y.owner).first()
+        return repo_issue_close_time_comp(repo_x, repo_y)
+
     user_name = request.args.get("user")
     if user_name != None:
-        queries = GfiQueries.objects(user_github_login=user_name)
-        pending_queries = list(
-            filter(lambda query: query.is_pending, [q for q in queries])
-        )
-        finished_queries = list(
-            filter(lambda query: query.is_finished, [q for q in queries])
-        )
-        return {
-            "code": 200,
-            "result": {
-                "nums": len(pending_queries) + len(finished_queries),
-                "queries": get_user_query(pending_queries),
-                "finished_queries": get_user_query(finished_queries),
-            },
-        }
+        if method == "GET":
+            user_queries = GfiUsers.objects(github_login=user_name).first().user_queries
+            actual_queries = []
+            query_filter = request.args.get("filter")
+            for query in user_queries:
+                actual_query = GfiQueries.objects(
+                    Q(name=query.repo) & Q(owner=query.owner)
+                ).first()
+                if actual_query:
+                    actual_queries.append(actual_query)
+            pending_queries = list(
+                filter(lambda query: query.is_pending, [q for q in actual_queries])
+            )
+            finished_queries = list(
+                filter(lambda query: query.is_finished, [q for q in actual_queries])
+            )
+            if query_filter != None and query_filter in REPO_FILTER_TYPES:
+                if query_filter == "popularity":
+                    finished_queries.sort(key=cmp_to_key(repo_stars_comp))
+                elif query_filter == "median_issue_resolve_time":
+                    finished_queries.sort(
+                        key=cmp_to_key(query_median_issue_resolve_time_comp)
+                    )
+                elif query_filter == "newcomer_friendly":
+                    finished_queries.sort(key=cmp_to_key(repo_newcomer_resolved_camp))
+                elif query_filter == "gfis":
+                    finished_queries.sort(key=cmp_to_key(repo_gfi_num_camp))
+
+            return {
+                "code": 200,
+                "result": {
+                    "nums": len(pending_queries) + len(finished_queries),
+                    "queries": get_user_query(pending_queries),
+                    "finished_queries": get_user_query(finished_queries),
+                },
+            }
+        elif method == "DELETE":
+            name = request.args.get("name")
+            owner = request.args.get("owner")
+            user_queries = GfiUsers.objects(github_login=user_name).first().user_queries
+            if name != None and owner != None:
+                for query in user_queries:
+                    if query.repo == name and query.owner == owner:
+                        user_queries.remove(query)
+                        GfiUsers.objects(github_login=user_name).update(
+                            user_queries=user_queries
+                        )
+                        return {"code": 200, "result": "success"}
+                return {"code": 200, "result": "delete query successfully"}
+            else:
+                return {"code": 400, "result": "no query name or owner provided"}
     return {"code": 404, "result": "user not found"}
+
+
+@app.route("/api/user/queries/config", methods=["GET", "PUT"])
+def user_queries_config():
+    method = request.method
+    user_login = request.args.get("user")
+    name = request.args.get("name")
+    owner = request.args.get("owner")
+    if user_login != None and name != None and owner != None:
+        user = GfiUsers.objects(github_login=user_login).first()
+        repo_info = {
+            "name": name,
+            "owner": owner,
+        }
+        user_queries = [
+            {"name": query.repo, "owner": query.owner} for query in user.user_queries
+        ]
+        if repo_info in user_queries:
+            repo_query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+        if method == "GET":
+            if repo_query != None:
+                return {
+                    "code": 200,
+                    "result": {
+                        "newcomer_threshold": repo_query.repo_config.newcomer_threshold,
+                        "gfi_threshold": repo_query.repo_config.gfi_threshold,
+                        "need_comment": repo_query.repo_config.need_comment,
+                        "issue_tag": repo_query.repo_config.issue_tag,
+                    },
+                }
+            else:
+                return {"code": 404, "result": "no query found"}
+        elif method == "PUT":
+            req_body = request.get_json()
+            if req_body != None:
+                newcomer_threshold = req_body["newcomer_threshold"]
+                gfi_threshold = req_body["gfi_threshold"]
+                need_comment = req_body["need_comment"]
+                issue_tag = req_body["issue_tag"]
+                if (
+                    newcomer_threshold != None
+                    and gfi_threshold != None
+                    and need_comment != None
+                    and issue_tag != None
+                ):
+                    """replace repo_query.repo_config with new config"""
+                    repo_query.repo_config = GfiQueries.GfiRepoConfig(
+                        newcomer_threshold=newcomer_threshold,
+                        gfi_threshold=gfi_threshold,
+                        need_comment=need_comment,
+                        issue_tag=issue_tag,
+                    )
+                    repo_query.save()
+                    return {"code": 200, "result": "success"}
+                return {"code": 400, "result": "invalid config"}
+            return {"code": 400, "result": "no config provided"}
+    else:
+        return {"code": 404, "result": "user not found"}
+
+
+@app.route("/api/user/searches", methods=["GET", "DELETE"])
+def get_user_searches():
+    method = request.method
+    github_login = request.args.get("user")
+    user_searches = GfiUsers.objects(github_login=github_login).first().user_searches
+
+    def get_search_result(searches):
+        return [
+            {
+                "name": search.repo,
+                "owner": search.owner,
+                "created_at": search.created_at,
+                "increment": search.increment,
+            }
+            for search in searches
+        ]
+
+    if user_searches != None:
+        if method == "GET":
+            return {"code": 200, "result": get_search_result(user_searches)}
+        elif method == "DELETE":
+            id = request.args.get("id")
+            if id != None:
+                """delete user search with increment = id"""
+                GfiUsers.objects(github_login=github_login).update_one(
+                    pull__user_searches__increment=int(id)
+                )
+                user_searches = (
+                    GfiUsers.objects(github_login=github_login).first().user_searches
+                )
+                return {"code": 200, "result": get_search_result(user_searches)}
+            else:
+                return {"code": 404, "result": "id not found"}
+    else:
+        return {"code": 404, "result": "user not found"}
 
 
 @app.route("/api/github/app/installation")
 def github_app_install():
     code = request.args.get("code")
     return github_login_redirect(name=GITHUB_APP_NAME, code=code)
+
+
+def update_repos(repo_info):
+    for repo in repo_info:
+        name = repo["name"]
+        owner = repo["owner"]
+        task_id = generate_repo_update_task_id(owner, name)
+        update_repository_gfi_info(task_id, owner=owner, repo=name)
+
+
+def update_repository_gfi_info(task_id: str, owner: str, repo: str):
+    update_gfi_update_job(daemon_scheduler, task_id, repo, owner)
+
+
+def get_owner_and_name_form_github_request(repository: Dict):
+    repo_full_name = repository["full_name"]
+    repo_name = repository["name"]
+    last_idx = repo_full_name.rfind("/")
+    owner = repo_full_name[:last_idx]
+    return owner, repo_name
+
+
+def add_repo_from_github_app(user_collection, repositories):
+    repo_info = []
+    for repo in repositories:
+        owner, repo_name = get_owner_and_name_form_github_request(repo)
+        repo_info.append(
+            {
+                "name": repo_name,
+                "owner": owner,
+            }
+        )
+
+        queries = [[q.repo, q.owner] for q in user_collection.user_queries]
+        if [repo_name, owner] not in queries:
+            user_collection.update(
+                push__user_queries={
+                    "repo": repo_name,
+                    "owner": owner,
+                    "created_at": datetime.utcnow(),
+                }
+            )
+
+        if len(GfiQueries.objects(Q(name=repo_name) & Q(owner=owner))) == 0:
+            GfiQueries(
+                name=repo_name,
+                owner=owner,
+                is_pending=True,
+                is_finished=False,
+                is_updating=False,
+                is_github_app_repo=True,
+                app_user_github_login=user_collection.github_login,
+                _created_at=datetime.utcnow(),
+                repo_config=GfiQueries.GfiRepoConfig(),
+                update_config=GfiQueries.GfiUpdateConfig(
+                    task_id=generate_repo_update_task_id(owner, repo_name),
+                    interval=24 * 3600,
+                ),
+            ).save()
+        else:
+            logger.info(f"update new query {repo_name}/{owner}")
+            GfiQueries.objects(Q(name=repo_name) & Q(owner=owner)).update(
+                is_github_app_repo=True,
+                app_user_github_login=user_collection.github_login,
+                is_updating=False,
+            )
+            if (
+                not GfiQueries.objects(Q(name=repo_name) & Q(owner=owner))
+                .first()
+                .update_config
+            ):
+                GfiQueries.objects(Q(name=repo_name) & Q(owner=owner)).update(
+                    update_config=GfiQueries.GfiUpdateConfig(
+                        task_id=generate_repo_update_task_id(owner, repo_name),
+                        interval=24 * 3600,
+                    )
+                )
+    user_token = user_collection.github_app_token
+    if user_token:
+        update_repos(repo_info)
+
+
+def delete_repo_from_github_app(repositories):
+    for repo in repositories:
+        owner, repo_name = get_owner_and_name_form_github_request(repo)
+        delete_repo_from_query(owner, repo_name)
 
 
 @app.route("/api/github/actions/webhook", methods=["POST"])
@@ -493,59 +867,65 @@ def github_app_webhook_process():
     """
     event = request.headers.get("X-Github-Event")
     data = request.get_json()
-    if event == "installation":
-        action = data["action"]
-        if action == "created":
-            None
-        elif action == "deleted":
-            None
-    elif event == "issues":
-        action = data["action"]
-    elif event == "issue_comment":
-        None
 
-    return {"code": 200, "result": "callback succeed for event {}".format(event)}
+    sender_id = data["sender"]["id"]
+    user_collection = GfiUsers.objects(github_id=sender_id).first()
+
+    if user_collection:
+        if event == "installation":
+            action = data["action"]
+            if action == "created":
+                repositories = data["repositories"]
+                add_repo_from_github_app(user_collection, repositories)
+            elif action == "deleted":
+                repositories = data["repositories"]
+                delete_repo_from_github_app(repositories)
+            elif action == "suspend":
+                repositories = data["repositories"]
+                delete_repo_from_github_app(repositories)
+            elif action == "unsuspend":
+                add_repo_from_github_app(user_collection, repositories)
+        elif event == "installation_repositories":
+            action = data["action"]
+            if action == "added":
+                repositories = data["repositories_added"]
+                add_repo_from_github_app(user_collection, repositories)
+            elif action == "removed":
+                repositories = data["repositories_removed"]
+                delete_repo_from_github_app(repositories)
+        elif event == "issues":
+            action = data["action"]
+        return {"code": 200, "result": "callback succeed for event {}".format(event)}
+    else:
+        return {"code": 404, "result": "user not found"}
 
 
-def send_email(user_github_id, subject, body):
+@app.route("/api/repo/badge")
+def get_repo_badge():
     """
-    Send email to user
+    Generate GitHub README badge for certain repository
     """
-
-    app.logger.info("send email to user {}".format(user_github_id))
-
-    user_email = GfiUsers.objects(github_id=user_github_id).first().github_email
-
-    email = gfi_db.get_collection(db_gfi_email).find_one({})["email"]
-    password = gfi_db.get_collection(db_gfi_email).find_one({})["password"]
-
-    app.logger.info("Sending email to {} using {}".format(user_email, email))
-
-    if user_email != None:
-        yag = yagmail.SMTP(email, password)
-        yag.send(user_email, subject, body)
-        yag.close()
-
-
-# using websocket to handle user query
-
-
-@socketio.on("connect", namespace="/gfi_process")
-def connect_gfi_process():
-    """
-    Process socketio connection
-    """
-    app.logger.info("gfi_process connected")
-    emit("socket_connected", {"data": "Connected"})
-
-
-@socketio.on("disconnect", namespace="/gfi_process")
-def disconnect_gfi_process():
-    """
-    Process socketio disconnection
-    """
-    app.logger.info("gfi_process disconnected")
-
-
-if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    owner = request.args.get("owner")
+    name = request.args.get("name")
+    if owner != None and name != None:
+        query = Repo.objects(Q(name=name) & Q(owner=owner))
+        threshold = 0.5
+        repo_config = (
+            GfiQueries.objects(Q(name=name) & Q(owner=owner)).first().repo_config
+        )
+        if repo_config.gfi_threshold:
+            threshold = repo_config.gfi_threshold
+        if len(query):
+            gfi_num = Prediction.objects(
+                Q(name=name) & Q(owner=owner) & Q(probability__gte=threshold)
+            ).count()
+            print(gfi_num)
+            img_src = "https://img.shields.io/badge/{}-{}".format(
+                "Using - GFIBot", "success"
+            )
+            svg = requests.get(img_src).content
+            return app.response_class(svg, mimetype="image/svg+xml")
+        else:
+            abort(404)
+    else:
+        abort(400)

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { KeyMap } from '../module/data/dataModel';
 
-type HTTPMethods = 'GET' | 'POST';
+type HTTPMethods = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
 type ErrorFunc = null | ((error: Error) => void);
 
 type RequestParams = {
@@ -18,9 +18,9 @@ type RequestParams = {
 // import base url form env, can be undefined
 export const BASE_URL: string | undefined = process.env.REACT_APP_BASE_URL;
 
-export const asyncRequest: <T>(params: RequestParams) => Promise<T> = async <T>(
+export const asyncRequest: <T>(
   params: RequestParams
-) => {
+) => Promise<T | undefined> = async <T>(params: RequestParams) => {
   try {
     let method: HTTPMethods = 'GET';
     if (params?.method) {

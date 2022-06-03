@@ -433,6 +433,7 @@ def update_gfi_repo_add_query(owner: str, name: str) -> None:
     GfiQueries.objects(Q(owner=owner) & Q(name=name)).update_one(
         set__is_pending=False,
         set__is_finished=True,
+        set__is_updating=False,
         set___finished_at=datetime.now(timezone.utc),
     )
 
@@ -440,7 +441,7 @@ def update_gfi_repo_add_query(owner: str, name: str) -> None:
 def update_repo(token: str, owner: str, name: str) -> None:
     """Update all information of a repository for RecGFI training"""
     fetcher = RepoFetcher(token, owner, name)
-
+    logger.info("Fetching repo %s/%s", owner, name)
     repo = update_repo_info(fetcher)
     if repo.updated_at is None:
         since = repo.repo_created_at
@@ -456,6 +457,8 @@ def update_repo(token: str, owner: str, name: str) -> None:
     update_repo_stats(repo)
 
     repo.save()
+
+    update_gfi_repo_add_query(owner, name)
 
     resolved_issues = update_resolved_issues(fetcher, since)
 
@@ -479,8 +482,6 @@ def update_repo(token: str, owner: str, name: str) -> None:
                 all_users.add(event["commenter"])
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
 
-    update_gfi_repo_add_query(owner, name)
-
     for user in all_users:
         update_user(token, user)
 
@@ -494,7 +495,7 @@ if __name__ == "__main__":
         rest_logger.setLevel(logging.DEBUG)
 
     # run check_tokens before update
-    failed_tokens = check_tokens()
+    failed_tokens = check_tokens(TOKENS)
     valid_tokens = list(set(TOKENS) - failed_tokens)
 
     logger.info("data update started at {}".format(datetime.now()))
