@@ -408,12 +408,10 @@ def _update_user_meta(user: User, res: Dict[str, Any]) -> None:
 def _update_user_query(rate_state: dict, res: Dict[str, Any]) -> None:
     rate_state["remaining"] = res["rateLimit"]["remaining"]
     rate_state["resetAt"] = res["rateLimit"]["resetAt"]
-    if "cost" not in rate_state:
-        rate_state["cost"] = 0
     rate_state["cost"] += res["rateLimit"]["cost"]
 
 
-def update_user(token: str, login: str) -> None:
+def update_user(token: str, login: str) -> int:
     """Fetch data for a user"""
     # does the user exist?
     user = User.objects(login=login).first()
@@ -432,7 +430,7 @@ def update_user(token: str, login: str) -> None:
         logger.info("Running in CI environment, overriding 'since' date")
         since = time_now - timedelta(days=7)
 
-    rate_state = {}
+    rate_state = {"cost": 0}
 
     fetcher = UserFetcher(
         token=token,
@@ -465,6 +463,8 @@ def update_user(token: str, login: str) -> None:
     except Exception as e:
         logger.error("Failed to update user %s", login)
         logger.exception(e)
+
+    return rate_state["cost"]
 
 
 def update_gfi_repo_add_query(owner: str, name: str) -> None:
@@ -551,9 +551,8 @@ def update_repo(
 
     all_users = _find_users(owner, name, commits, issues, open_issues, resolved_issues)
     for user in all_users:
-        update_user(token, user)
+        log.rate_user += update_user(token, user)
     log.updated_users = len(all_users)
-    log.rate_user = 0  # TODO: fix this
     log.rate = log.rate + log.rate_user
     log.update_end = datetime.now(timezone.utc)
     log.save()
