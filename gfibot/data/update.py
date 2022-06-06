@@ -4,14 +4,13 @@ import logging
 import argparse
 import numpy as np
 
-from typing import List, Dict, Any, Iterable, Tuple
+from typing import List, Dict, Set, Any, Optional
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 from gfibot import CONFIG, TOKENS
 from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
-from gfibot.data.dataset import get_dataset
 from gfibot.data.graphql import UserFetcher
 from gfibot.data.rest import RepoFetcher, logger as rest_logger
 
@@ -19,7 +18,7 @@ from gfibot.data.rest import RepoFetcher, logger as rest_logger
 logger = logging.getLogger(__name__)
 
 
-def count_by_month(dates: List[datetime]) -> List[Repo.MonthCount]:
+def _count_by_month(dates: List[datetime]) -> List[Repo.MonthCount]:
     counts = Counter(map(lambda d: (d.year, d.month), dates))
     return sorted(
         [
@@ -32,7 +31,7 @@ def count_by_month(dates: List[datetime]) -> List[Repo.MonthCount]:
     )
 
 
-def match_issue_numbers(text: str) -> List[int]:
+def _match_issue_numbers(text: str) -> List[int]:
     """
     Match close issue text in a pull request, as documented in:
     https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue
@@ -44,7 +43,7 @@ def match_issue_numbers(text: str) -> List[int]:
     return numbers
 
 
-def update_repo_info(fetcher: RepoFetcher) -> Repo:
+def _update_repo_info(fetcher: RepoFetcher) -> Repo:
     logger.info("Updating repo: %s/%s", fetcher.owner, fetcher.name)
     repo = Repo.objects(owner=fetcher.owner, name=fetcher.name)
     if repo.count() == 0:
@@ -62,15 +61,13 @@ def update_repo_info(fetcher: RepoFetcher) -> Repo:
         if k == "languages":
             v = [Repo.LanguageCount(language=k2, count=v2) for k2, v2 in v.items()]
         setattr(repo, k, v)
-    logger.info("Repo stats updated, rate remaining %s", fetcher.get_rate_limit())
+    logger.info("Repo stats updated, rate = %s", fetcher.rate)
     return repo
 
 
-def update_stars(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
+def _update_stars(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
     stars = fetcher.get_stars(since)
-    logger.info(
-        "%d stars updated, rate remaining %s", len(stars), fetcher.get_rate_limit()
-    )
+    logger.info("%d stars updated, rate = %s", len(stars), fetcher.rate)
     for star in stars:
         RepoStar.objects(
             owner=fetcher.owner, name=fetcher.name, user=star["user"]
@@ -78,12 +75,12 @@ def update_stars(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
     return stars
 
 
-def update_commits(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
+def _update_commits(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
     commits = fetcher.get_commits(since)
     logger.info(
-        "%d commits updated, rate remaining %s",
+        "%d commits updated, rate = %s",
         len(commits),
-        fetcher.get_rate_limit(),
+        fetcher.rate,
     )
     for commit in commits:
         RepoCommit.objects(
@@ -92,12 +89,12 @@ def update_commits(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]
     return commits
 
 
-def update_issues(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
+def _update_issues(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]:
     issues = fetcher.get_issues(since)
     logger.info(
-        "%d issues updated, rate remaining %s",
+        "%d issues updated, rate = %s",
         len(issues),
-        fetcher.get_rate_limit(),
+        fetcher.rate,
     )
     for issue in issues:
         RepoIssue.objects(
@@ -106,7 +103,7 @@ def update_issues(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]]
     return issues
 
 
-def update_repo_stats(repo: Repo):
+def _update_repo_stats(repo: Repo):
     owner, name = repo.owner, repo.name
     all_issues: List[RepoIssue] = list(RepoIssue.objects(owner=owner, name=name))
 
@@ -119,19 +116,21 @@ def update_repo_stats(repo: Repo):
     repo.median_issue_close_time = np.median(closed_t) if len(closed_t) > 0 else None
 
     # Monthly data
-    repo.monthly_stars = count_by_month(
+    repo.monthly_stars = _count_by_month(
         RepoStar.objects(owner=owner, name=name).scalar("starred_at")
     )
-    repo.monthly_commits = count_by_month(
+    repo.monthly_commits = _count_by_month(
         RepoCommit.objects(owner=owner, name=name).scalar("committed_at")
     )
-    repo.monthly_issues = count_by_month(
+    repo.monthly_issues = _count_by_month(
         [i.created_at for i in all_issues if not i.is_pull]
     )
-    repo.monthly_pulls = count_by_month([i.created_at for i in all_issues if i.is_pull])
+    repo.monthly_pulls = _count_by_month(
+        [i.created_at for i in all_issues if i.is_pull]
+    )
 
 
-def locate_resolved_issues(
+def _locate_resolved_issues(
     fetcher: RepoFetcher, since: datetime
 ) -> List[Dict[str, Any]]:
     all_issues: Dict[int, RepoIssue] = {
@@ -176,7 +175,7 @@ def locate_resolved_issues(
         for c2 in author2commits[c.author]:
             if c2.authored_at < c.authored_at:
                 commits_before.add(c2.sha)
-        for num in match_issue_numbers(c.message):
+        for num in _match_issue_numbers(c.message):
             if num not in closed_nums:
                 continue
             logger.debug(
@@ -206,10 +205,10 @@ def locate_resolved_issues(
         )
         if len(prs) > 0:
             logger.debug(
-                "Candidate PRs %s for issue %d, rate remaining = %s",
+                "Candidate PRs %s for issue %d, rate = %s",
                 [pr.number for pr in prs],
                 issue.number,
-                fetcher.get_rate_limit(),
+                fetcher.rate,
             )
         for pr in prs:
             pr_details = fetcher.get_pull_detail(pr.number)
@@ -217,9 +216,12 @@ def locate_resolved_issues(
             text = "\n".join([t for t in text if t is not None])
             commits_before = set()
             for c in author2commits[pr.user]:
-                if c.authored_at < pr.merged_at and c.sha not in pr_details["commits"]:
+                if (
+                    c.authored_at < pr.merged_at - timedelta(days=1)
+                    and c.sha not in pr_details["commits"]
+                ):
                     commits_before.add(c.sha)
-            if issue.number in match_issue_numbers(text):
+            if issue.number in _match_issue_numbers(text):
                 logger.debug(
                     "Issue #%d resolved in #%d by %s (%d prior commits)",
                     issue.number,
@@ -239,16 +241,16 @@ def locate_resolved_issues(
     return list(resolved.values())
 
 
-def update_resolved_issues(
+def _update_resolved_issues(
     fetcher: RepoFetcher, since: datetime
 ) -> List[Dict[str, Any]]:
     """Fetch data for issues that will be used for RecGFI training."""
-    resolved_issues = locate_resolved_issues(fetcher, since)
+    resolved_issues = _locate_resolved_issues(fetcher, since)
     for resolved_issue in resolved_issues:
         logger.debug(
-            "Fetching details for resolved issue #%d, rate remaining = %s",
+            "Fetching details for resolved issue #%d, rate = %s",
             resolved_issue["number"],
-            fetcher.get_rate_limit(),
+            fetcher.rate,
         )
         for event in fetcher.get_issue_detail(resolved_issue["number"])["events"]:
             resolved_issue["events"].append(IssueEvent(**event))
@@ -256,23 +258,23 @@ def update_resolved_issues(
         ResolvedIssue.objects(
             owner=fetcher.owner, name=fetcher.name, number=resolved_issue["number"]
         ).upsert_one(**resolved_issue)
-        issue = ResolvedIssue(**resolved_issue)
-        get_dataset(issue, issue.resolved_at)
-        get_dataset(issue, issue.created_at)
     return resolved_issues
 
 
-def update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
+def _update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
     """Fetch data for all new open issues"""
     query = Q(name=fetcher.name, owner=fetcher.owner)
-    open_issues = RepoIssue.objects(
+    repo_open_issues = RepoIssue.objects(
         query & Q(is_pull=False, state="open", number__in=nums)
     )
-    logger.info("%d open issues updated since %s", open_issues.count(), since)
-    for issue in open_issues:
+    logger.info("%d open issues updated since %s", repo_open_issues.count(), since)
+
+    open_issues = []
+    for issue in repo_open_issues:
         existing = OpenIssue.objects(query & Q(number=issue.number))
         if existing.count() > 0:
             open_issue = existing.first()
+            open_issue.updated_at = since
         else:
             open_issue = OpenIssue(
                 name=fetcher.name,
@@ -281,20 +283,59 @@ def update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
                 created_at=issue.created_at,
                 updated_at=since,
             )
-        get_dataset(open_issue, open_issue.updated_at)
+
         logger.debug(
-            "Fetching details for open issue #%d, rate remaining = %s",
+            "Fetching details for open issue #%d, rate = %s",
             issue.number,
-            fetcher.get_rate_limit(),
+            fetcher.rate,
         )
         open_issue.events = [
             IssueEvent(**e) for e in fetcher.get_issue_detail(issue.number)["events"]
         ]
         open_issue.save()
+        open_issues.append(open_issue)
+
+    # Delete issues that are closed now
     closed_issue_nums = list(
         RepoIssue.objects(query & Q(is_pull=False, state="closed")).scalar("number")
     )
     OpenIssue.objects(query & Q(number__in=closed_issue_nums)).delete()
+
+    return open_issues
+
+
+def _find_users(
+    owner: str,
+    name: str,
+    commits: list,
+    issues: list,
+    open_issues: list,
+    resolved_issues: list,
+) -> Set[str]:
+    all_users = set([owner])
+    for commit in commits:
+        all_users.add(commit["author"])
+    for issue in issues:
+        all_users.add(issue["user"])
+    for resolved in resolved_issues:
+        all_users.add(resolved["resolver"])
+        for event in resolved["events"]:
+            all_users.add(event["actor"])
+            if "assignee" in event:
+                all_users.add(event["assignee"])
+            if "commenter" in event:
+                all_users.add(event["commenter"])
+    for open in open_issues:
+        for event in open["events"]:
+            all_users.add(event["actor"])
+            if "assignee" in event:
+                all_users.add(event["assignee"])
+            if "commenter" in event:
+                all_users.add(event["commenter"])
+    if None in all_users:
+        all_users.remove(None)
+    logger.info("%d users associated with %s/%s", len(all_users), owner, name)
+    return all_users
 
 
 def _update_user_issues(user: User, res: Dict[str, Any]) -> None:
@@ -370,12 +411,10 @@ def _update_user_meta(user: User, res: Dict[str, Any]) -> None:
 def _update_user_query(rate_state: dict, res: Dict[str, Any]) -> None:
     rate_state["remaining"] = res["rateLimit"]["remaining"]
     rate_state["resetAt"] = res["rateLimit"]["resetAt"]
-    if "cost" not in rate_state:
-        rate_state["cost"] = 0
     rate_state["cost"] += res["rateLimit"]["cost"]
 
 
-def update_user(token: str, login: str) -> None:
+def update_user(token: str, login: str) -> int:
     """Fetch data for a user"""
     # does the user exist?
     user = User.objects(login=login).first()
@@ -394,7 +433,7 @@ def update_user(token: str, login: str) -> None:
         logger.info("Running in CI environment, overriding 'since' date")
         since = time_now - timedelta(days=7)
 
-    rate_state = {}
+    rate_state = {"cost": 0}
 
     fetcher = UserFetcher(
         token=token,
@@ -428,8 +467,11 @@ def update_user(token: str, login: str) -> None:
         logger.error("Failed to update user %s", login)
         logger.exception(e)
 
+    return rate_state["cost"]
+
 
 def update_gfi_repo_add_query(owner: str, name: str) -> None:
+    """TODO: Remove this function after we have a better logging system"""
     GfiQueries.objects(Q(owner=owner) & Q(name=name)).update_one(
         set__is_pending=False,
         set__is_finished=True,
@@ -438,11 +480,36 @@ def update_gfi_repo_add_query(owner: str, name: str) -> None:
     )
 
 
-def update_repo(token: str, owner: str, name: str) -> None:
-    """Update all information of a repository for RecGFI training"""
+def update_repo(
+    token: str, owner: str, name: str, user_github_login: Optional[str] = None
+) -> None:
+    """Update all information of a repository for RecGFI training
+
+    Args:
+        token (str): A GitHub access token
+        owner (str): repository owner
+        name (str): repository name
+        user_github_login (Optional[str], optional):
+            If this function is called from backend, indicate which user intiated this update.
+            Defaults to None.
+    """
+    if GitHubFetchLog.objects(owner=owner, name=name, update_end=None).count() > 0:
+        logger.info("%s/%s is already being updated, skipping", owner, name)
+        return None
+
+    log = GitHubFetchLog(
+        owner=owner,
+        name=name,
+        update_begin=datetime.now(timezone.utc),
+        user_github_login=user_github_login,
+    )
+    log.save()
+
     fetcher = RepoFetcher(token, owner, name)
+
     logger.info("Fetching repo %s/%s", owner, name)
-    repo = update_repo_info(fetcher)
+    repo = _update_repo_info(fetcher)
+
     if repo.updated_at is None:
         since = repo.repo_created_at
     else:
@@ -450,43 +517,52 @@ def update_repo(token: str, owner: str, name: str) -> None:
     repo.updated_at = datetime.now(timezone.utc)
 
     logger.info("Update stars, commits, and issues since %s", since)
-    stars = update_stars(fetcher, since)
-    commits = update_commits(fetcher, since)
-    issues = update_issues(fetcher, since)
+    stars = _update_stars(fetcher, since)
+    commits = _update_commits(fetcher, since)
+    issues = _update_issues(fetcher, since)
 
-    update_repo_stats(repo)
-
+    _update_repo_stats(repo)
     repo.save()
 
-    update_gfi_repo_add_query(owner, name)
+    log.updated_stars = len(stars)
+    log.updated_issues = len(issues)
+    log.updated_commits = len(commits)
+    log.rate = fetcher.rate_consumed
+    log.rate_repo_stat = fetcher.rate_consumed
+    log.save()
 
-    resolved_issues = update_resolved_issues(fetcher, since)
+    resolved_issues = _update_resolved_issues(fetcher, since)
+    log.updated_resolved_issues = len(resolved_issues)
+    log.rate = fetcher.rate_consumed
+    log.rate_resolved_issue = fetcher.rate_consumed - log.rate_repo_stat
+    log.save()
+
+    update_gfi_repo_add_query(owner, name)
 
     open_issue_nums = [
         i["number"] for i in issues if i["state"] == "open" and not i["is_pull"]
     ]
-    update_open_issues(fetcher, open_issue_nums, since)
+    open_issues = _update_open_issues(fetcher, open_issue_nums, since)
+    log.updated_open_issues = len(open_issues)
+    log.rate = fetcher.rate_consumed
+    log.rate_open_issue = (
+        fetcher.rate_consumed - log.rate_repo_stat - log.rate_resolved_issue
+    )
+    log.save()
 
-    all_users = set([owner])
-    for commit in commits:
-        all_users.add(commit["author"])
-    for issue in issues:
-        all_users.add(issue["user"])
-    for resolved in resolved_issues:
-        all_users.add(resolved["resolver"])
-        for event in resolved["events"]:
-            all_users.add(event["actor"])
-            if "assignee" in event:
-                all_users.add(event["assignee"])
-            if "commenter" in event:
-                all_users.add(event["commenter"])
-    logger.info("%d users associated with %s/%s", len(all_users), owner, name)
+    update_gfi_repo_add_query(owner, name)
 
+    all_users = _find_users(owner, name, commits, issues, open_issues, resolved_issues)
+    log.rate_user = 0
     for user in all_users:
-        update_user(token, user)
+        log.rate_user += update_user(token, user)
+    log.updated_users = len(all_users)
+    log.rate = log.rate + log.rate_user
+    log.update_end = datetime.now(timezone.utc)
+    log.save()
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
@@ -498,11 +574,14 @@ if __name__ == "__main__":
     failed_tokens = check_tokens(TOKENS)
     valid_tokens = list(set(TOKENS) - failed_tokens)
 
-    logger.info("data update started at {}".format(datetime.now()))
+    logger.info("Data update started at {}".format(datetime.now()))
 
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         owner, name = project.split("/")
         update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
 
-    logger.info("data update finished at {}".format(datetime.now()))
-    logger.info("Done!")
+    logger.info("Data update finished at {}".format(datetime.now()))
+
+
+if __name__ == "__main__":
+    main()

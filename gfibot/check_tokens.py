@@ -102,4 +102,4 @@ def check_tokens(tokens: List[str]) -> Set[str]:
 
 
 if __name__ == "__main__":
-    check_tokens()
+    check_tokens(TOKENS)

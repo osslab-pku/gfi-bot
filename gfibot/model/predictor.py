@@ -10,7 +10,7 @@ from gfibot.collections import *
 
 logger = logging.getLogger(__name__)
 
-MODEL_ROOT_DIRECTORY = "/home/gfi_production/model"
+MODEL_ROOT_DIRECTORY = "production/models"
 
 
 def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:

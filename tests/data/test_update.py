@@ -9,8 +9,8 @@ from gfibot.collections import *
 
 
 def test_count_by_month():
-    assert upd.count_by_month([]) == []
-    c = upd.count_by_month(
+    assert upd._count_by_month([]) == []
+    c = upd._count_by_month(
         [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2021, 3, 4)]
     )
     print(c)
@@ -18,11 +18,11 @@ def test_count_by_month():
 
 
 def test_match_issue_numbers():
-    assert upd.match_issue_numbers("abc") == []
-    assert upd.match_issue_numbers("close #db") == []
-    assert upd.match_issue_numbers("close #1 closes #2 closed #3") == [1, 2, 3]
-    assert upd.match_issue_numbers("fix #3 fiXes #2 fixed #1") == [3, 2, 1]
-    assert upd.match_issue_numbers("Resolve #2 resolves #1 resolved #3") == [2, 1, 3]
+    assert upd._match_issue_numbers("abc") == []
+    assert upd._match_issue_numbers("close #db") == []
+    assert upd._match_issue_numbers("close #1 closes #2 closed #3") == [1, 2, 3]
+    assert upd._match_issue_numbers("fix #3 fiXes #2 fixed #1") == [3, 2, 1]
+    assert upd._match_issue_numbers("Resolve #2 resolves #1 resolved #3") == [2, 1, 3]
 
 
 def test_locate_resolved_issues(mock_mongodb):
@@ -92,7 +92,7 @@ def test_locate_resolved_issues(mock_mongodb):
 
     token = gfibot.TOKENS[0] if len(gfibot.TOKENS) > 0 else None
     fetcher = rest.RepoFetcher(token, owner, name)
-    resolved = upd.locate_resolved_issues(
+    resolved = upd._locate_resolved_issues(
         fetcher, datetime(1970, 1, 1, tzinfo=timezone.utc)
     )
     pprint(resolved)
