@@ -274,6 +274,7 @@ def _update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
         existing = OpenIssue.objects(query & Q(number=issue.number))
         if existing.count() > 0:
             open_issue = existing.first()
+            open_issue.updated_at = since
         else:
             open_issue = OpenIssue(
                 name=fetcher.name,

@@ -357,14 +357,29 @@ def get_dataset_with_issues(
         get_dataset(i, i.updated_at)
 
 
-def get_dataset_for_repo(owner: str, name: str, since: datetime):
+def get_dataset_for_repo(
+    owner: str, name: str, since: datetime, github_login: str = None
+):
     """
     Update the Dataset collection with latest resolved and open issues for a single repo.
     """
+    log = DatasetBuildLog(
+        owner=owner,
+        name=name,
+        github_user_login=github_login,
+        update_begin=datetime.utcnow(),
+    )
+    log.save()
+
     repo_query = Q(owner=owner) & Q(name=name)
     resolved_issues = ResolvedIssue.objects(repo_query & Q(resolved_at__gte=since))
-    open_issues = OpenIssue.objects(repo_query & Q(created_at__gte=since))
+    open_issues = OpenIssue.objects(repo_query & Q(updated_at__gte=since))
     get_dataset_with_issues(resolved_issues, open_issues)
+
+    log.updated_open_issues = len(open_issues)
+    log.updated_resolved_issues = len(resolved_issues)
+    log.update_end = datetime.utcnow()
+    log.save()
 
 
 def get_dataset_all(since: datetime = None):
@@ -374,22 +389,25 @@ def get_dataset_all(since: datetime = None):
         since (datetime, optional): Only consider issues updated after this time.
               Defaults to None, which means to consider all issues.
     """
+    log = DatasetBuildLog(owner="", name="", update_begin=datetime.utcnow())
+    log.save()
+
     if since is None:
         q_resolved, q_open = Q(), Q()
     else:
-        q_resolved, q_open = Q(resolved_at__gte=since), Q(created_at__gte=since)
+        q_resolved, q_open = Q(resolved_at__gte=since), Q(updated_at__gte=since)
 
     resolved_issues = ResolvedIssue.objects(q_resolved)
     open_issues = OpenIssue.objects(q_open)
     get_dataset_with_issues(resolved_issues, open_issues)
 
+    log.updated_open_issues = len(open_issues)
+    log.updated_resolved_issues = len(resolved_issues)
+    log.update_end = datetime.utcnow()
+    log.save()
+
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        format="%(asctime)s (Process %(process)d) [%(levelname)s] %(filename)s:%(lineno)d %(message)s",
-        level=logging.INFO,
-    )
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--since")
     since = parse_date(parser.parse_args().since)

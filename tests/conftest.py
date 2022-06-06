@@ -1,3 +1,4 @@
+import sys
 import pytest
 import logging
 import mongoengine
@@ -12,8 +13,6 @@ from gfibot.data.dataset import *
 
 @pytest.fixture(scope="session", autouse=True)
 def execute_before_any_test():
-    logging.basicConfig(level=logging.DEBUG)
-
     check_tokens(TOKENS)
 
     # Ensure that the production database is not touched in all tests

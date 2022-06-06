@@ -323,7 +323,7 @@ class RepoStar(Document):
 
 
 class User(Document):
-    """User statistics for RecGFI training (TODO: This documentation is not finalized yet)"""
+    """User statistics for RecGFI training"""
 
     class Issue(EmbeddedDocument):
         # repo info
