@@ -1,3 +1,6 @@
+# Ignore the default stdout file
+nohup.out
+
 # Ignore IDEA related files
 *.idea/
 

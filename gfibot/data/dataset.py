@@ -1,3 +1,4 @@
+import os
 import re
 import nltk
 import logging
@@ -363,9 +364,14 @@ def get_dataset_for_repo(
     """
     Update the Dataset collection with latest resolved and open issues for a single repo.
     """
+    if log_exists(owner, name, DatasetBuildLog):
+        logger.info("%s/%s is already being updated, skipping", owner, name)
+        return
+
     log = DatasetBuildLog(
         owner=owner,
         name=name,
+        pid=os.getpid(),
         github_user_login=github_login,
         update_begin=datetime.utcnow(),
     )
@@ -389,7 +395,13 @@ def get_dataset_all(since: datetime = None):
         since (datetime, optional): Only consider issues updated after this time.
               Defaults to None, which means to consider all issues.
     """
-    log = DatasetBuildLog(owner="", name="", update_begin=datetime.utcnow())
+    if log_exists("", "", DatasetBuildLog):
+        logger.info("A global dataset update is already being performed")
+        return
+
+    log = DatasetBuildLog(
+        owner="", name="", pid=os.getpid(), update_begin=datetime.utcnow()
+    )
     log.save()
 
     if since is None:

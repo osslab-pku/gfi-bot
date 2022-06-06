@@ -1,8 +1,10 @@
 import os
 import re
+import psutil
 import logging
 import argparse
 import numpy as np
+import multiprocessing as mp
 
 from typing import List, Dict, Set, Any, Optional
 from collections import Counter, defaultdict
@@ -493,13 +495,14 @@ def update_repo(
             If this function is called from backend, indicate which user intiated this update.
             Defaults to None.
     """
-    if GitHubFetchLog.objects(owner=owner, name=name, update_end=None).count() > 0:
+    if log_exists(owner, name, GitHubFetchLog):
         logger.info("%s/%s is already being updated, skipping", owner, name)
-        return None
+        return
 
     log = GitHubFetchLog(
         owner=owner,
         name=name,
+        pid=os.getpid(),
         update_begin=datetime.now(timezone.utc),
         user_github_login=user_github_login,
     )
@@ -562,6 +565,13 @@ def update_repo(
     log.save()
 
 
+def update_under_one_token(token: str, repos=List[str]) -> None:
+    logging.info("token = %s, repos = %s", token[0:6], repos)
+    for repo in repos:
+        owner, name = repo.split("/")
+        update_repo(token, owner, name)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
@@ -576,9 +586,11 @@ def main():
 
     logger.info("Data update started at {}".format(datetime.now()))
 
+    params = defaultdict(list)
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
-        owner, name = project.split("/")
-        update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
+        params[valid_tokens[i % len(valid_tokens)]].append(project)
+    with mp.Pool(len(valid_tokens)) as pool:
+        pool.map(update_under_one_token, params.items())
 
     logger.info("Data update finished at {}".format(datetime.now()))
 
