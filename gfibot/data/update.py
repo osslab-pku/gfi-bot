@@ -331,6 +331,8 @@ def _find_users(
                 all_users.add(event["assignee"])
             if "commenter" in event:
                 all_users.add(event["commenter"])
+    if None in all_users:
+        all_users.remove(None)
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
     return all_users
 
@@ -550,6 +552,7 @@ def update_repo(
     update_gfi_repo_add_query(owner, name)
 
     all_users = _find_users(owner, name, commits, issues, open_issues, resolved_issues)
+    log.rate_user = 0
     for user in all_users:
         log.rate_user += update_user(token, user)
     log.updated_users = len(all_users)
