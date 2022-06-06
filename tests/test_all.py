@@ -27,13 +27,13 @@ def test_all(real_mongodb):
     assert len(repo2.monthly_pulls) >= len(repo1.monthly_pulls)
     assert len(repo2.monthly_issues) >= len(repo1.monthly_issues)
 
-    dataset.get_dataset_all()
+    dataset.get_dataset_all("2008.01.01")
     open_issues1 = list(
         Dataset.objects(query & Q(resolver_commit_num=-1)).scalar("number")
     )
     assert len(set(open_issues1)) == len(open_issues1)
 
-    dataset.get_dataset_all()
+    dataset.get_dataset_all("2008.01.01")
     open_issues2 = list(
         Dataset.objects(query & Q(resolver_commit_num=-1)).scalar("number")
     )

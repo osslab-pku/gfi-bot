@@ -31,12 +31,5 @@ else:
     with open(BASE_DIR / "tokens.txt") as f:
         TOKENS = f.read().strip().split("\n")
 
-mongoengine.connect(
-    CONFIG["mongodb"]["db"],
-    host=CONFIG["mongodb"]["url"],
-    tz_aware=True,
-    uuidRepresentation="standard",
-)
-
 nltk.download("wordnet")
 nltk.download("omw-1.4")

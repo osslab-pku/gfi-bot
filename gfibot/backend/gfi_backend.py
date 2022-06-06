@@ -35,7 +35,8 @@ GITHUB_APP_NAME = "gfibot-githubapp"
 
 logger = logging.getLogger(__name__)
 
-daemon_scheduler = start_scheduler()
+# TODO: Fix when checking backend
+# daemon_scheduler = start_scheduler()
 
 
 @app.route("/api/repos/num")

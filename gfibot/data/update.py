@@ -1,8 +1,8 @@
 import os
 import re
-import psutil
 import logging
 import argparse
+import mongoengine
 import numpy as np
 import multiprocessing as mp
 
@@ -565,7 +565,15 @@ def update_repo(
     log.save()
 
 
-def update_under_one_token(token: str, repos=List[str]) -> None:
+def update_under_one_token(token: str, repos: List[str]) -> None:
+    # Reconnect in a new process
+    mongoengine.connect(
+        CONFIG["mongodb"]["db"],
+        host=CONFIG["mongodb"]["url"],
+        tz_aware=True,
+        uuidRepresentation="standard",
+    )
+
     logging.info("token = %s, repos = %s", token[0:6], repos)
     for repo in repos:
         owner, name = repo.split("/")
@@ -590,7 +598,7 @@ def main():
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         params[valid_tokens[i % len(valid_tokens)]].append(project)
     with mp.Pool(len(valid_tokens)) as pool:
-        pool.map(update_under_one_token, params.items())
+        pool.starmap(update_under_one_token, params.items())
 
     logger.info("Data update finished at {}".format(datetime.now()))
 

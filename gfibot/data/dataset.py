@@ -372,7 +372,7 @@ def get_dataset_for_repo(
         owner=owner,
         name=name,
         pid=os.getpid(),
-        github_user_login=github_login,
+        user_github_login=github_login,
         update_begin=datetime.utcnow(),
     )
     log.save()
@@ -388,35 +388,15 @@ def get_dataset_for_repo(
     log.save()
 
 
-def get_dataset_all(since: datetime = None):
+def get_dataset_all(since: datetime):
     """Update the Dataset collection with latest resolved and open issues.
 
     Args:
         since (datetime, optional): Only consider issues updated after this time.
               Defaults to None, which means to consider all issues.
     """
-    if log_exists("", "", DatasetBuildLog):
-        logger.info("A global dataset update is already being performed")
-        return
-
-    log = DatasetBuildLog(
-        owner="", name="", pid=os.getpid(), update_begin=datetime.utcnow()
-    )
-    log.save()
-
-    if since is None:
-        q_resolved, q_open = Q(), Q()
-    else:
-        q_resolved, q_open = Q(resolved_at__gte=since), Q(updated_at__gte=since)
-
-    resolved_issues = ResolvedIssue.objects(q_resolved)
-    open_issues = OpenIssue.objects(q_open)
-    get_dataset_with_issues(resolved_issues, open_issues)
-
-    log.updated_open_issues = len(open_issues)
-    log.updated_resolved_issues = len(resolved_issues)
-    log.update_end = datetime.utcnow()
-    log.save()
+    for repo in Repo.objects():
+        get_dataset_for_repo(repo.owner, repo.name, since)
 
 
 if __name__ == "__main__":
