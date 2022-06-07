@@ -98,7 +98,8 @@ class GitHubGraphQLClient(object):
             # we got an error from GitHub API
             except TransportQueryError as e:
                 # hit rate limit
-                if e.data and e.data.get("type") == "RATE_LIMITED":
+                # if e.data and e.data.get("type") == "RATE_LIMITED":
+                if "RATE_LIMITED" in str(e):
                     sleep_time = max(self._reset_at - time.time() + 1, 1)
                     self._logger.info(
                         "Hit rate limit. Sleeping for %d seconds",

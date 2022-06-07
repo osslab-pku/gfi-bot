@@ -116,6 +116,7 @@ authors = [
     "Wenxin Xiao <wenxin.xiao@stu.pku.edu.cn>",
     "Haonan Su <haonan.su@pku.edu.cn>",
     "Runzhi He <rzhe@pku.edu.cn>",
+    "Minghui Zhou <zhmh@pku.edu.cn>"
 ]
 
 [tool.poetry.dependencies]

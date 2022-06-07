@@ -524,9 +524,6 @@ def update_repo(
     commits = _update_commits(fetcher, since)
     issues = _update_issues(fetcher, since)
 
-    _update_repo_stats(repo)
-    repo.save()
-
     log.updated_stars = len(stars)
     log.updated_issues = len(issues)
     log.updated_commits = len(commits)
@@ -558,11 +555,16 @@ def update_repo(
     all_users = _find_users(owner, name, commits, issues, open_issues, resolved_issues)
     log.rate_user = 0
     for user in all_users:
+        if user is None or type(user) != str:
+            continue
         log.rate_user += update_user(token, user)
     log.updated_users = len(all_users)
     log.rate = log.rate + log.rate_user
     log.update_end = datetime.now(timezone.utc)
     log.save()
+
+    _update_repo_stats(repo)
+    repo.save()
 
 
 def update_under_one_token(token: str, repos: List[str]) -> None:
@@ -597,7 +599,7 @@ def main():
     params = defaultdict(list)
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         params[valid_tokens[i % len(valid_tokens)]].append(project)
-    with mp.Pool(len(valid_tokens)) as pool:
+    with mp.Pool(min(mp.cpu_count() * 2, len(valid_tokens))) as pool:
         pool.starmap(update_under_one_token, params.items())
 
     logger.info("Data update finished at {}".format(datetime.now()))
