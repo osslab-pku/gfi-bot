@@ -4,11 +4,14 @@ import nltk
 import logging
 import textstat
 import argparse
+import mongoengine
 import numpy as np
+import multiprocessing as mp
 
 from typing import Union
 from collections import Counter
 from dateutil.parser import parse as parse_date
+from gfibot import CONFIG
 from gfibot.collections import *
 from mongoengine.queryset.visitor import Q
 
@@ -153,16 +156,11 @@ def _get_user_data(
     owner: str, name: str, user: str, t: datetime
 ) -> Dataset.UserFeature:
     """Get user data before a certain time t"""
+    feat = Dataset.UserFeature(name=user)
 
-    if user == "ghost":  # The name of deleted GitHub account
-        return Dataset.UserFeature(
-            name=user,
-            n_commits=0,
-            n_issues=0,
-            n_pulls=0,
-            resolver_commits=[],
-        )
-
+    # The name of deleted GitHub account
+    if user == "ghost":
+        return feat
     # "web-flow" is a special account for all web commits (merge/revert/edit/etc...) made on GitHub
     usrcmts: List[RepoCommit] = list(
         RepoCommit.objects(
@@ -171,6 +169,7 @@ def _get_user_data(
         )
     )
 
+    # Within project features
     issue_query = Q(
         owner=owner,
         name=name,
@@ -179,7 +178,6 @@ def _get_user_data(
     )
     usriss: List[RepoIssue] = list(RepoIssue.objects(issue_query & Q(is_pull=False)))
     usrpulls: List[RepoIssue] = list(RepoIssue.objects(issue_query & Q(is_pull=True)))
-
     usriss_resolved: List[ResolvedIssue] = list(
         ResolvedIssue.objects(
             owner=owner,
@@ -190,14 +188,32 @@ def _get_user_data(
         )
     )
     usr_revolver_cmts = list(i.resolver_commit_num for i in usriss_resolved)
+    feat.n_commits = len(usrcmts)
+    feat.n_issues = len(usriss)
+    feat.n_pulls = len(usrpulls)
+    feat.resolver_commits = usr_revolver_cmts
 
-    return Dataset.UserFeature(
-        name=user,
-        n_commits=len(usrcmts),
-        n_issues=len(usriss),
-        n_pulls=len(usrpulls),
-        resolver_commits=usr_revolver_cmts,
-    )
+    # GitHub global features
+    query = User.objects(login=user)
+
+    if query.count() == 0:
+        return feat
+
+    user: User = query.first()
+    commits = [c for c in user.commit_contributions if c.created_at <= t]
+    issues = [i for i in user.issues if i.created_at <= t]
+    pulls = [p for p in user.pulls if p.created_at <= t]
+    reviews = [r for r in user.pull_reviews if r.created_at <= t]
+    feat.n_commits_all = sum(c.commit_count for c in commits)
+    feat.n_issues_all = len(issues)
+    feat.n_pulls_all = len(pulls)
+    feat.n_reviews_all = len(reviews)
+    feat.max_stars_commit = max([c.repo_stars for c in commits] + [0])
+    feat.max_stars_issue = max([i.repo_stars for i in issues] + [0])
+    feat.max_stars_pull = max([p.repo_stars for p in pulls] + [0])
+    feat.max_stars_review = max([r.repo_stars for r in reviews] + [0])
+
+    return feat
 
 
 def _get_background_data(owner: str, name: str, t: datetime):
@@ -359,12 +375,27 @@ def get_dataset_with_issues(
 
 
 def get_dataset_for_repo(
-    owner: str, name: str, since: datetime, github_login: str = None
+    owner: str,
+    name: str,
+    since: datetime,
+    github_login: str = None,
+    init_db: bool = False,
 ):
     """
     Update the Dataset collection with latest resolved and open issues for a single repo.
     """
-    if log_exists(owner, name, DatasetBuildLog):
+    if init_db:
+        mongoengine.disconnect_all()
+        mongoengine.connect(
+            CONFIG["mongodb"]["db"],
+            host=CONFIG["mongodb"]["url"],
+            tz_aware=True,
+            uuidRepresentation="standard",
+        )
+
+    if update_in_progress(owner, name, DatasetBuildLog) or update_in_progress(
+        owner, name, GitHubFetchLog
+    ):
         logger.info("%s/%s is already being updated, skipping", owner, name)
         return
 
@@ -388,15 +419,21 @@ def get_dataset_for_repo(
     log.save()
 
 
-def get_dataset_all(since: datetime):
+def get_dataset_all(since: datetime, n_process: int = None):
     """Update the Dataset collection with latest resolved and open issues.
 
     Args:
         since (datetime, optional): Only consider issues updated after this time.
               Defaults to None, which means to consider all issues.
+        n_process (int, optional): Number of processes to use. Defaults to None
     """
-    for repo in Repo.objects():
-        get_dataset_for_repo(repo.owner, repo.name, since)
+    if n_process is None:
+        for repo in Repo.objects():
+            get_dataset_for_repo(repo.owner, repo.name, since)
+    else:
+        params = [(r.owner, r.name, since, None, True) for r in Repo.objects()]
+        with mp.Pool(n_process) as p:
+            p.starmap(get_dataset_for_repo, params)
 
 
 if __name__ == "__main__":
@@ -404,6 +441,13 @@ if __name__ == "__main__":
     parser.add_argument("--since")
     since = parse_date(parser.parse_args().since)
 
-    get_dataset_all(since)
+    mongoengine.connect(
+        CONFIG["mongodb"]["db"],
+        host=CONFIG["mongodb"]["url"],
+        tz_aware=True,
+        uuidRepresentation="standard",
+    )
+
+    get_dataset_all(since, mp.cpu_count())
 
     logger.info("Finish!")

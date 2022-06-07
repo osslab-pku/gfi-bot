@@ -47,7 +47,7 @@ class DatasetBuildLog(Log):
     updated_resolved_issues: int = IntField(null=True)
 
 
-def log_exists(owner, name, log_type):
+def update_in_progress(owner, name, log_type):
     existing_log: Log = log_type.objects(owner=owner, name=name, update_end=None)
     if existing_log.count() > 0:
         existing_log: Log = existing_log.first()

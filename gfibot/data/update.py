@@ -276,14 +276,14 @@ def _update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
         existing = OpenIssue.objects(query & Q(number=issue.number))
         if existing.count() > 0:
             open_issue = existing.first()
-            open_issue.updated_at = since
+            open_issue.updated_at = datetime.utcnow()
         else:
             open_issue = OpenIssue(
                 name=fetcher.name,
                 owner=fetcher.owner,
                 number=issue.number,
                 created_at=issue.created_at,
-                updated_at=since,
+                updated_at=datetime.utcnow(),
             )
 
         logger.debug(
@@ -495,7 +495,7 @@ def update_repo(
             If this function is called from backend, indicate which user intiated this update.
             Defaults to None.
     """
-    if log_exists(owner, name, GitHubFetchLog):
+    if update_in_progress(owner, name, GitHubFetchLog):
         logger.info("%s/%s is already being updated, skipping", owner, name)
         return
 
@@ -585,6 +585,7 @@ def update_under_one_token(token: str, repos: List[str]) -> None:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--nprocess", type=int, default=mp.cpu_count())
     args = parser.parse_args()
     if args.debug:
         logger.setLevel(logging.DEBUG)
@@ -599,7 +600,7 @@ def main():
     params = defaultdict(list)
     for i, project in enumerate(CONFIG["gfibot"]["projects"]):
         params[valid_tokens[i % len(valid_tokens)]].append(project)
-    with mp.Pool(min(mp.cpu_count() * 2, len(valid_tokens))) as pool:
+    with mp.Pool(min(args.nprocess, len(valid_tokens))) as pool:
         pool.starmap(update_under_one_token, params.items())
 
     logger.info("Data update finished at {}".format(datetime.now()))

@@ -75,13 +75,28 @@ class Dataset(Document):
             n_pulls: Number of pull requests the user opened in this repository
             resolver_commits: For all resolved issue opened by this user,
                 number of the resolver's commits prior to issue resolution
+            n_repos: Number of repositories the user interacted with
+            n_commits_all, n_issues_all, n_pulls_all, n_reviews_all:
+                Number of commits, issues, pulls, and code reviews by this user
+            max_stars_commit, max_stars_issue, max_stars_pull, max_stars_review
+                For each of the four types of user interactions, maximum value of stars in their repo
+                This may indicate the users' overall ability and/or reputation
         """
 
         name: str = StringField(required=True)
-        n_commits: int = IntField(required=True, min_value=0)
-        n_issues: int = IntField(required=True, min_value=0)
-        n_pulls: int = IntField(required=True, min_value=0)
+        n_commits: int = IntField(default=0, min_value=0)
+        n_issues: int = IntField(default=0, min_value=0)
+        n_pulls: int = IntField(default=0, min_value=0)
         resolver_commits: List[int] = ListField(IntField(min_value=0), default=[])
+        n_repos: int = IntField(default=0, min_value=0)
+        n_commits_all: int = IntField(default=0, min_value=0)
+        n_issues_all: int = IntField(default=0, min_value=0)
+        n_pulls_all: int = IntField(default=0, min_value=0)
+        n_reviews_all: int = IntField(default=0, min_value=0)
+        max_stars_commit: int = IntField(default=0, min_value=0)
+        max_stars_issue: int = IntField(default=0, min_value=0)
+        max_stars_pull: int = IntField(default=0, min_value=0)
+        max_stars_review: int = IntField(default=0, min_value=0)
 
     owner: str = StringField(required=True)
     name: str = StringField(required=True)
@@ -370,11 +385,11 @@ class User(Document):
     name: str = StringField(null=True)
     login: str = StringField(required=True)
     # issues, issueComments, pulls (use end cursor to paginate)
-    issues: Issue = EmbeddedDocumentListField(Issue)
-    pulls: Pull = EmbeddedDocumentListField(Pull)
+    issues: List[Issue] = EmbeddedDocumentListField(Issue)
+    pulls: List[Pull] = EmbeddedDocumentListField(Pull)
     # reviews, commits (use date to paginate)
-    pull_reviews: Review = EmbeddedDocumentListField(Review)
-    commit_contributions: CommitContribution = EmbeddedDocumentListField(
+    pull_reviews: List[Review] = EmbeddedDocumentListField(Review)
+    commit_contributions: List[CommitContribution] = EmbeddedDocumentListField(
         CommitContribution
     )
 
