@@ -212,6 +212,9 @@ def _get_user_data(
     feat.max_stars_issue = max([i.repo_stars for i in issues] + [0])
     feat.max_stars_pull = max([p.repo_stars for p in pulls] + [0])
     feat.max_stars_review = max([r.repo_stars for r in reviews] + [0])
+    feat.n_repos = len(
+        set((x.owner, x.name) for x in commits + issues + pulls + reviews)
+    )
 
     return feat
 
@@ -409,8 +412,10 @@ def get_dataset_for_repo(
     log.save()
 
     repo_query = Q(owner=owner) & Q(name=name)
-    resolved_issues = ResolvedIssue.objects(repo_query & Q(resolved_at__gte=since))
-    open_issues = OpenIssue.objects(repo_query & Q(updated_at__gte=since))
+    resolved_issues = list(
+        ResolvedIssue.objects(repo_query & Q(resolved_at__gte=since))
+    )
+    open_issues = list(OpenIssue.objects(repo_query & Q(updated_at__gte=since)))
     get_dataset_with_issues(resolved_issues, open_issues)
 
     log.updated_open_issues = len(open_issues)

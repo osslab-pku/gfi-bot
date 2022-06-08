@@ -1,12 +1,13 @@
-import pandas as pd
-import xgboost as xgb
-from sklearn.metrics import accuracy_score
 import os
 import math
 import logging
+import pandas as pd
+import xgboost as xgb
+
 from datetime import datetime
 from gfibot.model import utils
 from gfibot.collections import *
+from sklearn.metrics import accuracy_score
 
 logger = logging.getLogger(__name__)
 

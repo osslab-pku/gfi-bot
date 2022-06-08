@@ -1,14 +1,15 @@
+import math
 import pandas as pd
+import xgboost as xgb
+
+from mongoengine import Q
+from gfibot.collections import *
+from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import f1_score
 from sklearn.metrics import roc_curve
 from sklearn.metrics import auc
-import math
-import xgboost as xgb
-from mongoengine.queryset.visitor import Q
-from gfibot.collections import *
-from sklearn.feature_extraction.text import HashingVectorizer
 
 
 def cat_comment(comment: list) -> str:
@@ -58,24 +59,28 @@ def get_text_feature(text):
     return vector_text
 
 
-def get_user_average(user_list: List[Dataset.UserFeature], threshold: int):
+def get_user_average(user_list: List[Dataset.UserFeature], threshold: int) -> dict:
     user_num = len(user_list)
-    commits_num, issues_num, pulls_num, user_gfi_ratio, user_gfi_num = 0, 0, 0, 0, 0
+    result = defaultdict(lambda: 0)
     if user_num != 0:
         for user in user_list:
-            commits_num += user.n_commits
-            issues_num += user.n_issues
-            pulls_num += user.n_pulls
-            user_gfi_ratio += get_ratio(user.resolver_commits, threshold)
-            user_gfi_num += get_num(user.resolver_commits, threshold)
-        commits_num, issues_num, pulls_num, user_gfi_ratio, user_gfi_num = (
-            commits_num / user_num,
-            issues_num / user_num,
-            pulls_num / user_num,
-            user_gfi_ratio / user_num,
-            user_gfi_num / user_num,
-        )
-    return commits_num, issues_num, pulls_num, user_gfi_ratio, user_gfi_num
+            result["commits_num"] += user.n_commits
+            result["issues_num"] += user.n_issues
+            result["pulls_num"] += user.n_pulls
+            result["repo_num"] += user.n_repos
+            result["commits_num_all"] += user.n_commits_all
+            result["issues_num_all"] += user.n_issues_all
+            result["pulls_num_all"] += user.n_pulls_all
+            result["review_num_all"] += user.n_reviews_all
+            result["max_stars_commit"] += user.max_stars_commit
+            result["max_stars_issue"] += user.max_stars_issue
+            result["max_stars_pull"] += user.max_stars_pull
+            result["max_stars_review"] += user.max_stars_review
+            result["user_gfi_ratio"] += get_ratio(user.resolver_commits, threshold)
+            result["user_gfi_num"] += get_num(user.resolver_commits, threshold)
+        for k, v in result.items():
+            result[k] = v / user_num
+    return result
 
 
 def load_data(threshold: int, batch: List[list]) -> pd.DataFrame:
@@ -88,7 +93,7 @@ def load_data(threshold: int, batch: List[list]) -> pd.DataFrame:
     return issue_df
 
 
-def get_issue_data(issue: list, threshold: int) -> dict:
+def get_issue_data(issue: Dataset, threshold: int) -> dict:
     is_gfi = user_new(issue.resolver_commit_num, threshold)
 
     rpt_is_new = user_new(issue.reporter_feat.n_commits, threshold)
@@ -104,20 +109,8 @@ def get_issue_data(issue: list, threshold: int) -> dict:
     body = get_text_feature(issue.body)[0]
     comment_text = get_text_feature(comments)[0]
 
-    (
-        commenter_commits_num,
-        commenter_issues_num,
-        commenter_pulls_num,
-        commenter_gfi_ratio,
-        commenter_gfi_num,
-    ) = get_user_average(issue.comment_users, threshold)
-    (
-        eventer_commits_num,
-        eventer_issues_num,
-        eventer_pulls_num,
-        eventer_gfi_ratio,
-        eventer_gfi_num,
-    ) = get_user_average(issue.event_users, threshold)
+    commenter = get_user_average(issue.comment_users, threshold)
+    eventer = get_user_average(issue.event_users, threshold)
     comment_num = len(issue.comments)
     event_num = len(issue.events)
 
@@ -153,8 +146,32 @@ def get_issue_data(issue: list, threshold: int) -> dict:
         # ---------- Background ----------
         "rpt_is_new": rpt_is_new,
         "rpt_gfi_ratio": rpt_gfi_ratio,
+        "rpt_commits_num": issue.reporter_feat.n_commits,
+        "rpt_issues_num": issue.reporter_feat.n_issues,
+        "rpt_pulls_num": issue.reporter_feat.n_pulls,
+        "rpt_repo_num": issue.reporter_feat.n_repos,
+        "rpt_commits_num_all": issue.reporter_feat.n_commits_all,
+        "rpt_issues_num_all": issue.reporter_feat.n_issues_all,
+        "rpt_pulls_num_all": issue.reporter_feat.n_pulls_all,
+        "rpt_reviews_num_all": issue.reporter_feat.n_reviews_all,
+        "rpt_max_stars_commit": issue.reporter_feat.max_stars_commit,
+        "rpt_max_stars_issue": issue.reporter_feat.max_stars_issue,
+        "rpt_max_stars_pull": issue.reporter_feat.max_stars_pull,
+        "rpt_max_stars_review": issue.reporter_feat.max_stars_review,
         "owner_gfi_ratio": owner_gfi_ratio,
         "owner_gfi_num": owner_gfi_num,
+        "owner_commits_num": issue.owner_feat.n_commits,
+        "owner_issues_num": issue.owner_feat.n_issues,
+        "owner_pulls_num": issue.owner_feat.n_pulls,
+        "owner_repo_num": issue.owner_feat.n_repos,
+        "owner_commits_num_all": issue.owner_feat.n_commits_all,
+        "owner_issues_num_all": issue.owner_feat.n_issues_all,
+        "owner_pulls_num_all": issue.owner_feat.n_pulls_all,
+        "owner_reviews_num_all": issue.owner_feat.n_reviews_all,
+        "owner_max_stars_commit": issue.owner_feat.max_stars_commit,
+        "owner_max_stars_issue": issue.owner_feat.max_stars_issue,
+        "owner_max_stars_pull": issue.owner_feat.max_stars_pull,
+        "owner_max_stars_review": issue.owner_feat.max_stars_review,
         "pro_gfi_ratio": pro_gfi_ratio,
         "pro_gfi_num": pro_gfi_num,
         "n_stars": issue.n_stars,
@@ -167,19 +184,13 @@ def get_issue_data(issue: list, threshold: int) -> dict:
         "issue_close_time": issue.issue_close_time,
         # ---------- Dynamics ----------
         # "comments": comments,
-        "commenter_commits_num": commenter_commits_num,
-        "commenter_issues_num": commenter_issues_num,
-        "commenter_pulls_num": commenter_pulls_num,
-        "commenter_gfi_ratio": commenter_gfi_ratio,
-        "commenter_gfi_num": commenter_gfi_num,
-        "eventer_commits_num": eventer_commits_num,
-        "eventer_issues_num": eventer_issues_num,
-        "eventer_pulls_num": eventer_pulls_num,
-        "eventer_gfi_ratio": eventer_gfi_ratio,
-        "eventer_gfi_num": eventer_gfi_num,
         "comment_num": comment_num,
         "event_num": event_num,
     }
+    for k, v in commenter.items():
+        one_issue["commenter_" + k] = v
+    for k, v in eventer.items():
+        one_issue["eventer_" + k] = v
     for i in range(len(title)):
         one_issue["title" + str(i)] = title[i]
     for i in range(len(body)):

@@ -247,6 +247,18 @@ def mock_mongodb():
             ],
         )
     ]
+    users = [
+        User(
+            _created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            name="a1",
+            login="a1",
+            issues=[],
+            pulls=[],
+            pull_reviews=[],
+            commit_contributions=[],
+        ),
+    ]
     datasets = [
         Dataset(
             owner="owner",
@@ -292,14 +304,12 @@ def mock_mongodb():
             r_open_issues=1,
             issue_close_time=1.0,
             comment_users=[
-                (
-                    Dataset.UserFeature(
-                        name="a3",
-                        n_commits=5,
-                        n_issues=1,
-                        n_pulls=2,
-                        resolver_commits=[1, 2],
-                    )
+                Dataset.UserFeature(
+                    name="a3",
+                    n_commits=5,
+                    n_issues=1,
+                    n_pulls=2,
+                    resolver_commits=[1, 2],
                 ),
                 Dataset.UserFeature(
                     name="a4",
