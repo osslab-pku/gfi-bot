@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from gfibot.collections import *
 from gfibot.model.predictor import *
 from gfibot.model.utils import *
-from tests.conftest import *
 
 
 def test_get_update_set(mock_mongodb):

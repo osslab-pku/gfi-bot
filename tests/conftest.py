@@ -1,8 +1,7 @@
-import sys
 import pytest
-import logging
 import mongoengine
 import mongoengine.context_managers
+import gfibot.model.predictor
 
 from datetime import datetime, timezone
 from gfibot import CONFIG, TOKENS
@@ -18,6 +17,8 @@ def execute_before_any_test():
     # Ensure that the production database is not touched in all tests
     CONFIG["mongodb"]["db"] = "gfibot-test"
     mongoengine.disconnect_all()
+
+    gfibot.model.predictor.MODEL_ROOT_DIRECTORY = "models-test"
 
 
 @pytest.fixture(scope="function")
@@ -250,9 +251,28 @@ def mock_mongodb():
     users = [
         User(
             _created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            _updated_at=datetime.utcnow(),
             name="a1",
             login="a1",
+            issues=[
+                User.Issue(
+                    owner="owner",
+                    name="name",
+                    repo_stars=1,
+                    state="closed",
+                    number=1,
+                    created_at=datetime(2022, 1, 1, tzinfo=timezone.utc),
+                )
+            ],
+            pulls=[],
+            pull_reviews=[],
+            commit_contributions=[],
+        ),
+        User(
+            _created_at=datetime.utcnow(),
+            _updated_at=datetime.utcnow(),
+            name="a2",
+            login="a2",
             issues=[],
             pulls=[],
             pull_reviews=[],
@@ -364,14 +384,12 @@ def mock_mongodb():
             r_open_issues=1,
             issue_close_time=1.0,
             comment_users=[
-                (
-                    Dataset.UserFeature(
-                        name="a3",
-                        n_commits=5,
-                        n_issues=1,
-                        n_pulls=2,
-                        resolver_commits=[1, 2],
-                    )
+                Dataset.UserFeature(
+                    name="a3",
+                    n_commits=5,
+                    n_issues=1,
+                    n_pulls=2,
+                    resolver_commits=[1, 2],
                 ),
                 Dataset.UserFeature(
                     name="a4",
@@ -399,6 +417,8 @@ def mock_mongodb():
     for open_issue in open_issues:
         open_issue.save()
         get_dataset(open_issue, open_issue.updated_at)
+    for user in users:
+        user.save()
     for dataset in datasets:
         dataset.save()
 

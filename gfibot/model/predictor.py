@@ -1,17 +1,19 @@
 import os
 import math
 import logging
+import mongoengine
 import pandas as pd
 import xgboost as xgb
 
 from datetime import datetime
+from gfibot import CONFIG
 from gfibot.model import utils
 from gfibot.collections import *
 from sklearn.metrics import accuracy_score
 
 logger = logging.getLogger(__name__)
 
-MODEL_ROOT_DIRECTORY = "production/models"
+MODEL_ROOT_DIRECTORY = "models"
 
 
 def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
@@ -233,7 +235,7 @@ def update_prediction(threshold: int):
     )
 
 
-if __name__ == "__main__":
+def update():
     for threshold in [1, 2, 3, 4, 5]:
         logger.info(
             "Update TrainingSummary and Prediction for threshold "
@@ -242,4 +244,14 @@ if __name__ == "__main__":
         )
         update_training_summary(threshold)
         update_prediction(threshold)
+
+
+if __name__ == "__main__":
+    mongoengine.connect(
+        CONFIG["mongodb"]["db"],
+        host=CONFIG["mongodb"]["url"],
+        tz_aware=True,
+        uuidRepresentation="standard",
+    )
+    update()
     logger.info("Done!")

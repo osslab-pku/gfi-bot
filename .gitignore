@@ -1,3 +1,7 @@
+# Ignore model files
+models/
+models-test/
+
 # Ignore the default stdout file
 nohup.out
 

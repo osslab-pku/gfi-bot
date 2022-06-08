@@ -3,6 +3,7 @@ import gfibot
 import gfibot.data.update as update
 import gfibot.data.rest as rest
 import gfibot.data.dataset as dataset
+import gfibot.model.predictor as predictor
 
 from gfibot.collections import *
 from gfibot.data.dataset import *
@@ -52,3 +53,5 @@ def test_all(real_mongodb):
         data = Dataset.objects(query & Q(number=num))
         assert data.count() == 2
         assert data.first().resolver_commit_num >= 0
+
+    predictor.update()

@@ -610,6 +610,7 @@ def test_get_user_data(mock_mongodb):
     assert user.n_issues == 2
     assert user.n_pulls == 1
     assert sorted(user.resolver_commits) == [0, 1]
+    assert user.n_issues_all == 1
 
 
 def test_get_background_data(mock_mongodb):

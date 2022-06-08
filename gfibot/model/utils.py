@@ -2,6 +2,7 @@ import math
 import pandas as pd
 import xgboost as xgb
 
+from collections import defaultdict
 from mongoengine import Q
 from gfibot.collections import *
 from sklearn.feature_extraction.text import HashingVectorizer
@@ -61,7 +62,22 @@ def get_text_feature(text):
 
 def get_user_average(user_list: List[Dataset.UserFeature], threshold: int) -> dict:
     user_num = len(user_list)
-    result = defaultdict(lambda: 0)
+    result = {
+        "commits_num": 0,
+        "issues_num": 0,
+        "pulls_num": 0,
+        "repo_num": 0,
+        "commits_num_all": 0,
+        "issues_num_all": 0,
+        "pulls_num_all": 0,
+        "review_num_all": 0,
+        "max_stars_commit": 0,
+        "max_stars_issue": 0,
+        "max_stars_pull": 0,
+        "max_stars_review": 0,
+        "gfi_ratio": 0,
+        "gfi_num": 0,
+    }
     if user_num != 0:
         for user in user_list:
             result["commits_num"] += user.n_commits
@@ -76,8 +92,8 @@ def get_user_average(user_list: List[Dataset.UserFeature], threshold: int) -> di
             result["max_stars_issue"] += user.max_stars_issue
             result["max_stars_pull"] += user.max_stars_pull
             result["max_stars_review"] += user.max_stars_review
-            result["user_gfi_ratio"] += get_ratio(user.resolver_commits, threshold)
-            result["user_gfi_num"] += get_num(user.resolver_commits, threshold)
+            result["gfi_ratio"] += get_ratio(user.resolver_commits, threshold)
+            result["gfi_num"] += get_num(user.resolver_commits, threshold)
         for k, v in result.items():
             result[k] = v / user_num
     return result
@@ -272,3 +288,15 @@ def get_all_metrics(y_test: List[int], pred_labels: List[int], y_prob: List[floa
     recall = recall_score(y_test, pred_labels)
     f1 = f1_score(y_test, pred_labels)
     return auc_, precision, recall, f1
+
+
+def dump_dataset(file: str, threshold: int):
+    dataset = []
+    for d in Dataset.objects():
+        dataset.append(get_issue_data(d, threshold))
+    pd.DataFrame(dataset).to_csv(file, index=False)
+
+
+if __name__ == "__main__":
+    
+    dump_dataset()

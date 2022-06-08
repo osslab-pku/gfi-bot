@@ -31,7 +31,7 @@ class GitHubGraphQLClient(object):
             try:
                 r = requests.get(schema_url)
                 if r.status_code == 200:
-                    with open(schema_path, "w") as f:
+                    with open(schema_path, "w", encoding="utf-8") as f:
                         f.write(r.text)
                     return r.text
                 else:

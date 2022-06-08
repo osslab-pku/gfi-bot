@@ -1,19 +1,123 @@
 from datetime import datetime, timezone
 from pandas.testing import assert_frame_equal
-import os
-import sys
-
-current_work_dir = os.path.dirname(__file__)
-utpath = os.path.join(current_work_dir, "../..")
-sys.path.append(utpath)
 from gfibot.collections import *
 from gfibot.model.predictor import *
 from gfibot.model.utils import *
-from tests.conftest import *
+
+
+example1 = {
+    "owner": "owner",
+    "name": "name",
+    "number": 5,
+    "is_gfi": 0,
+    "len_title": 1,
+    "len_body": 1,
+    "n_code_snips": 0,
+    "n_urls": 0,
+    "n_imgs": 0,
+    "coleman_liau_index": 0.1,
+    "flesch_reading_ease": 0.1,
+    "flesch_kincaid_grade": 0.1,
+    "automated_readability_index": 0.1,
+    "bug_num": 0,
+    "feature_num": 0,
+    "test_num": 0,
+    "build_num": 0,
+    "doc_num": 0,
+    "coding_num": 0,
+    "enhance_num": 0,
+    "gfi_num": 1,
+    "medium_num": 0,
+    "major_num": 0,
+    "triaged_num": 0,
+    "untriaged_num": 0,
+    "rpt_is_new": 0,
+    "rpt_gfi_ratio": 0.0,
+    "owner_gfi_ratio": 0.0,
+    "owner_gfi_num": 0,
+    "pro_gfi_ratio": 0,
+    "pro_gfi_num": 0,
+    "n_stars": 0,
+    "n_pulls": 1,
+    "n_commits": 5,
+    "n_contributors": 2,
+    "n_closed_issues": 1,
+    "n_open_issues": 1,
+    "r_open_issues": 1.0,
+    "issue_close_time": 1.0,
+    "comment_num": 0,
+    "event_num": 0,
+    "commenter_commits_num": 4.0,
+    "commenter_issues_num": 1.0,
+    "commenter_pulls_num": 1.5,
+    "commenter_gfi_ratio": 0.0,
+    "commenter_gfi_num": 0.0,
+    "eventer_commits_num": 0,
+    "eventer_issues_num": 0,
+    "eventer_pulls_num": 0,
+    "eventer_gfi_ratio": 0,
+    "eventer_gfi_num": 0,
+}
+
+example2 = {
+    "owner": "owner",
+    "name": "name",
+    "number": 6,
+    "is_gfi": 1,
+    "len_title": 1,
+    "len_body": 1,
+    "n_code_snips": 0,
+    "n_urls": 0,
+    "n_imgs": 0,
+    "coleman_liau_index": 0.1,
+    "flesch_reading_ease": 0.1,
+    "flesch_kincaid_grade": 0.1,
+    "automated_readability_index": 0.1,
+    "bug_num": 0,
+    "feature_num": 0,
+    "test_num": 0,
+    "build_num": 0,
+    "doc_num": 0,
+    "coding_num": 0,
+    "enhance_num": 0,
+    "gfi_num": 1,
+    "medium_num": 0,
+    "major_num": 0,
+    "triaged_num": 0,
+    "untriaged_num": 0,
+    "rpt_is_new": 0,
+    "rpt_gfi_ratio": 0.0,
+    "owner_gfi_ratio": 0.0,
+    "owner_gfi_num": 0,
+    "pro_gfi_ratio": 0,
+    "pro_gfi_num": 0,
+    "n_stars": 0,
+    "n_pulls": 1,
+    "n_commits": 5,
+    "n_contributors": 2,
+    "n_closed_issues": 1,
+    "n_open_issues": 1,
+    "r_open_issues": 1.0,
+    "issue_close_time": 1.0,
+    "comment_num": 0,
+    "event_num": 0,
+    "commenter_commits_num": 4.0,
+    "commenter_issues_num": 1.0,
+    "commenter_pulls_num": 1.5,
+    "commenter_gfi_ratio": 0.0,
+    "commenter_gfi_num": 0.0,
+    "eventer_commits_num": 0,
+    "eventer_issues_num": 0,
+    "eventer_pulls_num": 0,
+    "eventer_gfi_ratio": 0,
+    "eventer_gfi_num": 0,
+}
 
 
 def test_util():
-    assert cat_comment("```comment```" "```comment```") == "```comment``````comment```"
+    assert (
+        cat_comment(["```comment```", "```comment```"]) == "```comment``````comment```"
+    )
 
     assert user_new(0, 1) == 1
     assert user_new(1, 2) == 1
@@ -33,14 +137,12 @@ def test_util():
 
 def test_get_user_average(mock_mongodb):
     issue = Dataset.objects(name="name", owner="owner", number=5).first()
-    commits_num, issues_num, pulls_num, user_gfi_ratio, user_gfi_num = get_user_average(
-        issue.comment_users, 2
-    )
-    assert commits_num == 4
-    assert issues_num == 1
-    assert pulls_num == 1.5
-    assert user_gfi_ratio == 0.25
-    assert user_gfi_num == 0.5
+    result = get_user_average(issue.comment_users, 2)
+    assert result["commits_num"] == 4
+    assert result["issues_num"] == 1
+    assert result["pulls_num"] == 1.5
+    assert result["gfi_ratio"] == 0.25
+    assert result["gfi_num"] == 0.5
 
 
 def test_load_data(mock_mongodb):
@@ -49,70 +151,13 @@ def test_load_data(mock_mongodb):
     df_data = load_data(threshold, batch)
     columns = df_data.columns.tolist()
     for key in columns:
-        if "title" in key or "body" in key or "comment_text" in key:
-            if key != "len_title" and key != "len_body":
-                del df_data[key]
-    df_diff = assert_frame_equal(
+        if key not in example1.keys():
+            del df_data[key]
+    print(df_data.columns.tolist())
+    assert_frame_equal(
         df_data,
-        pd.DataFrame(
-            [
-                {
-                    "owner": "owner",
-                    "name": "name",
-                    "number": 5,
-                    "is_gfi": 0,
-                    "len_title": 1,
-                    "len_body": 1,
-                    "n_code_snips": 0,
-                    "n_urls": 0,
-                    "n_imgs": 0,
-                    "coleman_liau_index": 0.1,
-                    "flesch_reading_ease": 0.1,
-                    "flesch_kincaid_grade": 0.1,
-                    "automated_readability_index": 0.1,
-                    "bug_num": 0,
-                    "feature_num": 0,
-                    "test_num": 0,
-                    "build_num": 0,
-                    "doc_num": 0,
-                    "coding_num": 0,
-                    "enhance_num": 0,
-                    "gfi_num": 1,
-                    "medium_num": 0,
-                    "major_num": 0,
-                    "triaged_num": 0,
-                    "untriaged_num": 0,
-                    "rpt_is_new": 0,
-                    "rpt_gfi_ratio": 0.0,
-                    "owner_gfi_ratio": 0.0,
-                    "owner_gfi_num": 0,
-                    "pro_gfi_ratio": 0,
-                    "pro_gfi_num": 0,
-                    "n_stars": 0,
-                    "n_pulls": 1,
-                    "n_commits": 5,
-                    "n_contributors": 2,
-                    "n_closed_issues": 1,
-                    "n_open_issues": 1,
-                    "r_open_issues": 1.0,
-                    "issue_close_time": 1.0,
-                    "commenter_commits_num": 4.0,
-                    "commenter_issues_num": 1.0,
-                    "commenter_pulls_num": 1.5,
-                    "commenter_gfi_ratio": 0.0,
-                    "commenter_gfi_num": 0.0,
-                    "eventer_commits_num": 0,
-                    "eventer_issues_num": 0,
-                    "eventer_pulls_num": 0,
-                    "eventer_gfi_ratio": 0,
-                    "eventer_gfi_num": 0,
-                    "comment_num": 0,
-                    "event_num": 0,
-                }
-            ]
-        ),
+        pd.DataFrame([example1]),
     )
-    assert df_diff is None
 
 
 def test_get_issue_data(mock_mongodb):
@@ -121,62 +166,9 @@ def test_get_issue_data(mock_mongodb):
     one_issue = get_issue_data(issue, threshold)
     keys = list(one_issue.keys())
     for key in keys:
-        if "title" in key or "body" in key or "comment_text" in key:
-            if key != "len_title" and key != "len_body":
-                del one_issue[key]
-    assert one_issue == {
-        "owner": "owner",
-        "name": "name",
-        "number": 5,
-        "is_gfi": 0,
-        "len_title": 1,
-        "len_body": 1,
-        "n_code_snips": 0,
-        "n_urls": 0,
-        "n_imgs": 0,
-        "coleman_liau_index": 0.1,
-        "flesch_reading_ease": 0.1,
-        "flesch_kincaid_grade": 0.1,
-        "automated_readability_index": 0.1,
-        "bug_num": 0,
-        "feature_num": 0,
-        "test_num": 0,
-        "build_num": 0,
-        "doc_num": 0,
-        "coding_num": 0,
-        "enhance_num": 0,
-        "gfi_num": 1,
-        "medium_num": 0,
-        "major_num": 0,
-        "triaged_num": 0,
-        "untriaged_num": 0,
-        "rpt_is_new": 0,
-        "rpt_gfi_ratio": 0.0,
-        "owner_gfi_ratio": 0.0,
-        "owner_gfi_num": 0,
-        "pro_gfi_ratio": 0,
-        "pro_gfi_num": 0,
-        "n_stars": 0,
-        "n_pulls": 1,
-        "n_commits": 5,
-        "n_contributors": 2,
-        "n_closed_issues": 1,
-        "n_open_issues": 1,
-        "r_open_issues": 1.0,
-        "issue_close_time": 1.0,
-        "commenter_commits_num": 4.0,
-        "commenter_issues_num": 1.0,
-        "commenter_pulls_num": 1.5,
-        "commenter_gfi_ratio": 0.0,
-        "commenter_gfi_num": 0.0,
-        "eventer_commits_num": 0,
-        "eventer_issues_num": 0,
-        "eventer_pulls_num": 0,
-        "eventer_gfi_ratio": 0,
-        "eventer_gfi_num": 0,
-        "comment_num": 0,
-        "event_num": 0,
-    }
+        if key not in example1.keys():
+            del one_issue[key]
+    assert one_issue == example1
 
 
 def test_update_model(mock_mongodb):
@@ -193,197 +185,27 @@ def test_update_model(mock_mongodb):
 
 
 def test_load_train_data():
-    data = pd.DataFrame(
-        [
-            {
-                "owner": "owner",
-                "name": "name",
-                "number": 6,
-                "is_gfi": 1,
-                "len_title": 1,
-                "len_body": 1,
-                "n_code_snips": 0,
-                "n_urls": 0,
-                "n_imgs": 0,
-                "coleman_liau_index": 0.1,
-                "flesch_reading_ease": 0.1,
-                "flesch_kincaid_grade": 0.1,
-                "automated_readability_index": 0.1,
-                "bug_num": 0,
-                "feature_num": 0,
-                "test_num": 0,
-                "build_num": 0,
-                "doc_num": 0,
-                "coding_num": 0,
-                "enhance_num": 0,
-                "gfi_num": 1,
-                "medium_num": 0,
-                "major_num": 0,
-                "triaged_num": 0,
-                "untriaged_num": 0,
-                "rpt_is_new": 0,
-                "rpt_gfi_ratio": 0.0,
-                "owner_gfi_ratio": 0.0,
-                "owner_gfi_num": 0,
-                "pro_gfi_ratio": 0,
-                "pro_gfi_num": 0,
-                "n_stars": 0,
-                "n_pulls": 1,
-                "n_commits": 5,
-                "n_contributors": 2,
-                "n_closed_issues": 1,
-                "n_open_issues": 1,
-                "r_open_issues": 1.0,
-                "issue_close_time": 1.0,
-                "commenter_commits_num": 4.0,
-                "commenter_issues_num": 1.0,
-                "commenter_pulls_num": 1.5,
-                "commenter_gfi_ratio": 0.0,
-                "commenter_gfi_num": 0.0,
-                "eventer_commits_num": 0,
-                "eventer_issues_num": 0,
-                "eventer_pulls_num": 0,
-                "eventer_gfi_ratio": 0,
-                "eventer_gfi_num": 0,
-                "comment_num": 0,
-                "event_num": 0,
-            },
-            {
-                "owner": "owner",
-                "name": "name",
-                "number": 5,
-                "is_gfi": 0,
-                "len_title": 1,
-                "len_body": 1,
-                "n_code_snips": 0,
-                "n_urls": 0,
-                "n_imgs": 0,
-                "coleman_liau_index": 0.1,
-                "flesch_reading_ease": 0.1,
-                "flesch_kincaid_grade": 0.1,
-                "automated_readability_index": 0.1,
-                "bug_num": 0,
-                "feature_num": 0,
-                "test_num": 0,
-                "build_num": 0,
-                "doc_num": 0,
-                "coding_num": 0,
-                "enhance_num": 0,
-                "gfi_num": 1,
-                "medium_num": 0,
-                "major_num": 0,
-                "triaged_num": 0,
-                "untriaged_num": 0,
-                "rpt_is_new": 0,
-                "rpt_gfi_ratio": 0.0,
-                "owner_gfi_ratio": 0.0,
-                "owner_gfi_num": 0,
-                "pro_gfi_ratio": 0,
-                "pro_gfi_num": 0,
-                "n_stars": 0,
-                "n_pulls": 1,
-                "n_commits": 5,
-                "n_contributors": 2,
-                "n_closed_issues": 1,
-                "n_open_issues": 1,
-                "r_open_issues": 1.0,
-                "issue_close_time": 1.0,
-                "commenter_commits_num": 4.0,
-                "commenter_issues_num": 1.0,
-                "commenter_pulls_num": 1.5,
-                "commenter_gfi_ratio": 0.0,
-                "commenter_gfi_num": 0.0,
-                "eventer_commits_num": 0,
-                "eventer_issues_num": 0,
-                "eventer_pulls_num": 0,
-                "eventer_gfi_ratio": 0,
-                "eventer_gfi_num": 0,
-                "comment_num": 0,
-                "event_num": 0,
-            },
-        ]
-    )
+    data = pd.DataFrame([example2, example1])
     y_train = data["is_gfi"]
     X_train = data.drop(["is_gfi", "owner", "name", "number"], axis=1)
     x, y = load_train_data(data)
-    df_diff_x = assert_frame_equal(x, X_train)
-    df_diff_y = assert_frame_equal(pd.DataFrame(y), pd.DataFrame(y_train))
-    assert df_diff_x is None
-    assert df_diff_y is None
+    assert_frame_equal(x, X_train)
+    assert_frame_equal(pd.DataFrame(y), pd.DataFrame(y_train))
 
 
 def test_load_test_incremental(mock_mongodb):
     test_set = [["name", "owner", [5, datetime(1970, 1, 3, tzinfo=timezone.utc)]]]
     threshold = 1
-    data = pd.DataFrame(
-        [
-            {
-                "owner": "owner",
-                "name": "name",
-                "number": 5,
-                "is_gfi": 0,
-                "len_title": 1,
-                "len_body": 1,
-                "n_code_snips": 0,
-                "n_urls": 0,
-                "n_imgs": 0,
-                "coleman_liau_index": 0.1,
-                "flesch_reading_ease": 0.1,
-                "flesch_kincaid_grade": 0.1,
-                "automated_readability_index": 0.1,
-                "bug_num": 0,
-                "feature_num": 0,
-                "test_num": 0,
-                "build_num": 0,
-                "doc_num": 0,
-                "coding_num": 0,
-                "enhance_num": 0,
-                "gfi_num": 1,
-                "medium_num": 0,
-                "major_num": 0,
-                "triaged_num": 0,
-                "untriaged_num": 0,
-                "rpt_is_new": 0,
-                "rpt_gfi_ratio": 0.0,
-                "owner_gfi_ratio": 0.0,
-                "owner_gfi_num": 0,
-                "pro_gfi_ratio": 0,
-                "pro_gfi_num": 0,
-                "n_stars": 0,
-                "n_pulls": 1,
-                "n_commits": 5,
-                "n_contributors": 2,
-                "n_closed_issues": 1,
-                "n_open_issues": 1,
-                "r_open_issues": 1.0,
-                "issue_close_time": 1.0,
-                "commenter_commits_num": 4.0,
-                "commenter_issues_num": 1.0,
-                "commenter_pulls_num": 1.5,
-                "commenter_gfi_ratio": 0.0,
-                "commenter_gfi_num": 0.0,
-                "eventer_commits_num": 0,
-                "eventer_issues_num": 0,
-                "eventer_pulls_num": 0,
-                "eventer_gfi_ratio": 0,
-                "eventer_gfi_num": 0,
-                "comment_num": 0,
-                "event_num": 0,
-            }
-        ]
-    )
+    data = pd.DataFrame([example1])
     y_test = data["is_gfi"]
     X_test = data.drop(["is_gfi", "owner", "name"], axis=1)
     x, y = load_test_incremental(test_set, threshold)
     columns = x.columns.tolist()
     for key in columns:
-        if "title" in key or "body" in key or "comment_text" in key:
-            if key != "len_title" and key != "len_body":
-                del x[key]
-    df_diff_x = assert_frame_equal(x, X_test)
-    df_diff_y = assert_frame_equal(pd.DataFrame(y), pd.DataFrame(y_test))
-    assert df_diff_x is None
-    assert df_diff_y is None
+        if key not in example1:
+            del x[key]
+    assert_frame_equal(x, X_test)
+    assert_frame_equal(pd.DataFrame(y), pd.DataFrame(y_test))
 
 
 def test_predict_issues(mock_mongodb):
@@ -391,127 +213,7 @@ def test_predict_issues(mock_mongodb):
     threshold = 1
     batch_size = 100
     params = {"objective": "binary:logistic"}
-    data_dic0 = {
-        "owner": "owner",
-        "name": "name",
-        "number": 6,
-        "is_gfi": 1,
-        "len_title": 1,
-        "len_body": 1,
-        "n_code_snips": 0,
-        "n_urls": 0,
-        "n_imgs": 0,
-        "coleman_liau_index": 0.1,
-        "flesch_reading_ease": 0.1,
-        "flesch_kincaid_grade": 0.1,
-        "automated_readability_index": 0.1,
-        "bug_num": 0,
-        "feature_num": 0,
-        "test_num": 0,
-        "build_num": 0,
-        "doc_num": 0,
-        "coding_num": 0,
-        "enhance_num": 0,
-        "gfi_num": 1,
-        "medium_num": 0,
-        "major_num": 0,
-        "triaged_num": 0,
-        "untriaged_num": 0,
-        "rpt_is_new": 0,
-        "rpt_gfi_ratio": 0.0,
-        "owner_gfi_ratio": 0.0,
-        "owner_gfi_num": 0,
-        "pro_gfi_ratio": 0,
-        "pro_gfi_num": 0,
-        "n_stars": 0,
-        "n_pulls": 1,
-        "n_commits": 5,
-        "n_contributors": 2,
-        "n_closed_issues": 1,
-        "n_open_issues": 1,
-        "r_open_issues": 1.0,
-        "issue_close_time": 1.0,
-        "commenter_commits_num": 4.0,
-        "commenter_issues_num": 1.0,
-        "commenter_pulls_num": 1.5,
-        "commenter_gfi_ratio": 0.0,
-        "commenter_gfi_num": 0.0,
-        "eventer_commits_num": 0,
-        "eventer_issues_num": 0,
-        "eventer_pulls_num": 0,
-        "eventer_gfi_ratio": 0,
-        "eventer_gfi_num": 0,
-        "comment_num": 0,
-        "event_num": 0,
-    }
-    data_dic1 = {
-        "owner": "owner",
-        "name": "name",
-        "number": 5,
-        "is_gfi": 0,
-        "len_title": 1,
-        "len_body": 1,
-        "n_code_snips": 0,
-        "n_urls": 0,
-        "n_imgs": 0,
-        "coleman_liau_index": 0.1,
-        "flesch_reading_ease": 0.1,
-        "flesch_kincaid_grade": 0.1,
-        "automated_readability_index": 0.1,
-        "bug_num": 0,
-        "feature_num": 0,
-        "test_num": 0,
-        "build_num": 0,
-        "doc_num": 0,
-        "coding_num": 0,
-        "enhance_num": 0,
-        "gfi_num": 1,
-        "medium_num": 0,
-        "major_num": 0,
-        "triaged_num": 0,
-        "untriaged_num": 0,
-        "rpt_is_new": 0,
-        "rpt_gfi_ratio": 0.0,
-        "owner_gfi_ratio": 0.0,
-        "owner_gfi_num": 0,
-        "pro_gfi_ratio": 0,
-        "pro_gfi_num": 0,
-        "n_stars": 0,
-        "n_pulls": 1,
-        "n_commits": 5,
-        "n_contributors": 2,
-        "n_closed_issues": 1,
-        "n_open_issues": 1,
-        "r_open_issues": 1.0,
-        "issue_close_time": 1.0,
-        "commenter_commits_num": 4.0,
-        "commenter_issues_num": 1.0,
-        "commenter_pulls_num": 1.5,
-        "commenter_gfi_ratio": 0.0,
-        "commenter_gfi_num": 0.0,
-        "eventer_commits_num": 0,
-        "eventer_issues_num": 0,
-        "eventer_pulls_num": 0,
-        "eventer_gfi_ratio": 0,
-        "eventer_gfi_num": 0,
-        "comment_num": 0,
-        "event_num": 0,
-    }
-    for i in range(1024):
-        data_dic0["title" + str(i)] = 0
-        data_dic1["title" + str(i)] = 0
-    for i in range(1024):
-        data_dic0["body" + str(i)] = 0
-        data_dic1["body" + str(i)] = 0
-    for i in range(1024):
-        data_dic0["comment_text" + str(i)] = 0
-        data_dic1["comment_text" + str(i)] = 0
-    data = pd.DataFrame(
-        [
-            data_dic0,
-            data_dic1,
-        ]
-    )
+    data = load_data(threshold, test_set)
     y_train = data["is_gfi"]
     X_train = data.drop(["is_gfi", "owner", "name", "number"], axis=1)
     xg_train = xgb.DMatrix(X_train, label=y_train)
