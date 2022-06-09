@@ -315,10 +315,11 @@ def _find_users(
     resolved_issues: list,
 ) -> Set[str]:
     all_users = set([owner])
-    for commit in commits:
-        all_users.add(commit["author"])
+    issue_nums = set(i["number"] for i in open_issues + resolved_issues)
     for issue in issues:
-        all_users.add(issue["user"])
+        if issue["number"] in issue_nums:
+            all_users.add(issue["user"])
+    """
     for resolved in resolved_issues:
         all_users.add(resolved["resolver"])
         for event in resolved["events"]:
@@ -334,6 +335,7 @@ def _find_users(
                 all_users.add(event["assignee"])
             if "commenter" in event:
                 all_users.add(event["commenter"])
+    """
     if None in all_users:
         all_users.remove(None)
     logger.info("%d users associated with %s/%s", len(all_users), owner, name)
