@@ -12,15 +12,15 @@ def test_get_update_set(mock_mongodb):
     ]
     update_set = get_update_set(threshold, dataset_batch)
     assert update_set == [
-        ["name", "owner", [5, datetime(1970, 1, 3, 0, 0, tzinfo=timezone.utc)]],
-        ["name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)]],
+        ("name", "owner", [5, datetime(1970, 1, 3, 0, 0, tzinfo=timezone.utc)]),
+        ("name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)]),
     ]
 
 
 def test_update_basic_training_summary(mock_mongodb):
     update_set = [
-        ["name", "owner", [5, datetime(1970, 1, 3, 0, 0, tzinfo=timezone.utc)]],
-        ["name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)]],
+        ("name", "owner", [5, datetime(1970, 1, 3, 0, 0, tzinfo=timezone.utc)]),
+        ("name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)]),
     ]
     dataset_batch = [
         Dataset.objects(name="name", owner="owner", number=5).first(),
@@ -31,18 +31,18 @@ def test_update_basic_training_summary(mock_mongodb):
     get_update_set(threshold, dataset_batch)
     train_90_add = update_basic_training_summary(update_set, min_test_size, threshold)
     assert train_90_add == [
-        ["name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)]]
+        ("name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)])
     ]
 
 
 def test_update_models(mock_mongodb):
     update_set = [
-        ["name", "owner", [5, datetime(1970, 1, 3, 0, 0, tzinfo=timezone.utc)]],
-        ["name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)]],
+        ("name", "owner", [5, datetime(1970, 1, 3, 0, 0, tzinfo=timezone.utc)]),
+        ("name", "owner", [6, datetime(1971, 1, 3, 0, 0, tzinfo=timezone.utc)]),
     ]
     train_90_add = [
-        ["name", "owner", [5, datetime(1970, 1, 3, tzinfo=timezone.utc)]],
-        ["name", "owner", [6, datetime(1971, 1, 3, tzinfo=timezone.utc)]],
+        ("name", "owner", [5, datetime(1970, 1, 3, tzinfo=timezone.utc)]),
+        ("name", "owner", [6, datetime(1971, 1, 3, tzinfo=timezone.utc)]),
     ]
     batch_size = 100
     threshold = 2
@@ -50,8 +50,6 @@ def test_update_models(mock_mongodb):
         owner="owner",
         name="name",
         threshold=threshold,
-        model_90_file="",
-        model_full_file="",
         issues_train=[],
         issues_test=[],
         n_resolved_issues=0,

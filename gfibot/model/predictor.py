@@ -1,22 +1,35 @@
 import os
 import math
 import logging
+import argparse
 import mongoengine
 import pandas as pd
 import xgboost as xgb
 
+from typing import Tuple
 from datetime import datetime
 from gfibot import CONFIG
 from gfibot.model import utils
 from gfibot.collections import *
 from sklearn.metrics import accuracy_score
 
+
 logger = logging.getLogger(__name__)
-
 MODEL_ROOT_DIRECTORY = "models"
+os.makedirs(MODEL_ROOT_DIRECTORY, exist_ok=True)
 
 
-def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
+def model_90_path(threshold: int) -> str:
+    return f"{MODEL_ROOT_DIRECTORY}/model_90_{threshold}.model"
+
+
+def model_full_path(threshold: int) -> str:
+    return f"{MODEL_ROOT_DIRECTORY}/model_full_{threshold}.model"
+
+
+def get_update_set(
+    threshold: int, dataset_batch: List[Dataset]
+) -> Tuple[str, str, list]:  # name, owner, number, before
     update_set = []
     for i in dataset_batch:
         if i.resolver_commit_num == -1:
@@ -29,8 +42,6 @@ def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
                 owner=i.owner,
                 name=i.name,
                 threshold=threshold,
-                model_90_file="",
-                model_full_file="",
                 issues_train=[],
                 issues_test=[],
                 n_resolved_issues=0,
@@ -48,17 +59,19 @@ def get_update_set(threshold: int, dataset_batch: List[Dataset]) -> list:
         issue_set = train_set + test_set
         issue_number_set = [iss[0] for iss in issue_set]
         if i.number in issue_number_set:
-            logger.info(f"{i.owner}/{i.name}#{i.number}): no need to update")
+            logger.info(f"{i.owner}/{i.name}#{i.number}: no need to update")
             continue
         else:
-            update_set.append([i.name, i.owner, [i.number, i.before]])
-            logger.info(f"{i.owner}/{i.name}#{i.number}): added")
+            update_set.append((i.name, i.owner, [i.number, i.before]))
+            logger.info(f"{i.owner}/{i.name}#{i.number}: added")
     return update_set
 
 
 def update_basic_training_summary(
-    update_set: list, min_test_size: int, threshold: int
-) -> list:
+    update_set: Tuple[str, str, list],
+    min_test_size: int,
+    threshold: int,
+) -> List[Tuple[str, str, list]]:
     train_90_add = []
     for i in TrainingSummary.objects(threshold=threshold):
         update_issues = [
@@ -77,7 +90,7 @@ def update_basic_training_summary(
                 elif len(train_set) < 9 * min_test_size:
                     train_set.append(iss)
                     train_set.append(iss)
-                    train_90_add.append([i.name, i.owner, iss])
+                    train_90_add.append((i.name, i.owner, iss))
                 else:
                     test_set.append(iss)
                     if count == 9:
@@ -85,7 +98,7 @@ def update_basic_training_summary(
                         continue
                     else:
                         train_set.append(test_set[0])
-                        train_90_add.append([i.name, i.owner, test_set[0]])
+                        train_90_add.append((i.name, i.owner, test_set[0]))
                         test_set.pop(0)
                         count += 1
 
@@ -104,53 +117,93 @@ def update_basic_training_summary(
 def update_models(
     update_set: list, train_90_add: list, batch_size: int, threshold: int
 ) -> xgb.core.Booster:
-    model_90_path = TrainingSummary.objects(threshold=threshold)[0].model_90_file
-    if model_90_path == "":
-        model_90_path = None
-    model_90 = utils.update_model(model_90_path, threshold, train_90_add, batch_size)
-    model_full_path = TrainingSummary.objects(threshold=threshold)[0].model_full_file
-    if model_full_path == "":
-        model_full_path = None
-    model_full = utils.update_model(model_full_path, threshold, update_set, batch_size)
-    if model_90 is not None:
-        if 1 - os.path.exists(MODEL_ROOT_DIRECTORY):
-            os.makedirs(MODEL_ROOT_DIRECTORY)
-        model_90.save_model(
-            "{}/model_90_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
-        )
-    if model_full is not None:
-        if 1 - os.path.exists(MODEL_ROOT_DIRECTORY):
-            os.makedirs(MODEL_ROOT_DIRECTORY)
-        model_full.save_model(
-            "{}/model_full_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
-        )
+    model_90 = utils.update_model(
+        model_90_path(threshold), threshold, train_90_add, batch_size
+    )
+    model_full = utils.update_model(
+        model_full_path(threshold), threshold, update_set, batch_size
+    )
+    model_90.save_model(model_90_path(threshold))
+    model_full.save_model(model_full_path(threshold))
     return model_90
 
 
 def update_peformance_training_summary(
     model_90: xgb.core.Booster, batch_size: int, prob_thres: float, threshold: int
 ):
+    test_set_all = []
+    training_set_all = []
+    n_resolved_issues_all, n_newcomer_resolved_all = 0, 0
     for i in TrainingSummary.objects(threshold=threshold):
-        test_set = i.issues_test
-        test_set = [[i.name, i.owner, iss] for iss in test_set]
+        test_set_all.extend(i.issues_test)
+        training_set_all.extend(i.issues_train)
+        n_resolved_issues_all += i.n_resolved_issues
+        n_newcomer_resolved_all += i.n_newcomer_resolved
+
+        test_set = [[i.name, i.owner, iss] for iss in i.issues_test]
         y_test, y_prob = utils.predict_issues(test_set, threshold, batch_size, model_90)
         y_pred = [int(i > prob_thres) for i in y_prob]
 
-        auc, precision, recall, f1 = utils.get_all_metrics(y_test, y_pred, y_prob)
-        acc = accuracy_score(y_test, y_pred)
-        if math.isnan(auc):
-            auc = 0.0
-
-        i.model_90_file = (
-            "{}/model_90_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
-        )
-        i.model_full_file = (
-            "{}/model_full_".format(MODEL_ROOT_DIRECTORY) + str(threshold) + ".model"
-        )
-        i.accuracy = accuracy_score(y_test, y_pred)
-        i.auc = auc
-        i.last_updated = datetime.now()
+        if all(y == 1 for y in y_pred) or all(y == 0 for y in y_pred):
+            logger.info(
+                "Performance for %s/%s is undefined because of all-0 or all-1 labels",
+                i.name,
+                i.owner,
+            )
+            i.accuracy = i.auc = i.precision = i.recall = i.f1 = float("nan")
+        else:
+            i.auc, i.precision, i.recall, i.f1 = utils.get_all_metrics(
+                y_test, y_pred, y_prob
+            )
+            i.accuracy = accuracy_score(y_test, y_pred)
+        i.last_updated = datetime.utcnow()
         i.save()
+        logger.info(
+            "Performance for %s/%s: acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
+            i.owner,
+            i.name,
+            i.accuracy,
+            i.auc,
+            i.precision,
+            i.recall,
+            i.f1,
+        )
+
+    summ = TrainingSummary.objects(name="", owner="", threshold=threshold)
+    if summ.count() == 0:
+        summ = TrainingSummary(owner="", name="", threshold=threshold)
+    else:
+        summ = summ.first()
+
+    summ.issues_train = training_set_all
+    summ.issues_test = test_set_all
+    summ.n_resolved_issues = n_resolved_issues_all
+    summ.n_newcomer_resolved = n_newcomer_resolved_all
+
+    test_set = [[i.name, i.owner, iss] for iss in test_set_all]
+    y_test, y_prob = utils.predict_issues(test_set, threshold, batch_size, model_90)
+    y_pred = [int(i > prob_thres) for i in y_prob]
+
+    if all(y == 1 for y in y_pred) or all(y == 0 for y in y_pred):
+        logger.info(
+            "Performance is undefined because of all-0 or all-1 labels",
+        )
+        summ.accuracy = summ.auc = summ.precision = summ.recall = summ.f1 = float("nan")
+    else:
+        summ.auc, summ.precision, summ.recall, summ.f1 = utils.get_all_metrics(
+            y_test, y_pred, y_prob
+        )
+        summ.acc = accuracy_score(y_test, y_pred)
+    summ.last_updated = datetime.utcnow()
+    summ.save()
+    logger.info(
+        "Overall Performance: acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
+        summ.accuracy,
+        summ.auc,
+        summ.precision,
+        summ.recall,
+        summ.f1,
+    )
 
 
 def update_training_summary(
@@ -169,7 +222,7 @@ def update_training_summary(
     """
     dataset = Dataset.objects()
     ith_batch = 0
-    need_update = 0
+    need_update = False
     while ith_batch < math.ceil(dataset.count() / dataset_size):
         dataset_batch = dataset[
             ith_batch * dataset_size : (ith_batch + 1) * dataset_size
@@ -184,25 +237,20 @@ def update_training_summary(
                 update_set, min_test_size, threshold
             )
             model_90 = update_models(update_set, train_90_add, batch_size, threshold)
-            need_update = 1
+            need_update = True
         ith_batch += 1
         logger.info("Model updated.")
-    if need_update == 1 and model_90 is not None:
+    if need_update and model_90 is not None:
         update_peformance_training_summary(model_90, batch_size, prob_thres, threshold)
         logger.info("Performance on each project is updated.")
     else:
         logger.info("No need to update performance.")
 
 
-def update_prediction_for_issue(i: OpenIssue, threshold: int):
-    model_full_path = TrainingSummary.objects(threshold=threshold)[0].model_full_file
+def update_prediction_for_issue(issue: Dataset, threshold: int):
     model_full = xgb.Booster()
-    model_full.load_model(model_full_path)
-    query = Q(name=i.name, owner=i.owner, number=i.number)
-    iss = Dataset.objects(query)
-    iss = iss.first()
-    issue = utils.get_issue_data(iss, threshold)
-    issue_df = pd.DataFrame(issue, index=[0])
+    model_full.load_model(model_full_path(threshold))
+    issue_df = pd.DataFrame(utils.get_issue_data(issue, threshold), index=[0])
     y_test = issue_df["is_gfi"]
     X_test = issue_df.drop(["is_gfi", "owner", "name", "number"], axis=1)
     xg_test = xgb.DMatrix(X_test, label=y_test)
@@ -210,11 +258,11 @@ def update_prediction_for_issue(i: OpenIssue, threshold: int):
     # print(xg_test)
     # print(y_prob)
     Prediction.objects(
-        Q(owner=iss.owner) & Q(name=iss.name) & Q(number=iss.number)
+        owner=issue.owner, name=issue.name, number=issue.number
     ).upsert_one(
-        owner=iss.owner,
-        name=iss.name,
-        number=iss.number,
+        owner=issue.owner,
+        name=issue.name,
+        number=issue.number,
         threshold=threshold,
         probability=y_prob,
         last_updated=datetime.now(),
@@ -223,19 +271,26 @@ def update_prediction_for_issue(i: OpenIssue, threshold: int):
 
 def update_repo_prediction(owner: str, name: str):
     for threshold in [1, 2, 3, 4, 5]:
-        for i in OpenIssue.objects(Q(owner=owner) & Q(name=name)):
+        for i in Dataset.objects(owner=owner, name=name, resolver_commit_num=-1):
             update_prediction_for_issue(i, threshold)
 
 
 def update_prediction(threshold: int):
-    for i in OpenIssue.objects():
+    for i in Dataset.objects(resolver_commit_num=-1):
         update_prediction_for_issue(i, threshold)
     logger.info(
-        "Get predictions for open issues under threshold " + str(threshold) + "."
+        "Get predictions for open issues under threshol Model updated.d "
+        + str(threshold)
+        + "."
     )
 
 
-def update():
+def update(cleanup=False):
+    if cleanup:
+        TrainingSummary.drop_collection()
+        Prediction.drop_collection()
+        os.rmdir(MODEL_ROOT_DIRECTORY)
+        os.makedirs(MODEL_ROOT_DIRECTORY, exist_ok=True)
     for threshold in [1, 2, 3, 4, 5]:
         logger.info(
             "Update TrainingSummary and Prediction for threshold "
@@ -247,11 +302,17 @@ def update():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cleanup", action="store_true")
+    args = parser.parse_args()
+
     mongoengine.connect(
         CONFIG["mongodb"]["db"],
         host=CONFIG["mongodb"]["url"],
         tz_aware=True,
         uuidRepresentation="standard",
     )
-    update()
+
+    update(args.cleanup)
+
     logger.info("Done!")

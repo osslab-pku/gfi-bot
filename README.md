@@ -62,8 +62,22 @@ First, determine some GitHub projects of interest and specify them in [`pyprojec
 python -m gfibot.check_tokens
 ```
 
+### Dataset Preparation
+
 Next, run the following script to collect historical data for the interested projects. This can take some time (up to days) to finish for the first run, but can perform quick incremental update on an existing database. This script should be done periodically (e.g., as a scheduled background task) to ensure that the MongoDB database reflect the latest state in the specified repositories.
 
 ```shell script
-python -m gfibot.data.update
+python -m gfibot.data.update --nprocess=4 # you can increase parallelism with more GitHub tokens
 ```
+
+Then, build a dataset for training and prediction as follows. This script may also take a long time but can be accelerated with more processes.
+
+```shell script
+python -m gfibot.data.dataset --since=2008.01.01 --nprocess=4
+```
+
+### Model Training
+
+
+
+### Backend Deployment

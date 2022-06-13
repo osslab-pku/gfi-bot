@@ -41,25 +41,24 @@ class TrainingSummary(Document):
     Attributes:
         owner, name, threshold: uniquely identifies a GitHub repository and a training setting.
             If owner="", name="", then this is a global summary result.
-        model_file: relative path to the model file, with repository as root.
         n_resolved_issues: total number of resolved issues in this repository.
         n_newcomer_resolved: the number of issues resolved by newcomers in this repository.
-        accuracy: the accuracy of the model on the training data.
-        auc: the area under the ROC curve.
+        accuracy, auc, precision, recall, f1: performance metrics in this repo.
         last_updated: the last time this training summary was updated.
     """
 
     owner: str = StringField(required=True)
     name: str = StringField(required=True)
+    threshold: int = IntField(required=True, min_value=1, max_value=5)
     issues_train: List[list] = ListField(ListField(), default=[])
     issues_test: List[list] = ListField(ListField(), default=[])
-    threshold: int = IntField(required=True, min_value=1, max_value=5)
-    model_90_file: str = StringField(required=True)
-    model_full_file: str = StringField(required=True)
     n_resolved_issues: int = IntField(required=True)
     n_newcomer_resolved: int = IntField(required=True)
-    accuracy: float = FloatField(required=True)
-    auc: float = FloatField(required=True)
+    accuracy: float = FloatField(null=True)
+    auc: float = FloatField(null=True)
+    precision: float = FloatField(null=True)
+    recall: float = FloatField(null=True)
+    f1: float = FloatField(null=True)
     last_updated: datetime = DateTimeField(required=True)
     meta = {
         "indexes": [

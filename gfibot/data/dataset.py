@@ -153,7 +153,7 @@ def _get_categorized_labels(labels: List[str]) -> Dataset.LabelCategory:
 
 
 def _get_user_data(
-    owner: str, name: str, user: str, t: datetime
+    owner: str, name: str, user: str, t: datetime, all_github: bool = True
 ) -> Dataset.UserFeature:
     """Get user data before a certain time t"""
     feat = Dataset.UserFeature(name=user)
@@ -194,27 +194,28 @@ def _get_user_data(
     feat.resolver_commits = usr_revolver_cmts
 
     # GitHub global features
-    query = User.objects(login=user)
+    if all_github:
+        query = User.objects(login=user)
 
-    if query.count() == 0:
-        return feat
+        if query.count() == 0:
+            return feat
 
-    user: User = query.first()
-    commits = [c for c in user.commit_contributions if c.created_at <= t]
-    issues = [i for i in user.issues if i.created_at <= t]
-    pulls = [p for p in user.pulls if p.created_at <= t]
-    reviews = [r for r in user.pull_reviews if r.created_at <= t]
-    feat.n_commits_all = sum(c.commit_count for c in commits)
-    feat.n_issues_all = len(issues)
-    feat.n_pulls_all = len(pulls)
-    feat.n_reviews_all = len(reviews)
-    feat.max_stars_commit = max([c.repo_stars for c in commits] + [0])
-    feat.max_stars_issue = max([i.repo_stars for i in issues] + [0])
-    feat.max_stars_pull = max([p.repo_stars for p in pulls] + [0])
-    feat.max_stars_review = max([r.repo_stars for r in reviews] + [0])
-    feat.n_repos = len(
-        set((x.owner, x.name) for x in commits + issues + pulls + reviews)
-    )
+        user: User = query.first()
+        commits = [c for c in user.commit_contributions if c.created_at <= t]
+        issues = [i for i in user.issues if i.created_at <= t]
+        pulls = [p for p in user.pulls if p.created_at <= t]
+        reviews = [r for r in user.pull_reviews if r.created_at <= t]
+        feat.n_commits_all = sum(c.commit_count for c in commits)
+        feat.n_issues_all = len(issues)
+        feat.n_pulls_all = len(pulls)
+        feat.n_reviews_all = len(reviews)
+        feat.max_stars_commit = max([c.repo_stars for c in commits] + [0])
+        feat.max_stars_issue = max([i.repo_stars for i in issues] + [0])
+        feat.max_stars_pull = max([p.repo_stars for p in pulls] + [0])
+        feat.max_stars_review = max([r.repo_stars for r in reviews] + [0])
+        feat.n_repos = len(
+            set((x.owner, x.name) for x in commits + issues + pulls + reviews)
+        )
 
     return feat
 
@@ -262,8 +263,10 @@ def _get_dynamics_data(owner: str, name: str, events: List[IssueEvent], t: datet
                 comments.append(event.comment)
                 if event.actor is not None and event.actor != "ghost":
                     comment_users.add(event.actor)
-    comment_users = [_get_user_data(owner, name, user, t) for user in comment_users]
-    event_users = [_get_user_data(owner, name, user, t) for user in event_users]
+    comment_users = [
+        _get_user_data(owner, name, user, t, False) for user in comment_users
+    ]
+    event_users = [_get_user_data(owner, name, user, t, False) for user in event_users]
     return labels, comments, comment_users, event_users
 
 
@@ -433,8 +436,9 @@ def get_dataset_all(since: datetime, n_process: int = None):
         n_process (int, optional): Number of processes to use. Defaults to None
     """
     if n_process is None:
-        for repo in Repo.objects():
-            get_dataset_for_repo(repo.owner, repo.name, since)
+        repos = [(r.owner, r.name) for r in Repo.objects()]
+        for owner, name in repos:
+            get_dataset_for_repo(owner, name, since)
     else:
         params = [(r.owner, r.name, since, None, True) for r in Repo.objects()]
         with mp.Pool(n_process) as p:
@@ -443,8 +447,12 @@ def get_dataset_all(since: datetime, n_process: int = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--since")
-    since = parse_date(parser.parse_args().since)
+    parser.add_argument("--since", type=str, default="2008.01.01")
+    parser.add_argument("--nprocess", type=int, default=mp.cpu_count())
+    args = parser.parse_args()
+    since, nprocess = parse_date(args.since), args.nprocess
+
+    logger.info("Start!")
 
     mongoengine.connect(
         CONFIG["mongodb"]["db"],
@@ -453,6 +461,6 @@ if __name__ == "__main__":
         uuidRepresentation="standard",
     )
 
-    get_dataset_all(since, mp.cpu_count())
+    get_dataset_all(since, nprocess)
 
     logger.info("Finish!")

@@ -272,7 +272,7 @@ def _update_open_issues(fetcher: RepoFetcher, nums: List[int], since: datetime):
     logger.info("%d open issues updated since %s", repo_open_issues.count(), since)
 
     open_issues = []
-    for issue in repo_open_issues:
+    for issue in list(repo_open_issues):
         existing = OpenIssue.objects(query & Q(number=issue.number))
         if existing.count() > 0:
             open_issue = existing.first()

@@ -2,7 +2,6 @@ import math
 import pandas as pd
 import xgboost as xgb
 
-from collections import defaultdict
 from mongoengine import Q
 from gfibot.collections import *
 from sklearn.feature_extraction.text import HashingVectorizer
@@ -298,5 +297,5 @@ def dump_dataset(file: str, threshold: int):
 
 
 if __name__ == "__main__":
-    
+
     dump_dataset()
