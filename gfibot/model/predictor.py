@@ -46,8 +46,6 @@ def get_update_set(
                 issues_test=[],
                 n_resolved_issues=0,
                 n_newcomer_resolved=0,
-                accuracy=0,
-                auc=0,
                 last_updated=datetime.now(),
             )
             repo.save()
@@ -118,10 +116,18 @@ def update_models(
     update_set: list, train_90_add: list, batch_size: int, threshold: int
 ) -> xgb.core.Booster:
     model_90 = utils.update_model(
-        model_90_path(threshold), threshold, train_90_add, batch_size
+        model_90_path(threshold) if os.path.exists(model_90_path(threshold)) else None,
+        threshold,
+        train_90_add,
+        batch_size,
     )
     model_full = utils.update_model(
-        model_full_path(threshold), threshold, update_set, batch_size
+        model_full_path(threshold)
+        if os.path.exists(model_full_path(threshold))
+        else None,
+        threshold,
+        update_set,
+        batch_size,
     )
     model_90.save_model(model_90_path(threshold))
     model_full.save_model(model_full_path(threshold))

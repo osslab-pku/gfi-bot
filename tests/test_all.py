@@ -54,4 +54,5 @@ def test_all(real_mongodb):
         assert data.count() == 2
         assert data.first().resolver_commit_num >= 0
 
+    predictor.update(cleanup=True)
     predictor.update()
