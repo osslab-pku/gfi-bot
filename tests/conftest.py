@@ -19,6 +19,7 @@ def execute_before_any_test():
     mongoengine.disconnect_all()
 
     gfibot.model.predictor.MODEL_ROOT_DIRECTORY = "models-test"
+    os.makedirs("models-test", exist_ok=True)
 
 
 @pytest.fixture(scope="function")
