@@ -48,6 +48,8 @@ def get_update_set(
                 issues_test=[],
                 n_resolved_issues=0,
                 n_newcomer_resolved=0,
+                batch_accuracy=[],
+                batch_auc=[],
                 last_updated=datetime.now(),
             )
             repo.save()
@@ -226,6 +228,68 @@ def update_peformance_training_summary(
     )
 
 
+def update_patch_performance(
+    ith_batch: int, model_90: xgb.core.Booster, batch_size: int, prob_thres: float, threshold: int
+):
+    test_set_all = []
+    training_set_all = []
+    n_resolved_issues_all, n_newcomer_resolved_all = 0, 0
+    for i in TrainingSummary.objects(threshold=threshold):
+        training_set_all.extend(i.issues_train)
+        n_resolved_issues_all += i.n_resolved_issues
+        n_newcomer_resolved_all += i.n_newcomer_resolved
+        test_set = [[i.name, i.owner, iss] for iss in i.issues_test]
+        test_set_all.extend(test_set)
+
+        y_test, y_prob = utils.predict_issues(test_set, threshold, batch_size, model_90)
+        y_pred = [int(i > prob_thres) for i in y_prob]
+
+        if all(y == 1 for y in y_pred) or all(y == 0 for y in y_pred):
+            logger.info(
+                "Performance for %d th_batch of %s/%s is undefined because of all-0 or all-1 labels",
+                ith_batch,
+                i.name,
+                i.owner,
+            )
+            accuracy = auc = precision = recall = f1 = float("nan")
+        else:
+            auc, precision, recall, f1 = utils.get_all_metrics(
+                y_test, y_pred, y_prob
+            )
+            accuracy = accuracy_score(y_test, y_pred)
+
+        batch_accuracy_list = i.batch_accuracy
+        batch_auc_list = i.batch_auc
+        batch_precision_list = i.batch_precision
+        batch_recall_list = i.batch_recall
+        batch_f1_list = i.batch_f1
+        batch_accuracy_list.append(str(ith_batch)+ "th_batch: " +str(accuracy))
+        batch_auc_list.append(str(ith_batch)+ "th_batch: " +str(auc))
+        batch_precision_list.append(str(ith_batch)+ "th_batch: " +str(precision))
+        batch_recall_list.append(str(ith_batch)+ "th_batch: " +str(recall))
+        batch_f1_list.append(str(ith_batch)+ "th_batch: " +str(f1))
+        i.batch_accuracy = batch_accuracy_list
+        i.batch_auc = batch_auc_list
+        i.batch_precision = batch_precision_list
+        i.batch_recall = batch_recall_list
+        i.batch_f1 = batch_f1_list
+        i.last_updated = datetime.utcnow()
+        i.save()
+        logger.info(
+            "Performance for %d th_batch of %s/%s (%d test issues): "
+            "acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
+            ith_batch,
+            i.owner,
+            i.name,
+            len(test_set),
+            i.batch_accuracy,
+            i.batch_auc,
+            i.batch_precision,
+            i.batch_recall,
+            i.batch_f1,
+        )
+
+        
 def update_training_summary(
     threshold: int,
     min_test_size=1,
@@ -258,6 +322,9 @@ def update_training_summary(
             )
             model_90 = update_models(update_set, train_90_add, batch_size, threshold)
             need_update = True
+            update_patch_performance(
+                ith_batch, model_90, batch_size, prob_thres, threshold
+            )
         ith_batch += 1
         logger.info("Model updated.")
 
