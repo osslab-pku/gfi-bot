@@ -50,6 +50,9 @@ def get_update_set(
                 n_newcomer_resolved=0,
                 batch_accuracy=[],
                 batch_auc=[],
+                batch_precision=[],
+                batch_recall=[],
+                batch_f1=[],
                 last_updated=datetime.now(),
             )
             repo.save()
