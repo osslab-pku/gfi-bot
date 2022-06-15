@@ -567,6 +567,7 @@ def update_repo(
 
     _update_repo_stats(repo)
     repo.save()
+    logger.info("Finished updating for %s/%s since %s", owner, name, since)
 
 
 def update_under_one_token(token: str, repos: List[str]) -> None:

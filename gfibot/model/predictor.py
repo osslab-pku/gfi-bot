@@ -1,5 +1,6 @@
 import os
 import math
+import shutil
 import logging
 import argparse
 import mongoengine
@@ -8,6 +9,7 @@ import xgboost as xgb
 
 from typing import Tuple
 from datetime import datetime
+from dateutil.parser import parse as parse_date
 from gfibot import CONFIG
 from gfibot.model import utils
 from gfibot.collections import *
@@ -78,8 +80,8 @@ def update_basic_training_summary(
         if update_issues == []:
             continue
         else:
-            train_set = i.issues_train
-            test_set = i.issues_test
+            train_set, test_set = i.issues_train, i.issues_test
+            prev_len_train, prev_len_test = len(train_set), len(test_set)
 
             count = 0
             for iss in update_issues:
@@ -109,6 +111,15 @@ def update_basic_training_summary(
             i.issues_train = train_set
             i.issues_test = test_set
         i.save()
+        logger.info(
+            "%s/%s: train_set %d -> %d, test set %d -> %d",
+            i.name,
+            i.owner,
+            prev_len_train,
+            len(i.issues_train),
+            prev_len_test,
+            len(i.issues_test),
+        )
     return train_90_add
 
 
@@ -141,12 +152,12 @@ def update_peformance_training_summary(
     training_set_all = []
     n_resolved_issues_all, n_newcomer_resolved_all = 0, 0
     for i in TrainingSummary.objects(threshold=threshold):
-        test_set_all.extend(i.issues_test)
         training_set_all.extend(i.issues_train)
         n_resolved_issues_all += i.n_resolved_issues
         n_newcomer_resolved_all += i.n_newcomer_resolved
-
         test_set = [[i.name, i.owner, iss] for iss in i.issues_test]
+        test_set_all.extend(test_set)
+
         y_test, y_prob = utils.predict_issues(test_set, threshold, batch_size, model_90)
         y_pred = [int(i > prob_thres) for i in y_prob]
 
@@ -165,9 +176,11 @@ def update_peformance_training_summary(
         i.last_updated = datetime.utcnow()
         i.save()
         logger.info(
-            "Performance for %s/%s: acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
+            "Performance for %s/%s (%d test issues): "
+            "acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
             i.owner,
             i.name,
+            len(test_set),
             i.accuracy,
             i.auc,
             i.precision,
@@ -186,8 +199,7 @@ def update_peformance_training_summary(
     summ.n_resolved_issues = n_resolved_issues_all
     summ.n_newcomer_resolved = n_newcomer_resolved_all
 
-    test_set = [[i.name, i.owner, iss] for iss in test_set_all]
-    y_test, y_prob = utils.predict_issues(test_set, threshold, batch_size, model_90)
+    y_test, y_prob = utils.predict_issues(test_set_all, threshold, batch_size, model_90)
     y_pred = [int(i > prob_thres) for i in y_prob]
 
     if all(y == 1 for y in y_pred) or all(y == 0 for y in y_pred):
@@ -199,11 +211,13 @@ def update_peformance_training_summary(
         summ.auc, summ.precision, summ.recall, summ.f1 = utils.get_all_metrics(
             y_test, y_pred, y_prob
         )
-        summ.acc = accuracy_score(y_test, y_pred)
+        summ.accuracy = accuracy_score(y_test, y_pred)
     summ.last_updated = datetime.utcnow()
     summ.save()
     logger.info(
-        "Overall Performance: acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
+        "Overall Performance (%d test issues): "
+        "acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
+        len(test_set_all),
         summ.accuracy,
         summ.auc,
         summ.precision,
@@ -215,8 +229,8 @@ def update_peformance_training_summary(
 def update_training_summary(
     threshold: int,
     min_test_size=1,
-    dataset_size=20000,
-    batch_size=10000,
+    dataset_size=5000,
+    batch_size=2500,
     prob_thres=0.5,
 ):
     """
@@ -226,7 +240,7 @@ def update_training_summary(
     batch_size: the maximum number of training points allowed to be added in one-step update of models.
     prob_thres: threshold to distinguish two classes.
     """
-    dataset = Dataset.objects()
+    dataset = Dataset.objects().order_by("before")
     ith_batch = 0
     need_update = False
     while ith_batch < math.ceil(dataset.count() / dataset_size):
@@ -246,11 +260,14 @@ def update_training_summary(
             need_update = True
         ith_batch += 1
         logger.info("Model updated.")
-    if need_update and model_90 is not None:
-        update_peformance_training_summary(model_90, batch_size, prob_thres, threshold)
-        logger.info("Performance on each project is updated.")
-    else:
-        logger.info("No need to update performance.")
+
+        if need_update and model_90 is not None:
+            update_peformance_training_summary(
+                model_90, batch_size, prob_thres, threshold
+            )
+            logger.info("Performance on each project is updated.")
+        else:
+            logger.info("No need to update performance.")
 
 
 def update_prediction_for_issue(issue: Dataset, threshold: int):
@@ -277,15 +294,18 @@ def update_prediction_for_issue(issue: Dataset, threshold: int):
 
 def update_repo_prediction(owner: str, name: str):
     for threshold in [1, 2, 3, 4, 5]:
-        for i in Dataset.objects(owner=owner, name=name, resolver_commit_num=-1):
+        for i in list(Dataset.objects(owner=owner, name=name, resolver_commit_num=-1)):
             update_prediction_for_issue(i, threshold)
 
 
 def update_prediction(threshold: int):
-    for i in Dataset.objects(resolver_commit_num=-1):
-        update_prediction_for_issue(i, threshold)
+    repos = [(r.owner, r.name) for r in Repo.objects()]
+    for owner, name in repos:
+        for i in list(Dataset.objects(owner=owner, name=name, resolver_commit_num=-1)):
+            logger.info("Update prediction: %s/%s#%d", owner, name, i.number)
+            update_prediction_for_issue(i, threshold)
     logger.info(
-        "Get predictions for open issues under threshol Model updated.d "
+        "Get predictions for open issues under threshol Model updated"
         + str(threshold)
         + "."
     )
@@ -295,7 +315,7 @@ def update(cleanup=False):
     if cleanup:
         TrainingSummary.drop_collection()
         Prediction.drop_collection()
-        os.rmdir(MODEL_ROOT_DIRECTORY)
+        shutil.rmtree(MODEL_ROOT_DIRECTORY)
         os.makedirs(MODEL_ROOT_DIRECTORY, exist_ok=True)
     for threshold in [1, 2, 3, 4, 5]:
         logger.info(

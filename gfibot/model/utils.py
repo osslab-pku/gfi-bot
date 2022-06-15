@@ -103,6 +103,8 @@ def load_data(threshold: int, batch: List[list]) -> pd.DataFrame:
     for issue in batch:
         query = Q(owner=issue[1], name=issue[0], number=issue[2][0], before=issue[2][1])
         one_issue = Dataset.objects(query).first()
+        if one_issue is None:
+            continue
         issue_list.append(get_issue_data(one_issue, threshold))
     issue_df = pd.DataFrame(issue_list)
     return issue_df
