@@ -278,18 +278,6 @@ def update_patch_performance(
         i.batch_f1 = batch_f1_list
         i.last_updated = datetime.utcnow()
         i.save()
-        logger.info(
-            "Performance for %s/%s (%d test issues): "
-            "acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
-            i.owner,
-            i.name,
-            len(test_set),
-            i.batch_accuracy,
-            i.batch_auc,
-            i.batch_precision,
-            i.batch_recall,
-            i.batch_f1,
-        )
 
         
 def update_training_summary(
