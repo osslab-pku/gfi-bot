@@ -59,6 +59,8 @@ class TrainingSummary(Document):
     precision: float = FloatField(null=True)
     recall: float = FloatField(null=True)
     f1: float = FloatField(null=True)
+    batch_accuracy: List[str] = ListField(StringField(), default=[])
+    batch_auc: List[str] = ListField(StringField(), default=[])
     last_updated: datetime = DateTimeField(required=True)
     meta = {
         "indexes": [
