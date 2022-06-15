@@ -279,9 +279,8 @@ def update_patch_performance(
         i.last_updated = datetime.utcnow()
         i.save()
         logger.info(
-            "Performance for %d th_batch of %s/%s (%d test issues): "
+            "Performance for %s/%s (%d test issues): "
             "acc = %.4f, auc = %.4f, prec = %.4f, recall = %.4f, f1 = %.4f",
-            ith_batch,
             i.owner,
             i.name,
             len(test_set),
