@@ -11,13 +11,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    services:
-      mongodb:
-        image: mongo:4.4.1
-        command: mongod --port 27020
-        ports:
-          - 27020:27020
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3.9
@@ -31,6 +24,11 @@ jobs:
     - name: Set up a GitHub token
       run: |
         echo ${{ secrets.GITHUB_TOKEN }} >> tokens.txt
+    - name: Start MongoDB
+      uses: supercharge/mongodb-github-action@1.7.0
+      with:
+        mongodb-version: 4.4.1
+        mongodb-port: 27020
     - name: Test with pytest
       run: |
         poetry run pytest --cov=./gfibot --cov-report=xml
