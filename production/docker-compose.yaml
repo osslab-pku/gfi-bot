@@ -20,12 +20,13 @@ services:
         depends_on:
             - mongodb
 
-    gfi-bot-frontend:
-        build:
-            context: ../
-            dockerfile: ./production/gfibot.frontend.dockerfile
-        ports:
-            - "80:80"
-            - "443:443"
-        depends_on:
-            - gfi-bot 
+    # TODO: fix strange dependency bugs before using frontend docker
+    #gfi-bot-frontend:
+    #    build:
+    #        context: ../
+    #        dockerfile: ./production/gfibot.frontend.dockerfile
+    #    ports:
+    #        - "80:80"
+    #        - "443:443"
+    #    depends_on:
+    #        - gfi-bot 

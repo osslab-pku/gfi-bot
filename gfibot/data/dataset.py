@@ -289,8 +289,6 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
         logger.error(f"{issue.owner}/{issue.name}#{issue.number}: Pull Request")
         return
 
-    logger.info(f"{issue.owner}/{issue.name}#{issue.number} (before {before}) start")
-
     repo: Repo = Repo.objects(owner=issue.owner, name=issue.name).first()
     contribs, n_closed, n_open, close_times = _get_background_data(
         issue.owner, issue.name, before
@@ -355,7 +353,6 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
     data.event_users = event_users
 
     data.save()
-    logger.info(f"{issue.owner}/{issue.name}#{issue.number} (before {before}) is done")
     return data
 
 
@@ -435,6 +432,14 @@ def get_dataset_for_repo(
         ResolvedIssue.objects(repo_query & Q(resolved_at__gte=since))
     )
     open_issues = list(OpenIssue.objects(repo_query & Q(updated_at__gte=since)))
+
+    logger.info(
+        "%s/%s: start building dataset (%d resolved, %d open)",
+        owner,
+        name,
+        len(resolved_issues),
+        len(open_issues),
+    )
     get_dataset_with_issues(resolved_issues, open_issues)
 
     log.updated_open_issues = len(open_issues)

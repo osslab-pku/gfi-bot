@@ -4,7 +4,7 @@ import json
 import logging
 import argparse
 
-MONGO_URI: Final = "mongodb://mongodb:27017/"
+MONGO_URI: Final = "mongodb://mongodb:27020/"
 SECRET_FILE_NAME: Final = "production/production_secrets.json"
 
 db_client = pymongo.MongoClient(MONGO_URI)

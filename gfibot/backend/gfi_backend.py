@@ -922,7 +922,7 @@ def get_repo_badge():
             ).count()
             print(gfi_num)
             img_src = "https://img.shields.io/badge/{}-{}".format(
-                "Using - GFIBot", "success"
+                f"GFIBot - {gfi_num} recommended good first issues", "success"
             )
             svg = requests.get(img_src).content
             return app.response_class(svg, mimetype="image/svg+xml")
