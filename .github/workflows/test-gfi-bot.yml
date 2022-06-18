@@ -15,7 +15,7 @@ jobs:
       mongodb:
         image: mongo:4.4.1
         ports:
-          - 27017:27017
+          - 27020:27020
 
     steps:
     - uses: actions/checkout@v2
