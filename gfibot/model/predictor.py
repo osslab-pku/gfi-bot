@@ -235,7 +235,11 @@ def update_peformance_training_summary(
 
 
 def update_patch_performance(
-    ith_batch: int, model_90: xgb.core.Booster, batch_size: int, prob_thres: float, threshold: int
+    ith_batch: int,
+    model_90: xgb.core.Booster,
+    batch_size: int,
+    prob_thres: float,
+    threshold: int,
 ):
     test_set_all = []
     training_set_all = []
@@ -259,9 +263,7 @@ def update_patch_performance(
             )
             accuracy = auc = precision = recall = f1 = float("nan")
         else:
-            auc, precision, recall, f1 = utils.get_all_metrics(
-                y_test, y_pred, y_prob
-            )
+            auc, precision, recall, f1 = utils.get_all_metrics(y_test, y_pred, y_prob)
             accuracy = accuracy_score(y_test, y_pred)
 
         batch_accuracy_list = i.batch_accuracy
@@ -269,11 +271,11 @@ def update_patch_performance(
         batch_precision_list = i.batch_precision
         batch_recall_list = i.batch_recall
         batch_f1_list = i.batch_f1
-        batch_accuracy_list.append(str(ith_batch)+ "th_batch: " +str(accuracy))
-        batch_auc_list.append(str(ith_batch)+ "th_batch: " +str(auc))
-        batch_precision_list.append(str(ith_batch)+ "th_batch: " +str(precision))
-        batch_recall_list.append(str(ith_batch)+ "th_batch: " +str(recall))
-        batch_f1_list.append(str(ith_batch)+ "th_batch: " +str(f1))
+        batch_accuracy_list.append(str(ith_batch) + "th_batch: " + str(accuracy))
+        batch_auc_list.append(str(ith_batch) + "th_batch: " + str(auc))
+        batch_precision_list.append(str(ith_batch) + "th_batch: " + str(precision))
+        batch_recall_list.append(str(ith_batch) + "th_batch: " + str(recall))
+        batch_f1_list.append(str(ith_batch) + "th_batch: " + str(f1))
         i.batch_accuracy = batch_accuracy_list
         i.batch_auc = batch_auc_list
         i.batch_precision = batch_precision_list
@@ -282,7 +284,7 @@ def update_patch_performance(
         i.last_updated = datetime.utcnow()
         i.save()
 
-        
+
 def update_training_summary(
     threshold: int,
     min_test_size=1,
