@@ -64,11 +64,11 @@ def get_update_set(
         issue_set = train_set + test_set
         issue_number_set = [iss[0] for iss in issue_set]
         if i.number in issue_number_set:
-            logger.info(f"{i.owner}/{i.name}#{i.number}: no need to update")
+            logger.debug(f"{i.owner}/{i.name}#{i.number}: no need to update")
             continue
         else:
             update_set.append((i.name, i.owner, [i.number, i.before]))
-            logger.info(f"{i.owner}/{i.name}#{i.number}: added")
+            logger.debug(f"{i.owner}/{i.name}#{i.number}: added")
     return update_set
 
 
@@ -157,6 +157,9 @@ def update_peformance_training_summary(
     training_set_all = []
     n_resolved_issues_all, n_newcomer_resolved_all = 0, 0
     for i in TrainingSummary.objects(threshold=threshold):
+        if i.name == "":
+            continue
+
         training_set_all.extend(i.issues_train)
         n_resolved_issues_all += i.n_resolved_issues
         n_newcomer_resolved_all += i.n_newcomer_resolved
@@ -283,8 +286,8 @@ def update_patch_performance(
 def update_training_summary(
     threshold: int,
     min_test_size=1,
-    dataset_size=5000,
-    batch_size=2500,
+    dataset_size=40000,
+    batch_size=20000,
     prob_thres=0.5,
 ):
     """
@@ -294,7 +297,7 @@ def update_training_summary(
     batch_size: the maximum number of training points allowed to be added in one-step update of models.
     prob_thres: threshold to distinguish two classes.
     """
-    dataset = Dataset.objects().order_by("before")
+    dataset = Dataset.objects()
     ith_batch = 0
     need_update = False
     while ith_batch < math.ceil(dataset.count() / dataset_size):
@@ -312,9 +315,9 @@ def update_training_summary(
             )
             model_90 = update_models(update_set, train_90_add, batch_size, threshold)
             need_update = True
-            update_patch_performance(
-                ith_batch, model_90, batch_size, prob_thres, threshold
-            )
+            # update_patch_performance(
+            #     ith_batch, model_90, batch_size, prob_thres, threshold
+            # )
         ith_batch += 1
         logger.info("Model updated.")
 

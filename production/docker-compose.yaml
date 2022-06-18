@@ -6,8 +6,10 @@ services:
         image: mongo
         container_name: mongodb
         volumes:
-            - /home/gfi_production/db:/data/db
-        command: mongod --bind_ip=0.0.0.0
+            - /data/heh/mongodb:/data/db
+        command: mongod --bind_ip=0.0.0.0 --port=27020
+        ports:
+            - "27020:27020"
     
     gfi-bot:
         build:
@@ -17,3 +19,13 @@ services:
             - "5000:5000" 
         depends_on:
             - mongodb
+
+    gfi-bot-frontend:
+        build:
+            context: ../
+            dockerfile: ./production/gfibot.frontend.dockerfile
+        ports:
+            - "80:80"
+            - "443:443"
+        depends_on:
+            - gfi-bot 

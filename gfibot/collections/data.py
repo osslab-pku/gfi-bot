@@ -291,7 +291,15 @@ class RepoCommit(Document):
 
     message: str = StringField(required=True)
 
-    meta = {"indexes": [{"fields": ["owner", "name", "sha"], "unique": True}]}
+    meta = {
+        "indexes": [
+            {"fields": ["owner", "name", "sha"], "unique": True},
+            {"fields": ["author"]},
+            {"fields": ["authored_at"]},
+            {"fields": ["committer"]},
+            {"fields": ["committed_at"]},
+        ]
+    }
 
 
 class RepoIssue(Document):
@@ -322,7 +330,13 @@ class RepoIssue(Document):
     body: str = StringField(null=True)
     labels: List[str] = ListField(StringField(required=True))
 
-    meta = {"indexes": [{"fields": ["owner", "name", "number"], "unique": True}]}
+    meta = {
+        "indexes": [
+            {"fields": ["owner", "name", "number"], "unique": True},
+            {"fields": ["is_pull"]},
+            {"fields": ["created_at"]},
+        ],
+    }
 
 
 class RepoStar(Document):

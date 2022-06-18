@@ -17,7 +17,6 @@ ENV PYTHONUNBUFFERED=1 \
 # prepend poetry and venv to path
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
-
 # `builder-base` stage is used to build deps + create our virtual environment
 FROM python-base as builder-base
 RUN apt-get update \
@@ -35,7 +34,6 @@ WORKDIR $PYSETUP_PATH
 COPY ./poetry.lock ./pyproject.toml ./
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
 RUN poetry install --no-dev
-
 
 # `production` image used for runtime
 FROM python-base as production

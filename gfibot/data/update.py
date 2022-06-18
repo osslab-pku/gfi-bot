@@ -589,10 +589,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--nprocess", type=int, default=mp.cpu_count())
+    parser.add_argument("--repos", type=str, default="")
     args = parser.parse_args()
     if args.debug:
         logger.setLevel(logging.DEBUG)
         rest_logger.setLevel(logging.DEBUG)
+    if args.repos == "":
+        repos = CONFIG["gfibot"]["projects"]
+    else:
+        repos = args.repos.split(",")
 
     # run check_tokens before update
     failed_tokens = check_tokens(TOKENS)
@@ -601,7 +606,7 @@ def main():
     logger.info("Data update started at {}".format(datetime.now()))
 
     params = defaultdict(list)
-    for i, project in enumerate(CONFIG["gfibot"]["projects"]):
+    for i, project in enumerate(repos):
         params[valid_tokens[i % len(valid_tokens)]].append(project)
     with mp.Pool(min(args.nprocess, len(valid_tokens))) as pool:
         pool.starmap(update_under_one_token, params.items())

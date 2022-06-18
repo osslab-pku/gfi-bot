@@ -362,22 +362,38 @@ def get_dataset(issue: Union[OpenIssue, ResolvedIssue], before: datetime) -> Dat
 def get_dataset_with_issues(
     resolved_issues: List[ResolvedIssue], open_issues: List[OpenIssue]
 ):
-    for i in resolved_issues:
-        get_dataset(i, i.created_at)
-        get_dataset(i, i.resolved_at)
+    for i, iss in enumerate(resolved_issues):
+        get_dataset(iss, iss.created_at)
+        get_dataset(iss, iss.resolved_at)
+        logger.info(
+            "%s/%s#%d is done (%d of %d resolved issues)",
+            iss.owner,
+            iss.name,
+            iss.number,
+            i,
+            len(resolved_issues),
+        )
 
-    for i in open_issues:
+    for i, iss in enumerate(open_issues):
         # determine whether this issue needs to be updated
-        if len(i.events) > 0:
-            last_updated = max(e.time for e in i.events)
+        if len(iss.events) > 0:
+            last_updated = max(e.time for e in iss.events)
         else:
-            last_updated = i.created_at
-        existing = Dataset.objects(name=i.name, owner=i.owner, number=i.number)
+            last_updated = iss.created_at
+        existing = Dataset.objects(name=iss.name, owner=iss.owner, number=iss.number)
         if existing.count() > 0 and existing.first().before >= last_updated:
-            logger.info(f"{i.owner}/{i.name}#{i.number}): no need to update")
+            logger.info("%s/%s#%d: no need to update", iss.owner, iss.name, iss.number)
             continue
 
-        get_dataset(i, i.updated_at)
+        get_dataset(iss, iss.updated_at)
+        logger.info(
+            "%s/%s#%d is done (%d of %d open issues)",
+            iss.owner,
+            iss.name,
+            iss.number,
+            i,
+            len(open_issues),
+        )
 
 
 def get_dataset_for_repo(

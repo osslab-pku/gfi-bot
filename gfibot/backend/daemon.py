@@ -1,4 +1,5 @@
 import argparse
+import mongoengine
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import random
@@ -121,6 +122,13 @@ def update_gfi_update_job(scheduler, job_id, name, owner):
 
 
 def start_scheduler():
+    mongoengine.connect(
+        CONFIG["mongodb"]["db"],
+        host=CONFIG["mongodb"]["url"],
+        tz_aware=True,
+        uuidRepresentation="standard",
+    )
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(daemon, "cron", hour=0, minute=0, id=DEFAULT_JOB_ID)
     tokens = [user.github_access_token for user in GfiUsers.objects()]
