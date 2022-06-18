@@ -204,7 +204,7 @@ class RepoFetcher(object):
                 "issue page %d/%d, rate %s", p, page_num, self.gh.rate_limiting
             )
             for issue in request_github(self.gh, issues.get_page, (p,), []):
-                if issue.state == "closed":
+                if issue.state == "closed" and issue.closed_at is not None:
                     closed_at = issue.closed_at.astimezone(timezone.utc)
                 else:
                     closed_at = None
