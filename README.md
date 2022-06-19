@@ -8,7 +8,9 @@
 
 ML-powered 🤖 for finding and labeling good first issues in your GitHub project!
 
-The tool is based on the following paper:
+The introduction of the bot is submitted to [FSE 2022 Demo](https://2022.esec-fse.org/track/fse-2022-demonstrations) --- GFI-Bot: Automated Good First Issue Recommendation on GitHub
+
+The embedded ML approach is introduced in the following paper:
 W. Xiao, H. He, W. Xu, X. Tan, J. Dong, M. Zhou. Recommending Good First Issues in GitHub OSS Projects. Accepted at [ICSE'2022](https://conf.researchr.org/home/icse-2022).
 
 ## Get Started
