@@ -4,11 +4,13 @@
 ![GFI-Bot Tests](https://github.com/osslab-pku/gfi-bot/actions/workflows/test-gfi-bot.yml/badge.svg)
 ![GFI-Bot Coverage](https://img.shields.io/codecov/c/github/osslab-pku/gfi-bot?label=GFI-Bot%20Coverage)
 ![License](https://img.shields.io/github/license/osslab-pku/gfi-bot?label=License)
-[![GFI-Bot]https://gfibot.io/api/repo/badge?owner=osslab-pku&name=gfi-bot)](https://gfibot.io/?owner=osslab-pku&name=gfi-bot)
+[![GFI-Bot](https://gfibot.io/api/repo/badge?owner=osslab-pku&name=gfi-bot)](https://gfibot.io/?owner=osslab-pku&name=gfi-bot)
 
 ML-powered 🤖 for finding and labeling good first issues in your GitHub project!
 
-The tool is based on the following paper:
+The introduction of the bot is submitted to [FSE 2022 Demo](https://2022.esec-fse.org/track/fse-2022-demonstrations) --- GFI-Bot: Automated Good First Issue Recommendation on GitHub
+
+The embedded ML approach is introduced in the following paper:
 W. Xiao, H. He, W. Xu, X. Tan, J. Dong, M. Zhou. Recommending Good First Issues in GitHub OSS Projects. Accepted at [ICSE'2022](https://conf.researchr.org/home/icse-2022).
 
 ## Get Started
