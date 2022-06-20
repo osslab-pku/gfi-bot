@@ -1,11 +1,14 @@
 gfibot.io {
-    route {
-        reverse_proxy /api/* localhost:5000 {
-            header_down +Access-Control-Allow-Origin "*"
-            header_down +Access-Control-Allow-Methods "OPTIONS, DELETE, GET, HEAD, POST, PUT"
-        }
-        root * frontend/build
-        try_files {path} /index.html
-        file_server
-    }
+	route {
+		reverse_proxy /api/* localhost:5000 {
+			header_down +Access-Control-Allow-Origin "*"
+			header_down +Access-Control-Allow-Methods "OPTIONS, DELETE, GET, HEAD, POST, PUT"
+		}
+		root * frontend/build
+		try_files {path} /index.html
+		file_server
+	}
+	log {
+		output file production/access.log
+	}
 }

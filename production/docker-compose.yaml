@@ -1,4 +1,4 @@
-version: '3'
+version: '2.2'
 
 services:
     
@@ -10,6 +10,7 @@ services:
         command: mongod --bind_ip=0.0.0.0 --port=27020
         ports:
             - "27020:27020"
+        mem_limit: 12G
     
     gfi-bot:
         build:
@@ -19,6 +20,7 @@ services:
             - "5000:5000" 
         depends_on:
             - mongodb
+        mem_limit: 12G
 
     # TODO: fix strange dependency bugs before using frontend docker
     #gfi-bot-frontend:

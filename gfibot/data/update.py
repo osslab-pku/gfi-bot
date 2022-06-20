@@ -113,7 +113,7 @@ def _update_repo_stats(repo: Repo):
     closed_t = [
         (i.closed_at - i.created_at).total_seconds()
         for i in all_issues
-        if i.state == "closed" and not i.is_pull
+        if i.state == "closed" and not i.is_pull and i.closed_at is not None
     ]
     repo.median_issue_close_time = np.median(closed_t) if len(closed_t) > 0 else None
 

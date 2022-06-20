@@ -558,9 +558,9 @@ def get_training_result():
         )
         training_result = []
         if len(query):
-            training_result = [query[0]]
+            training_result: List[TrainingSummary] = [query[0]]
     else:
-        training_result = []
+        training_result: List[TrainingSummary] = []
         for repo in Repo.objects():
             query = TrainingSummary.objects(
                 Q(name=repo.name) & Q(owner=repo.owner)

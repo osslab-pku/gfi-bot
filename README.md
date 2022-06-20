@@ -86,3 +86,14 @@ Model training can be simply done by running the following script.
 ```
 
 ### Backend Deployment
+
+
+### Dataset Dump and Restore
+
+```shell script
+mongodump --uri=mongodb://localhost:27020 --db=gfibot --collection=dataset --query="{\"resolver_commit_num\":{\"\$ne\":-1}}" --gzip 
+```
+
+```shel script
+mongorestore --uri={{ your mongodb url }} --db={{ your collection name }} --gzip
+```
