@@ -18,12 +18,11 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module',
   },
-  plugins: [
-    'react',
-    '@typescript-eslint',
-    'only-warn',
-  ],
+  plugins: ['react', '@typescript-eslint', 'only-warn'],
   rules: {
-    'react/jsx-filename-extension': [2, { 'extensions': ['.js', '.jsx', '.ts', '.tsx'] }],
+    'react/jsx-filename-extension': [
+      2,
+      { extensions: ['.js', '.jsx', '.ts', '.tsx'] },
+    ],
   },
 };
