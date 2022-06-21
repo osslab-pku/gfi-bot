@@ -4,30 +4,16 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../style/gfiStyle.css';
 import { defaultFontFamily } from '../utils';
 
-import { GFICopyright, GFIOverlay } from './GFIComponents';
+import { Link } from 'react-router-dom';
 
 // TODO: @MSKYurina
 //       Design and Animation
 
-// Mocked Description Words
+const SELF_INTRO =
+  'The introduction of the bot is submitted to FSE 2022 Demo --- GFI-Bot: Automated Good First Issue Recommendation on GitHub';
 
-const desFirstTitle = 'Declarative';
-const desFirstContent =
-  'React makes it painless to create interactive UIs. Design simple views for each state in your application, and React will efficiently update and render just the right components when your data changes.\n' +
-  '\n' +
-  'Declarative views make your code more predictable and easier to debug.';
-
-const desSecondTitle = 'Component-Based';
-const desSecondContent =
-  'Build encapsulated components that manage their own state, then compose them to make complex UIs.\n' +
-  '\n' +
-  'Since component logic is written in JavaScript instead of templates, you can easily pass rich data through your app and keep state out of the DOM.';
-
-const desThirdTitle = 'Learn Once, Write Anywhere';
-const desThirdContent =
-  'We don’t make assumptions about the rest of your technology stack, so you can develop new features in React without rewriting existing code.\n' +
-  '\n' +
-  'React can also render on the server using Node and power mobile apps using React Native.';
+const GFIBOT_INTRO =
+  "The embedded ML approach is introduced in the following paper: W. Xiao, H. He, W. Xu, X. Tan, J. Dong, M. Zhou. Recommending Good First Issues in GitHub OSS Projects. Accepted at ICSE'2022.";
 
 export const DescriptionPage: React.FC = () => {
   const welcomeMsg = 'GFI-BOT WebApp';
@@ -37,10 +23,9 @@ export const DescriptionPage: React.FC = () => {
   return (
     <div className="scrollbar-hidden">
       <Container
+        className="flex-col flex-center"
         style={{
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginTop: '7%',
+          marginTop: '9%',
         }}
       >
         <Row style={{ height: '25%', flexDirection: 'column-reverse' }}>
@@ -59,36 +44,20 @@ export const DescriptionPage: React.FC = () => {
           </Col>
         </Row>
         <Row style={{ marginTop: '20px' }}>
-          <Col sm={4} />
-          <Col sm={4} style={{ textAlign: 'center' }}>
+          <Col style={{ textAlign: 'center', maxWidth: '400px' }}>
             {description}
           </Col>
-          <Col sm={4} />
         </Row>
-        <Row style={{ marginTop: '60px' }}>
-          <Col sm={4} style={{ minWidth: '300px' }}>
-            {' '}
-            <Description title={desFirstTitle} content={desFirstContent} />{' '}
-          </Col>
-          <Col sm={4} style={{ minWidth: '300px' }}>
-            {' '}
-            <Description
-              title={desSecondTitle}
-              content={desSecondContent}
-            />{' '}
-          </Col>
-          <Col sm={4} style={{ minWidth: '300px' }}>
-            {' '}
-            <Description title={desThirdTitle} content={desThirdContent} />{' '}
-          </Col>
-        </Row>
-        <Row style={{ margin: '60px' }}>
-          <Col
-            style={{
-              textAlign: 'center',
-            }}
-          >
-            <Button variant="outline-primary"> Get Started </Button>
+        <Row style={{ margin: '35px' }}>
+          <Col className="flex-col flex-center description-container">
+            <div style={{ maxWidth: '600px' }}>{SELF_INTRO}</div>
+            <div style={{ maxWidth: '600px' }}>{GFIBOT_INTRO}</div>
+            <Link to="/">
+              <Button variant="outline-primary" style={{ marginTop: '2rem' }}>
+                {' '}
+                Get Started{' '}
+              </Button>
+            </Link>
           </Col>
         </Row>
       </Container>
