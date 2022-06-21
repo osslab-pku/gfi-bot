@@ -8,30 +8,40 @@
 
 ML-powered 🤖 for finding and labeling good first issues in your GitHub project!
 
-The introduction of the bot is submitted to [FSE 2022 Demo](https://2022.esec-fse.org/track/fse-2022-demonstrations) --- GFI-Bot: Automated Good First Issue Recommendation on GitHub
+A GFI-Bot introduction paper is availabe as follows (submitted to [ESEC/FSE 2022 Demonstration Track](https://2022.esec-fse.org/track/fse-2022-demonstrations)):
 
-The embedded ML approach is introduced in the following paper:
-W. Xiao, H. He, W. Xu, X. Tan, J. Dong, M. Zhou. Recommending Good First Issues in GitHub OSS Projects. Accepted at [ICSE'2022](https://conf.researchr.org/home/icse-2022).
+* Hao He, Haonan Su, Wenxin Xiao, Runzhi He, and Minghui Zhou. 2022. GFI-Bot: Automated Good First Issue Recommendation on GitHub. Currently Under Review at the ESEC/FSE 2022 Demonstration Track. https://hehao98.github.io/files/2022-gfibot.pdf
+
+The underlying ML approach is introduced in the following paper:
+
+* Wenxin Xiao, Hao He, Weiwei Xu, Xin Tan, Jinhao Dong, and Minghui Zhou. 2022. Recommending Good First Issues in GitHub OSS Projects. In Proceedings of the 44th International Conference on Software Engineering, ICSE 2022, Pittsburgh, PA, USA, May 21–29, 2022. ACM. https://hehao98.github.io/files/2022-recgfi.pdf
+
+We provide a good first issue recommendation dataset at [Zenodo](https://doi.org/10.5281/zenodo.6665931).
 
 ## Get Started
 
-TODO: Add a quick usage guide after a prototype is finished.
+GFI-Bot is available at https://gfibot.io, where you can browse through existing good first issue recommendations or register your own repository for recommendation. GFI-Bot can be installed in GitHub repositories from [the GitHub App page](https://github.com/apps/GFI-Bot).
+
+**NOTE: GFI-Bot is currently in pre-alpha stage. It is undergoing rapid development and still highly unstable. We cannot guanrantee the preseveration of registered users and repositories in the next release and it may have unexpected behaviors on GitHub. We will change this note after GFI-Bot reaches a certain level of maturity**
 
 ## Roadmap
 
 We describe our envisioned use cases for GFI-Bot in this [documentation](USE_CASES.md).
 
+Currently, we are focusing on the following tasks:
+1. Identifying an optimal training strategy
+2. Improving user experience
+
 ## Development
 
 ### Project Organization
 
-GFI-Bot is organized into five main modules:
+GFI-Bot is organized into four main modules:
 
 1. [`gfibot.data`](gfibot/data): Modules to periodically and incrementally collect latest issue statistics on registered GitHub projects.
 2. [`gfibot.model`](gfibot/data): Modules to periodically train GFI recommendation models based on issue statistics collected by [`gfibot.data`](gfibot/data).
-3. [`gfibot.backend`](gfibot/backend): Modules to provide RESTful APIs for interaction with [`frontend`](frontend).
+3. [`gfibot.backend`](gfibot/backend): Modules to provide RESTful APIs for interaction with [`frontend`](frontend) and the GitHub App.
 4. [`frontend`](frontend): A standalone JavaScript (or TypeScript?) project as our website. This website will be used both as the main portal of GFI-Bot and as a control panel for users to find recommended good first issues or track bot status for their projects.
-5. [`github-app`](github-app): A standalone JavaScript (or TypeScript?) project for interacting with GitHub.
 
 All modules interact with a MongoDB instance for both reading and writing data (except [`frontend`](frontend), which interact with backend using RESTful APIs). The MongoDB instance serves as a "single source of truth" and the main way to decouple different modules. It will be used to store and continiously update issue statistics, training progress and performance, recommendation results, etc.
 
@@ -65,6 +75,8 @@ First, determine some GitHub projects of interest and specify them in [`pyprojec
 python -m gfibot.check_tokens
 ```
 
+We provide scripts for building docker images in the `production/` folder. You can choose to build docker images to quickly setup MongoDB and backend by following the README there.
+
 ### Dataset Preparation
 
 Next, run the following script to collect historical data for the interested projects. This can take some time (up to days) to finish for the first run, but can perform quick incremental update on an existing database. This script should be done periodically (e.g., as a scheduled background task) to ensure that the MongoDB database reflect the latest state in the specified repositories.
@@ -84,18 +96,13 @@ python -m gfibot.data.dataset --since=2008.01.01 --nprocess=4
 Model training can be simply done by running the following script.
 
 ```shell script
-
+python -m gfibot.model.predictor
 ```
 
-### Backend Deployment
+### Dataset Dump
 
-
-### Dataset Dump and Restore
+The Zenodo dataset can be dumped using the following script. See [Zenodo](https://doi.org/10.5281/zenodo.6665931) for more details about how to use the dumped dataset.
 
 ```shell script
-mongodump --uri=mongodb://localhost:27020 --db=gfibot --collection=dataset --query="{\"resolver_commit_num\":{\"\$ne\":-1}}" --gzip 
-```
-
-```shel script
-mongorestore --uri={{ your mongodb url }} --db={{ your collection name }} --gzip
+mongodump --uri=mongodb://localhost:27020 --db=gfibot --collection=dataset --query="{\"resolver_commit_num\":{\"\$ne\":-1}}" --gzip
 ```

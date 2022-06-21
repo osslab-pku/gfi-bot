@@ -377,12 +377,12 @@ def get_dataset_with_issues(
             last_updated = max(e.time for e in iss.events)
         else:
             last_updated = iss.created_at
-        
+
         existing = Dataset.objects(name=iss.name, owner=iss.owner, number=iss.number)
         if existing.count() > 0 and existing.first().before >= last_updated:
             logger.info("%s/%s#%d: no need to update", iss.owner, iss.name, iss.number)
             continue
-        existing.delete()    
+        existing.delete()
 
         get_dataset(iss, iss.updated_at)
         logger.info(
