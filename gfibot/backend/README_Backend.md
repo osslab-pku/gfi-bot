@@ -14,7 +14,7 @@ Get the no of repos for good first issue by filtering with
 1)Language  
 2)Sort by option  
 
-Route-->`/api/repos/info`
+Route-->`/api/repos/info`  
 Search for the repos for gfi to fetch
 1)name
 2)owner
@@ -22,7 +22,7 @@ Search for the repos for gfi to fetch
 4)Language
 5)Topics
 
-Route-->`/api/repos/info/detail`
+Route-->`/api/repos/info/detail`  
 It returns the name and owner of the repos with filtering  
 sort by option like:  
 "popularity",  
@@ -48,17 +48,17 @@ Searching gif for the specific language
 Route-->`/api/repos/update/`  
 To update any repo information(query is resolved or unresolved)
 
-Route-->`/api/issue/gfi`
-Get GFI issue from repo with repo_name and repo_owner
+Route-->`/api/issue/gfi`  
+Get GFI issue from repo with repo_name and repo_owner  
 
-Route-->`/api/issue/gfi/num`
-Get no of GFi by repo name
+Route-->`/api/issue/gfi/num`  
+Get no of GFi by repo name  
 
-Route-->`/api/user/github/login`
-User auth0 login with github
+Route-->`/api/user/github/login`  
+User auth0 login with github  
 
-Route-->`/api/model/training/result`
-GFi probability result with percentage
+Route-->`/api/model/training/result`  
+GFi probability result with percentage  
 
 Route-->`/api/user/queries`  
 The user queries details like added and deleted by the user  
