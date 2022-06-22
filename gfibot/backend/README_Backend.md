@@ -8,11 +8,11 @@
 
 ML-powered 🤖 for finding and labeling good first issues in your GitHub project!
 
-GFI-Bot Backend Routes Description
-Route-->`/api/repos/num`
-Get the no of repos for good first issue by filtering with
-1)Language
-2)Sort by option
+GFI-Bot Backend Routes Description  
+Route-->`/api/repos/num`  
+Get the no of repos for good first issue by filtering with  
+1)Language  
+2)Sort by option  
 
 Route-->`/api/repos/info`
 Search for the repos for gfi to fetch
@@ -60,17 +60,17 @@ User auth0 login with github
 Route-->`/api/model/training/result`
 GFi probability result with percentage
 
-Route-->`/api/user/queries`
-The user queries details like added and deleted by the user
+Route-->`/api/user/queries`  
+The user queries details like added and deleted by the user  
 
-Route-->`/api/user/searches`
-the specific search made by the user
+Route-->`/api/user/searches`  
+the specific search made by the user  
 
-Route-->`/api/github/app/installation`
-Adding gifibot to any repo 
+Route-->`/api/github/app/installation`  
+Adding gifibot to any repo   
 
-Route-->`/api/github/actions/webhook`
-Webhook action process by github app
+Route-->`/api/github/actions/webhook`  
+Webhook action process by github app  
 
-Route-->`/api/repo/badge`
-Automate generate github readme badge for some repo
+Route-->`/api/repo/badge`  
+Automate generate github readme badge for some repo  
