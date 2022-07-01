@@ -41,6 +41,7 @@ import {
 import { GFIRepoInfo, GFITrainingSummary } from '../../module/data/dataModel';
 import { GFIRootReducers } from '../../module/storage/configureStorage';
 import { GFITrainingSummaryDisplayView } from './GFITrainingSummaryDisplayView';
+import { GFIAlphaWarning } from './GFIBanners';
 
 export function MainPage() {
   const dispatch = useDispatch();
@@ -55,6 +56,7 @@ export function MainPage() {
 
   const [showLoginMsg, setShowLoginMsg] = useState(false);
   const [showSearchMsg, setShowSearchMsg] = useState(false);
+  const [showBannerMsg, setShowBannerMsg] = useState(true);
 
   const isMobile = useIsMobile();
   const { width, height } = useWindowSize();
@@ -504,6 +506,7 @@ const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
         fontFamily: defaultFontFamily,
       }}
     >
+      <GFIAlphaWarning />
       <div className="kanban wrapper">
         <div className="gfi-wrapper tags">
           <div style={{ marginBottom: '0.3rem' }}>Languages</div>
