@@ -5,7 +5,7 @@
 
 [build]
   publish = "build"
-# command = "npx pnpm i --store=node_modules/.pnpm-store && npx pnpm run build"
+  command = "npm ci --force && npm run build"
 
 [[redirects]]
   from = "/api/*"
