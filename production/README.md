@@ -27,8 +27,7 @@ Then, try executing
 
 ```bash
 cd production
-docker-compose build
-docker-compose up
+./gfibot.sh up
 ```
 
 to start your GFI-Bot service.
