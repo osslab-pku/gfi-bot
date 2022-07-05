@@ -3,7 +3,6 @@ version: "2.2"
 services:
   mongodb:
     image: mongo
-    container_name: mongodb
     volumes:
       # - /data/heh/mongodb:/data/db
       - /data/hrz/gfi-data/mongodb:/data/db
