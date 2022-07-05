@@ -1,9 +1,13 @@
 FROM node:16 AS builder
 
-COPY ./ /gfi-bot
+# install dependencies
+RUN mkdir /gfi-bot/ /gfi-bot/frontend
+COPY ./frontend/package-lock.json ./frontend/package.json /gfi-bot/frontend/
 WORKDIR /gfi-bot/frontend
-# Build frontend
 RUN npm ci --force
+
+# Build frontend
+COPY ./frontend/ /gfi-bot/frontend
 RUN npm run build
 
 FROM caddy:2.5.1

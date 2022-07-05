@@ -39,13 +39,13 @@ RUN poetry install --no-dev
 FROM python-base as production
 COPY --from=builder-base $VENV_PATH $VENV_PATH
 
-COPY ./ /
+COPY pyproject.toml /
+COPY ./gfibot /gfibot
+COPY ./production /production
 EXPOSE 5000
 WORKDIR /
 
-COPY /production/run_production.sh /run_production.sh
-COPY /production/gunicorn.conf.py /gunicorn.conf.py
-RUN chmod +x /run_production.sh
-ENTRYPOINT /run_production.sh $0 $@
+RUN chmod +x production/run_production.sh
+ENTRYPOINT production/run_production.sh $0 $@
 
-CMD ["gunicorn", "gfibot.backend.gfi_backend:app", "-c", "gunicorn.conf.py"]
+CMD ["gunicorn", "gfibot.backend.gfi_backend:app", "-c", "production/gunicorn.conf.py"]
