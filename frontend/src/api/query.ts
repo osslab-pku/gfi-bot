@@ -15,20 +15,8 @@ type RequestParams = {
   data?: KeyMap;
 };
 
-export const URL_KEY = 'baseURL';
-
-export const getBaseURL = () => {
-  if (process.env.REACT_APP_ENV === 'production') {
-    return process.env.REACT_APP_BASE_URL;
-  }
-  const url = localStorage.getItem(URL_KEY);
-  if (url && url.length) {
-    return url;
-  }
-  const baseURL = process.env.REACT_APP_BASE_URL || '';
-  localStorage.setItem(URL_KEY, baseURL);
-  return baseURL;
-};
+// import base url form env, can be undefined
+export const BASE_URL: string = import.meta.env.REACT_APP_BASE_URL || '/';
 
 export const asyncRequest: <T>(
   params: RequestParams

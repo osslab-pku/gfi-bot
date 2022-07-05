@@ -1,34 +1,48 @@
 version: '2.2'
 
 services:
-
+    
     mongodb:
         image: mongo
         container_name: mongodb
         volumes:
             - /data/heh/mongodb:/data/db
-        command: mongod --bind_ip=0.0.0.0 --port=27020 --quiet --logpath /dev/null
+        command: mongod --bind_ip=0.0.0.0 --port=27020
         ports:
-            - "27020:27020"
+            - "37020:27020"
         mem_limit: 10G
-
+        restart: always
+        logging:
+            options:
+                max-size: "10m"
+                max-file: "5"
+    
     gfi-bot:
         build:
             context: ../
             dockerfile: ./production/gfibot.backend.dockerfile
         ports:
-            - "5000:5000"
+            - "6000:5000" 
         depends_on:
             - mongodb
-        mem_limit: 12G
+        mem_limit: 10G
+        restart: always
+        logging:
+            options:
+                max-size: "10m"
+                max-file: "5"
 
-    # TODO: fix strange dependency bugs before using frontend docker
-    #gfi-bot-frontend:
-    #    build:
-    #        context: ../
-    #        dockerfile: ./production/gfibot.frontend.dockerfile
-    #    ports:
-    #        - "80:80"
-    #        - "443:443"
-    #    depends_on:
-    #        - gfi-bot
+    gfi-bot-frontend:
+        build:
+           context: ../
+           dockerfile: ./production/gfibot.frontend.dockerfile
+        ports:
+           - "1080:80"
+           - "10443:443"
+        restart: always
+        logging:
+            options:
+                max-size: "10m"
+                max-file: "5"
+        depends_on:
+           - gfi-bot 
