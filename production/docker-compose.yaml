@@ -1,23 +1,23 @@
 version: '2.2'
 
 services:
-    
+
     mongodb:
         image: mongo
         container_name: mongodb
         volumes:
             - /data/heh/mongodb:/data/db
-        command: mongod --bind_ip=0.0.0.0 --port=27020
+        command: mongod --bind_ip=0.0.0.0 --port=27020 --quiet --logpath /dev/null
         ports:
             - "27020:27020"
-        mem_limit: 12G
-    
+        mem_limit: 10G
+
     gfi-bot:
         build:
             context: ../
             dockerfile: ./production/gfibot.backend.dockerfile
         ports:
-            - "5000:5000" 
+            - "5000:5000"
         depends_on:
             - mongodb
         mem_limit: 12G
@@ -31,4 +31,4 @@ services:
     #        - "80:80"
     #        - "443:443"
     #    depends_on:
-    #        - gfi-bot 
+    #        - gfi-bot

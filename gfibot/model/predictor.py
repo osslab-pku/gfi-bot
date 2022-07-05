@@ -288,8 +288,8 @@ def update_patch_performance(
 def update_training_summary(
     threshold: int,
     min_test_size=1,
-    dataset_size=30000,
-    batch_size=15000,
+    dataset_size=25000,
+    batch_size=12500,
     prob_thres=0.5,
 ):
     """
