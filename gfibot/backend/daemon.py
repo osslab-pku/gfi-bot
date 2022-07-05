@@ -131,7 +131,11 @@ def start_scheduler():
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(daemon, "cron", hour=0, minute=0, id=DEFAULT_JOB_ID)
-    tokens = [user.github_access_token for user in GfiUsers.objects()]
+    tokens = [
+        user.github_access_token
+        for user in GfiUsers.objects()
+        if user.github_access_token is not None
+    ]
     if tokens:
         valid_tokens = list(set(tokens) - check_tokens(tokens))
         for query in GfiQueries.objects():
