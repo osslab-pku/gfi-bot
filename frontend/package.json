@@ -108,7 +108,8 @@
     "build:prod": "cross-env REACT_APP_ENV=production node scripts/build.js",
     "build:dev": "cross-env REACT_APP_ENV=development node scripts/build.js",
     "test": "node scripts/test.js",
-    "prepare": "cd .. && husky install"
+    "prepare": "cd .. && husky install",
+    "dev": "REACT_APP_BASE_URL='https://gfibot.io/' npm run start"
   },
   "eslintConfig": {
     "extends": [

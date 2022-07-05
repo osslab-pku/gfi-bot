@@ -481,11 +481,11 @@ function IssueOverlayItem(props: IssueOverlayItem) {
         },
         {
           title: 'AUC',
-          data: parseFloat(trainingSummary.auc.toFixed(2)),
+          data: trainingSummary.auc? parseFloat(trainingSummary.auc.toFixed(2)) : 0,
         },
         {
           title: 'ACC',
-          data: parseFloat(trainingSummary.accuracy.toFixed(2)),
+          data: trainingSummary.auc? parseFloat(trainingSummary.auc.toFixed(2)) : 0,
         },
       ]
     : [];
@@ -575,11 +575,11 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
           },
           {
             title: 'AUC',
-            data: parseFloat(trainingSummary.auc.toFixed(2)),
+            data: trainingSummary.auc? parseFloat(trainingSummary.auc.toFixed(2)) : 0,
           },
           {
             title: 'ACC',
-            data: parseFloat(trainingSummary.accuracy.toFixed(2)),
+            data: trainingSummary.auc? parseFloat(trainingSummary.accuracy.toFixed(2)) : 0,
           },
         ]
       : [];
