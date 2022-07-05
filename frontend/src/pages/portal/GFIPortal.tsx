@@ -267,7 +267,7 @@ function AddProjectComponent() {
     fetchAddedRepos();
   }, []);
 
-  const [intervalID, setIntervalId] = useState<NodeJS.Timeout>();
+  const [intervalID, setIntervalId] = useState<number>();
   useEffect(() => {
     if (intervalID) {
       clearInterval(intervalID);

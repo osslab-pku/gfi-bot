@@ -3,7 +3,7 @@ import { Alert, Badge, Col, Container, ListGroup, Row } from 'react-bootstrap';
 import '../../style/gfiStyle.css';
 
 // @ts-ignore
-import Fade from 'react-reveal/Fade';
+import Fade from '@stahl.luke/react-reveal/Fade';
 import { useDispatch } from 'react-redux';
 import { checkIsNumber } from '../../utils';
 import { GFIAlarm, GFIPagination } from '../GFIComponents';
@@ -60,7 +60,7 @@ export function Repositories() {
       });
   }, [pageIdx]);
 
-  let [activeCardIdx, setActiveCardIdx] = useState<number>(0);
+  const [activeCardIdx, setActiveCardIdx] = useState<number>(0);
   const [pageFormInput, setPageFormInput] = useState<string>('0');
 
   const projectCardOnClick = (idx: number) => {
