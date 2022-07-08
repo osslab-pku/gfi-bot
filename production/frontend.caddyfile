@@ -1,6 +1,6 @@
 gfibot.io {
 	route {
-		reverse_proxy /api/* localhost:5000 {
+		reverse_proxy /api/* gfi-bot:5000 {
 			header_down +Access-Control-Allow-Origin "*"
 			header_down +Access-Control-Allow-Methods "OPTIONS, DELETE, GET, HEAD, POST, PUT"
 		}
