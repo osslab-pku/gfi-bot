@@ -7,7 +7,8 @@ process.env.REACT_APP_VERSION = version;
 
 export default defineConfig(({command, mode}) => {
     const env = loadEnv(mode, process.cwd(), 'REACT_APP_');
-    console.log(mode, env);
+    const processEnv = Object.fromEntries(Object.entries(env).filter(([key]) => key.startsWith('REACT_APP_')));
+    console.log(mode, {...env, ...processEnv});
     return {
         plugins: [
             react(),
