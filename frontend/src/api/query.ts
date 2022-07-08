@@ -15,12 +15,24 @@ type RequestParams = {
   data?: KeyMap;
 };
 
-// import base url form env, can be undefined
-export const BASE_URL: string | undefined = process.env.REACT_APP_BASE_URL;
+export const URL_KEY = 'baseURL';
+
+export const getBaseURL = () => {
+  if (process.env.REACT_APP_ENV === 'production') {
+    return process.env.REACT_APP_BASE_URL;
+  }
+  const url = localStorage.getItem(URL_KEY);
+  if (url && url.length) {
+    return url;
+  }
+  const baseURL = process.env.REACT_APP_BASE_URL || '';
+  localStorage.setItem(URL_KEY, baseURL);
+  return baseURL;
+};
 
 export const asyncRequest: <T>(
   params: RequestParams
-) => Promise<T | undefined> = async <T>(params: RequestParams) => {
+) => Promise<T | undefined> = async (params: RequestParams) => {
   try {
     let method: HTTPMethods = 'GET';
     if (params?.method) {
@@ -57,5 +69,6 @@ export const asyncRequest: <T>(
     if (typeof params.onError === 'function' && error instanceof Error) {
       params.onError(error);
     }
+    return error;
   }
 };

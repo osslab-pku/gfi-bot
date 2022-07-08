@@ -107,7 +107,7 @@ export const GFITrainingSummaryDisplayView = forwardRef(
     }, []);
 
     useEffect(() => {
-      if (originTrainingSummary) {
+      if (originTrainingSummary && originTrainingSummary.length) {
         const repoNum = originTrainingSummary.length;
         let issueNumTest = 0;
         let issueNumTrain = 0;

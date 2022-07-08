@@ -4,6 +4,7 @@ import React, {
   forwardRef,
   MouseEventHandler,
   ReactElement,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -271,13 +272,14 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
   const render = () => {
     const pageLowerBound = (currentPageIdx - 1) * maxPageItems;
     const pageUpperBound = currentPageIdx * maxPageItems;
+    const randomId = Math.random() * 1000;
     return displayIssueList?.map((issue, i) => {
       if (pageLowerBound <= i && i < pageUpperBound) {
         return (
           <GFIIssueListItem
             repoInfo={repoInfo}
             issue={issue}
-            key={`gfi-issue-${repoInfo.name}-${issue}-${i}`}
+            key={`gfi-issue-${repoInfo.name}-${issue}-${i}-${randomId}`}
             useTips={!(i % maxPageItems)}
             trainingSummary={trainingSummary}
           />
@@ -286,6 +288,18 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
       return <></>;
     });
   };
+
+  const onPageBtnClicked = useCallback(() => {
+    if (pageInput && checkIsNumber(pageInput) && displayIssueList) {
+      const page = parseInt(pageInput, 10);
+      if (
+        page > 0 &&
+        page <= Math.ceil(displayIssueList.length / maxPageItems)
+      ) {
+        setCurrentPageIdx(parseInt(pageInput, 10));
+      }
+    }
+  }, [displayIssueList, maxPageItems, pageInput]);
 
   return (
     <div className="flex-col">
@@ -317,17 +331,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
               const t = target as HTMLTextAreaElement;
               setPageInput(t.value);
             }}
-            onPageBtnClicked={() => {
-              if (pageInput && checkIsNumber(pageInput)) {
-                const page = parseInt(pageInput);
-                if (
-                  page > 0 &&
-                  page <= Math.ceil(displayIssueList.length / maxPageItems)
-                ) {
-                  setCurrentPageIdx(parseInt(pageInput));
-                }
-              }
-            }}
+            onPageBtnClicked={onPageBtnClicked}
           />
         </div>
       )}
@@ -396,21 +400,24 @@ function GFIIssueListItem(props: GFIIssueListItem) {
     );
   };
 
-  const onDetailShow: MouseEventHandler<HTMLDivElement> = (e) => {
-    const callbackProp: RepoShouldDisplayPopoverState = {
-      shouldDisplayPopover: true,
-      popoverComponent: (
-        <IssueOverlayItem
-          repoInfo={repoInfo}
-          issueBtn={issueBtn}
-          displayData={displayData}
-          trainingSummary={trainingSummary}
-        />
-      ),
-      popoverID: overlayID,
-    };
-    dispatch(createPopoverAction(callbackProp));
-  };
+  const onDetailShow: MouseEventHandler<HTMLDivElement> = useCallback(
+    (e) => {
+      const callbackProp: RepoShouldDisplayPopoverState = {
+        shouldDisplayPopover: true,
+        popoverComponent: (
+          <IssueOverlayItem
+            repoInfo={repoInfo}
+            issueBtn={issueBtn}
+            displayData={displayData}
+            trainingSummary={trainingSummary}
+          />
+        ),
+        popoverID: overlayID,
+      };
+      dispatch(createPopoverAction(callbackProp));
+    },
+    [repoInfo, displayData, trainingSummary, overlayID]
+  );
 
   return (
     <div
@@ -481,11 +488,15 @@ function IssueOverlayItem(props: IssueOverlayItem) {
         },
         {
           title: 'AUC',
-          data: trainingSummary.auc? parseFloat(trainingSummary.auc.toFixed(2)) : 0,
+          data: trainingSummary.auc
+            ? parseFloat(trainingSummary.auc.toFixed(2))
+            : 0,
         },
         {
           title: 'ACC',
-          data: trainingSummary.auc? parseFloat(trainingSummary.auc.toFixed(2)) : 0,
+          data: trainingSummary.auc
+            ? parseFloat(trainingSummary.auc.toFixed(2))
+            : 0,
         },
       ]
     : [];
@@ -575,11 +586,15 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
           },
           {
             title: 'AUC',
-            data: trainingSummary.auc? parseFloat(trainingSummary.auc.toFixed(2)) : 0,
+            data: trainingSummary.auc
+              ? parseFloat(trainingSummary.auc.toFixed(2))
+              : 0,
           },
           {
             title: 'ACC',
-            data: trainingSummary.auc? parseFloat(trainingSummary.accuracy.toFixed(2)) : 0,
+            data: trainingSummary.auc
+              ? parseFloat(trainingSummary.accuracy.toFixed(2))
+              : 0,
           },
         ]
       : [];
