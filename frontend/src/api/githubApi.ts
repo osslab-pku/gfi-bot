@@ -1,5 +1,5 @@
 import { store } from '../module/storage/configureStorage';
-import { asyncRequest, BASE_URL } from './query';
+import { asyncRequest, getBaseURL } from './query';
 import { userInfo } from './api';
 import {
   GitHubIssueResponse,
@@ -41,7 +41,7 @@ export const checkGithubLogin = async () => {
 const gitHubOAuthLogin = async () => {
   return await asyncRequest<string>({
     url: '/api/user/github/login',
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 

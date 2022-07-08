@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -233,7 +233,7 @@ export function MainPage() {
     }
   };
 
-  const handleSearchBtn = (s: string) => {
+  const handleSearchBtn = useCallback((s: string) => {
     let repoURL: string | undefined = s;
     let repoName;
     if (!checkIsGitRepoURL(s)) {
@@ -253,7 +253,7 @@ export function MainPage() {
       }
       dispatch(createGlobalProgressBarAction({ hidden: true }));
     });
-  };
+  }, []);
 
   const renderInfoComponent = () => {
     if (displayRepoInfo && displayRepoInfo.length) {

@@ -61,3 +61,11 @@ export const convertFilter = (filter: string | undefined) => {
   }
   return filterConverted;
 };
+
+export const checkIsValidUrl = (url: string) => {
+  try {
+    return Boolean(new URL(url));
+  } catch (e) {
+    return false;
+  }
+};
