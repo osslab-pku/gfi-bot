@@ -1085,3 +1085,49 @@ a.account-nav {
   margin: 1rem;
   font-weight: lighter;
 }
+
+.gfi-dev-controller {
+  width: 100%;
+  background-color: var(--color-canvas-subtle);
+  padding: 0 1rem 0.3rem 1rem;
+
+  align-items: center;
+}
+
+.gfi-dev-controller-title {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: darkgray;
+  margin-left: 0.5rem;
+}
+
+.gfi-dev-controller-btn {
+  display: flex;
+  flex-direction: row;
+  background-color: transparent;
+  border: 2px solid var(--color-border-default);
+  padding: 0.1rem 0.2rem;
+  border-radius: 7px;
+}
+
+#dev-setting {
+  background-color: transparent;
+  margin-top: 1rem;
+}
+
+#dev-setting-title {
+  margin: 1rem;
+}
+
+.dev-setting-form {
+  margin-bottom: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.dev-setting-refresh-btn {
+  border: 0;
+  background-color: transparent;
+  color: #0f5132;
+  padding: 0;
+  margin-top: 0.4rem;
+}

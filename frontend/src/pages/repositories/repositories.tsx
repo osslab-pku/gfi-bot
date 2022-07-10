@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Badge, Col, Container, ListGroup, Row } from 'react-bootstrap';
 import '../../style/gfiStyle.css';
 
-// @ts-ignore
-import Fade from 'react-reveal/Fade';
 import { useDispatch } from 'react-redux';
 import { checkIsNumber } from '../../utils';
 import { GFIAlarm, GFIPagination } from '../GFIComponents';
@@ -223,36 +221,30 @@ export function Repositories() {
           </Row>
         </Col>
         <Col sm={8}>
-          <Fade top delay={0} distance="7%" when={showCards} force>
-            <RepoGraphContainer
-              info={
-                'monthly_stars' in cardInfoListToDisplay
-                  ? cardInfoListToDisplay.monthly_stars
-                  : []
-              }
-              title="Stars By Month"
-            />
-          </Fade>
-          <Fade top delay={100} distance="7%" when={showCards} force>
-            <RepoGraphContainer
-              info={
-                'monthly_issues' in cardInfoListToDisplay
-                  ? cardInfoListToDisplay.monthly_issues
-                  : []
-              }
-              title="Issues By Month"
-            />
-          </Fade>
-          <Fade top delay={200} distance="7%" when={showCards} force>
-            <RepoGraphContainer
-              info={
-                'monthly_commits' in cardInfoListToDisplay
-                  ? cardInfoListToDisplay.monthly_commits
-                  : []
-              }
-              title="Commits By Month"
-            />
-          </Fade>
+          <RepoGraphContainer
+            info={
+              'monthly_stars' in cardInfoListToDisplay
+                ? cardInfoListToDisplay.monthly_stars
+                : []
+            }
+            title="Stars By Month"
+          />
+          <RepoGraphContainer
+            info={
+              'monthly_issues' in cardInfoListToDisplay
+                ? cardInfoListToDisplay.monthly_issues
+                : []
+            }
+            title="Issues By Month"
+          />
+          <RepoGraphContainer
+            info={
+              'monthly_commits' in cardInfoListToDisplay
+                ? cardInfoListToDisplay.monthly_commits
+                : []
+            }
+            title="Commits By Month"
+          />
         </Col>
       </Row>
     </Container>

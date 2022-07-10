@@ -4,6 +4,7 @@ import React, {
   createRef,
   forwardRef,
   MutableRefObject,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -50,55 +51,56 @@ export interface GFIPaginationProps {
 }
 
 export function GFIPagination(props: GFIPaginationProps) {
-  const { maxPagingCount } = props;
+  const { maxPagingCount, toPage, pageIdx, pageNums, needPadding, className } =
+    props;
 
-  const toFirstPage = () => {
-    props.toPage(1);
-  };
+  const toFirstPage = useCallback(() => {
+    toPage(1);
+  }, [toPage]);
 
-  const toPrevPage = () => {
-    if (props.pageIdx === 1) {
+  const toPrevPage = useCallback(() => {
+    if (pageIdx === 1) {
       toFirstPage();
     } else {
-      props.toPage(props.pageIdx - 1);
+      toPage(pageIdx - 1);
     }
-  };
+  }, [pageIdx, toPage, toFirstPage]);
 
   const toLastPage = () => {
-    props.toPage(props.pageNums);
+    toPage(pageNums);
   };
 
   const toNextPage = () => {
-    if (props.pageIdx === props.pageNums) {
+    if (pageIdx === pageNums) {
       return;
     }
-    if (props.pageIdx === props.pageNums - 1) {
+    if (pageIdx === pageNums - 1) {
       toLastPage();
     } else {
-      props.toPage(props.pageIdx + 1);
+      toPage(pageIdx + 1);
     }
   };
 
-  const calRenderRange = (pageNums: number, selectedIdx: number) => {
+  const calRenderRange = (pageNum: number, selectedIdx: number) => {
     const pageArray: number[] = [];
     let idx = Math.max(selectedIdx - maxPagingCount + 2, 1);
-    for (let i = 0; i < maxPagingCount; i++, idx++) {
+    for (let i = 0; i < maxPagingCount; i += 1, idx += 1) {
       pageArray.push(idx);
-      if (idx + 1 > pageNums) {
+      if (idx + 1 > pageNum) {
         break;
       }
     }
     return pageArray;
   };
 
-  const renderPagingItem = (pageNums: number, selectedIdx: number) => {
-    const pageArray = calRenderRange(pageNums, selectedIdx);
+  const renderPagingItem = (pageNum: number, selectedIdx: number) => {
+    const pageArray = calRenderRange(pageNum, selectedIdx);
     const renderedArray = pageArray.map((ele, idx) => {
       return (
         <Pagination.Item
           key={ele}
           active={ele === selectedIdx}
-          onClick={() => props.toPage(ele)}
+          onClick={() => toPage(ele)}
         >
           {' '}
           {ele}{' '}
@@ -124,7 +126,7 @@ export function GFIPagination(props: GFIPaginationProps) {
       msg = `.. ${pageNum}`;
     }
     return (
-      <Pagination.Item key={pageNum} onClick={() => props.toPage(pageNum)}>
+      <Pagination.Item key={pageNum} onClick={() => toPage(pageNum)}>
         {' '}
         {msg}{' '}
       </Pagination.Item>
@@ -134,11 +136,11 @@ export function GFIPagination(props: GFIPaginationProps) {
   return (
     <Container
       style={
-        props.needPadding
+        needPadding
           ? { overflow: 'hidden' }
           : { overflow: 'hidden', padding: '0' }
       }
-      className={props.className}
+      className={className}
     >
       <Row style={{ marginTop: '10px' }}>
         <Form.Group>
@@ -149,7 +151,7 @@ export function GFIPagination(props: GFIPaginationProps) {
                   toPrevPage();
                 }}
               />
-              {renderPagingItem(props.pageNums, props.pageIdx)}
+              {renderPagingItem(pageNums, pageIdx)}
               <Pagination.Next
                 onClick={() => {
                   toNextPage();

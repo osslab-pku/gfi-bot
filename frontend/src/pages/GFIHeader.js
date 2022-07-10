@@ -14,7 +14,11 @@ import {
   ProgressBar,
 } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
-import { GithubFilled, UserDeleteOutlined } from '@ant-design/icons';
+import {
+  GithubFilled,
+  UserDeleteOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import { gsap } from 'gsap';
@@ -30,6 +34,7 @@ import '../style/gfiStyle.css';
 
 import navLogo from '../assets/favicon-thumbnail.png';
 import { GFIPortalPageNav } from './portal/GFIPortal';
+import { GFIDevController } from './GFIDevController';
 
 export function GFIHeader() {
   const dispatch = useDispatch();
@@ -186,7 +191,7 @@ export function GFIHeader() {
       return (
         <Container
           style={{
-            padding: '0',
+            padding: 0,
             display: 'flex',
             alignItems: 'center',
             height: '40px',
@@ -326,12 +331,15 @@ export function GFIHeader() {
   // The 'expand' property of React-bootstrap Navbar turn out to be effective (equals to 'false') even when set to 'true' or ''
   // so temporarily using two functions to render navbar responsively
 
+  const isDev = process.env.REACT_APP_ENV === 'development';
+
   const renderDesktopNavbar = () => {
     return (
       <div className="flex-col sticky-top">
         <Navbar bg="light" sticky="top">
           {renderNavItem(false)}
         </Navbar>
+        {isDev && <GFIDevController />}
         <GFIGlobalProgressBar />
       </div>
     );
@@ -343,6 +351,7 @@ export function GFIHeader() {
         <Navbar bg="light" sticky="top" expand="false">
           {renderNavItem(true)}
         </Navbar>
+        {isDev && <GFIDevController />}
         <GFIGlobalProgressBar />
       </>
     );

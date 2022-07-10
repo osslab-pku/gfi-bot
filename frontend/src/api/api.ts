@@ -1,4 +1,4 @@
-import { asyncRequest, BASE_URL } from './query';
+import { asyncRequest, getBaseURL } from './query';
 import {
   GetRepoDetailedInfo,
   GFIInfo,
@@ -25,7 +25,7 @@ export const getRepoNum = async (lang?: string) => {
     params: {
       lang,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -43,7 +43,7 @@ export const getPagedRepoDetailedInfo = async (
       lang,
       filter: convertFilter(filter),
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -54,7 +54,7 @@ export const getRepoDetailedInfo = async (name: string, owner: string) => {
       name,
       owner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -65,7 +65,7 @@ export const getRepoInfo = async (name: string, owner: string) => {
       name,
       owner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -81,7 +81,7 @@ export const searchRepoInfoByNameOrURL = async (
       url: repoURL,
       user: userLogin,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -92,7 +92,7 @@ export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
       repo: repoName,
       owner: repoOwner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -103,14 +103,14 @@ export const getGFINum = async (repoName?: string, repoOwner?: string) => {
       repo: repoName,
       owner: repoOwner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
 export const getLanguageTags = async () => {
   return await asyncRequest<string[]>({
     url: '/api/repos/language',
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -127,7 +127,7 @@ export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
       repo: repoName,
       owner: repoOwner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -143,7 +143,7 @@ export const getAddRepoHistory = async (filter?: string) => {
       user: loginName,
       filter: convertFilter(filter),
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -154,7 +154,7 @@ export const getTrainingSummary = async (name?: string, owner?: string) => {
       name,
       owner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -165,7 +165,7 @@ export const getUserSearches = async () => {
     params: {
       user: githubLogin,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -184,7 +184,7 @@ export const deleteUserSearch = async (
       owner,
       id,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -202,7 +202,7 @@ export const deleteRepoQuery = async (name: string, owner: string) => {
       name,
       owner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -216,7 +216,7 @@ export const updateRepoInfo = async (name: string, owner: string) => {
       name,
       owner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -229,7 +229,7 @@ export const getRepoConfig = async (name: string, owner: string) => {
       name,
       owner,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
 
@@ -253,6 +253,6 @@ export const updateRepoConfig = async (
       need_comment: config.need_comment,
       issue_tag: config.issue_tag,
     },
-    baseURL: BASE_URL,
+    baseURL: getBaseURL(),
   });
 };
