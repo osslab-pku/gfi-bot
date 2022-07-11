@@ -8,7 +8,7 @@ services:
     command: mongod --bind_ip=0.0.0.0 --port=27020
     ports:
       - "${GFIBOT_MONGO_PORT}:27020"
-    mem_limit: 10G
+    # mem_limit: 12G
     restart: always
     logging:
       options:
@@ -25,26 +25,28 @@ services:
       - mongodb
     volumes:
       - ${GFIBOT_DATA_DIR}/models:/models
-    mem_limit: 10G
+    # mem_limit: 16G
     restart: always
     logging:
       options:
         max-size: "10m"
         max-file: "5"
 
-#   frontend:
-#     build:
-#       context: ../
-#       dockerfile: ./production/frontend.dockerfile
-#     ports:
-#       - "${GFIBOT_HTTP_PORT}:80"
-#       - "${GFIBOT_HTTPS_PORT}:443"
-#     restart: always
-#     logging:
-#       options:
-#         max-size: "10m"
-#         max-file: "5"
-#     volumes:
-#       - ${GFIBOT_DATA_DIR}/certs/:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/
-#     depends_on:
-#       - gfi-bot
+  frontend:
+    build:
+      context: ../
+      dockerfile: ./production/frontend.dockerfile
+    ports:
+      - "${GFIBOT_HTTP_PORT}:80"
+      - "${GFIBOT_HTTPS_PORT}:443"
+    restart: always
+    environment:
+      - REACT_APP_BASE_URL
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+    volumes:
+      - ${GFIBOT_DATA_DIR}/certs/:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/
+    depends_on:
+      - gfi-bot
