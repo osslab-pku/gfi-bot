@@ -1,16 +1,13 @@
 from typing import List, Optional, Any, Dict
 from urllib.parse import urlparse
-from enum import Enum
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Response
 import requests
 
 from gfibot.collections import *
-from ..models import GFIResponse, RepoQuery
-from ..scheduled_tasks import update_gfi_update_job
-from ..background_tasks import add_repo_worker
-from .issue import get_repo_gfi_threshold
+from gfibot.backend.models import GFIResponse, RepoQuery, RepoBrief, RepoDetail, RepoSort, Config
+from gfibot.backend.background_tasks import add_repo_to_gfibot, has_write_access, schedule_repo_update_now
+from gfibot.backend.routes.issue import get_repo_gfi_threshold
 
 api = APIRouter()
 logger = logging.getLogger(__name__)
@@ -23,30 +20,6 @@ def get_repo_num(language: Optional[str] = None):
     if language:
         return GFIResponse(result=Repo.objects.filter(language=language).count())
     return GFIResponse(result=Repo.objects.count())
-
-
-class RepoBrief(BaseModel):
-    name: str
-    owner: str
-    description: str
-    language: str
-    topics: List[str]
-
-
-class MonthlyCount(BaseModel):
-    month: datetime
-    count: int
-
-class RepoDetail(BaseModel):
-    name: str
-    owner: str
-    description: str
-    language: str
-    topics: List[str]  
-    monthly_stars: List[MonthlyCount]
-    monthly_commits: List[MonthlyCount]
-    monthly_issues: List[MonthlyCount]
-    monthly_pulls: List[MonthlyCount]
 
 
 @api.get('/info', response_model=GFIResponse[RepoBrief])
@@ -69,19 +42,12 @@ def get_repo_detail(name: str, owner: str):
     if repo:
         return GFIResponse(result=RepoDetail(**repo.to_mongo()))
     raise HTTPException(status_code=404, detail="Repository not found")
-    
-
-class RepoSort(Enum):
-    STARS = "popularity"
-    GFIS = "gfis"
-    ISSUE_CLOSE_TIME = "median_issue_resolve_time"
-    NEWCOMER_RESOLVE_RATE = "newcomer_friendly"
 
 
 @api.get('/info/', response_model=GFIResponse[List[RepoDetail]])
 def get_paged_repo_detail(start: int, length: int, lang: Optional[str]=None, filter: Optional[RepoSort]=None):
     """
-    Get brief info of repository (paged)
+    Get detailed info of repository (paged)
     """
     RANK_THRESHOLD = 3  # newcomer_thres used for ranking repos
 
@@ -131,7 +97,6 @@ def get_paged_repo_detail(start: int, length: int, lang: Optional[str]=None, fil
     # return GFIResponse(result=repos_brief)
 
 
-
 @api.get('/info/search', response_model=GFIResponse[List[RepoDetail]])
 def search_repo_detail(user: Optional[str]=None, repo: Optional[str]=None, url: Optional[str]=None):
     """
@@ -155,7 +120,7 @@ def search_repo_detail(user: Optional[str]=None, repo: Optional[str]=None, url: 
 
     # text search
     query_str = repo if not owner else owner + " " + repo
-    repos_q= Repo.objects.search_text(query_str).only(*RepoDetail.__fields__).order_by("$text_score").limit(5)
+    repos_q = Repo.objects.search_text(query_str).only(*RepoDetail.__fields__).order_by("$text_score").limit(5)
     if repos_q.count() == 0:
         raise HTTPException(status_code=404, detail="Repository not found")
     repos_search = [RepoDetail(**repo.to_mongo()) for repo in repos_q]
@@ -185,7 +150,7 @@ def get_repo_language():
 
 
 @api.post('/add', response_model=GFIResponse[str])
-def add_repo(user: str, repo: str, owner: str, background_tasks: BackgroundTasks):
+def add_repo(user: str, repo: str, owner: str):
     """
     Add repository to GFI-Bot
     """
@@ -194,36 +159,15 @@ def add_repo(user: str, repo: str, owner: str, background_tasks: BackgroundTasks
         raise HTTPException(status_code=400, detail="User not registered")
     if not gfi_user.github_access_token:
         raise HTTPException(status_code=400, detail="GitHub user token not found")
-    token = gfi_user.github_user_token
 
     query = GfiQueries.objects.filter(Q(name=repo, owner=owner)).first()
     if not query:
-        background_tasks.add_task(
-            add_repo_worker, owner, repo, token
-        )
+        add_repo_to_gfibot(owner=owner, name=repo, user=user)
         return GFIResponse(result="Repository added")
     if query.is_pending:
         return GFIResponse(result="Repository is being processed by GFI-Bot")
     else:
         return GFIResponse(result="Repository already exists")
-
-
-class UpdateConfig(BaseModel):
-    task_id: str
-    interval: int
-    begin_time: datetime
-
-
-class RepoConfig(BaseModel):
-    newcomer_threshold: int
-    gfi_threshold: float
-    need_comment: bool
-    issue_tag: str
-
-
-class Config(BaseModel):
-    update_config: UpdateConfig
-    repo_config: RepoConfig
 
 
 @api.get("/update/config", response_model=GFIResponse[Config])
@@ -238,10 +182,12 @@ def get_repo_update_config(name: str, owner: str):
 
 
 @api.put("/update/")
-def force_repo_update(name: str, owner: str):
+def force_repo_update(name: str, owner: str, github_login: str):
     """
     Force update a repository (next update will be scheduled 24h later)
     """
+    if not has_write_access(owner=owner, name=name, user=github_login):
+        raise HTTPException(status_code=403, detail="You don't have write access to this repository")
     repo_q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not found")
@@ -252,21 +198,25 @@ def force_repo_update(name: str, owner: str):
     update_config = repo_q.update_config
     if update_config != None:
         task_id = update_config.task_id
-        interval = update_config.interval
+        # interval = update_config.interval
     else:
         # create update config for manually updated projects
         task_id = f"{owner}-{name}-update"
-        interval = 24 * 3600  # update daily by default
-        repo_q.update(
-            update_config={
-                "task_id": task_id,
-                "interval": interval,
-            }
-        )
+        # interval = 24 * 3600  # update daily by default
+        # repo_q.update(
+        #     update_config={
+        #         "task_id": task_id,
+        #         "interval": interval,
+        #     }
+        # )
 
     # alter update schedule
-    from ..server import get_scheduler
-    update_gfi_update_job(get_scheduler(), task_id, name=name, owner=owner)
+    user_q: GfiUsers = GfiUsers.objects(github_login=github_login).first()
+    if user_q:
+        token = user_q.github_access_token if user_q.github_access_token else user_q.github_app_token
+        schedule_repo_update_now(name=name, owner=owner, task_id=task_id, token=token)
+    else:
+        raise HTTPException(status_code=400, detail="User not registered")
 
     return GFIResponse(result="Repository update config updated")
 

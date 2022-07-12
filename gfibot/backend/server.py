@@ -8,8 +8,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import mongoengine
 
 from gfibot import CONFIG
-from .routes import github, issue, repos, user, model
-from .scheduled_tasks import start_scheduler
+from gfibot.backend.routes import github, issue, repos, user, model
+from gfibot.backend.scheduled_tasks import start_scheduler
 
 app = FastAPI()
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     logger.info('Starting uvicorn server on port %d', args.port)
 
     uvicorn.run(
-        'gfibot.backend_2.server:app',
+        'gfibot.backend.server:app',
         host=args.host,
         port=args.port,
         reload=args.reload,

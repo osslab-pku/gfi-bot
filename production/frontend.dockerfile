@@ -7,6 +7,8 @@ WORKDIR /gfi-bot/frontend
 RUN npm ci --force
 
 # Build frontend
+ARG NODE_ENV
+ARG REACT_APP_BASE_URL
 COPY ./frontend/ /gfi-bot/frontend
 RUN npm run build
 

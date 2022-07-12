@@ -48,4 +48,4 @@ WORKDIR /
 RUN chmod +x production/run_production.sh
 ENTRYPOINT production/run_production.sh $0 $@
 
-CMD ["gunicorn", "gfibot.backend.gfi_backend:app", "-c", "production/gunicorn.conf.py"]
+CMD ["uvicorn", "gfibot.backend.server:app", "--host", "0.0.0.0", "--port", "5000"]

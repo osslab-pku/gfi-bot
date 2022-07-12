@@ -19,7 +19,8 @@ export default defineConfig(({command, mode}) => {
             outDir: 'build',
         },
         define: {
-            __APP_ENV__: env.APP_ENV
+            __APP_ENV__: env.APP_ENV,
+            'process.env': {...env, ...processEnv},
         }
     }
 });

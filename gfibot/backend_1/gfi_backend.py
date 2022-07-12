@@ -1,26 +1,24 @@
 from flask import Flask, redirect, request, abort
+from pandas import Interval
 import requests
 import logging
 
 import json
 from datetime import datetime
 from urllib import parse
+import numpy as np
 
-from typing import Dict, Final, Optional
+from typing import Dict, Final
 
 import urllib.parse
 
 from datetime import datetime
 from functools import cmp_to_key
 
-import uvicorn
-from fastapi import FastAPI
-
-
 from gfibot.collections import *
 from gfibot.data.update import update_repo
-from gfibot.backend.daemon import start_scheduler, update_gfi_update_job
-from gfibot.backend.utils import (
+from gfibot.backend_1.daemon import start_scheduler, update_gfi_update_job
+from gfibot.backend_1.utils import (
     delete_repo_from_query,
     get_repo_stars,
     get_repo_gfi_num,
@@ -30,7 +28,14 @@ from gfibot.backend.utils import (
     executor,
 )
 
+from werkzeug.middleware.profiler import ProfilerMiddleware
+
 app = Flask(__name__)
+
+import os
+if not os.path.exists("./profiler"):
+    os.mkdir("./profiler")
+app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir="./profiler")
 
 WEB_APP_NAME = "gfibot-webapp"
 GITHUB_APP_NAME = "gfibot-githubapp"
@@ -41,40 +46,46 @@ logger = logging.getLogger(__name__)
 daemon_scheduler = start_scheduler()
 
 
-# @app.route("/api/repos/num")
-@app.get("/api/repos/num")
-def get_repo_num(lang: Optional[str] = None):
-    """
-    Get the number of repositories in the database.
-    """
+@app.route("/api/repos/num")
+def get_repo_num():
+    """Get number of repos by filter"""
+    language = request.args.get("lang")
+    filter = request.args.get("filter")
+    repos = Repo.objects()
     res = 0
-    if lang is not None:
-        res = Repo.query.filter_by(language=lang).count()
+    if language != None:
+        res = len(Repo.objects(language=language))
     else:
-        res = Repo.query.count()
+        res = len(repos)
     return {"code": 200, "result": res}
 
 
-# @app.route("/api/repos/info")
-@app.get("/api/repos/info")
+@app.route("/api/repos/info")
 def get_repo_info():
     repo_name = request.args.get("name")
     repo_owner = request.args.get("owner")
     if repo_name != None and repo_owner != None:
-        repos = Repo.objects(Q(name=repo_name, owner=repo_owner))
-        if len(repos) == 0:
-            return {"code": 404, "result": "Repo not found"}
-        else:
-            return {"code": 200, "result": repos[0].to_dict()}
+        repos = Repo.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
+        return {
+            "code": 200,
+            "result": {
+                "name": repos.name,
+                "owner": repos.owner,
+                "description": repos.description,
+                "language": repos.language,
+                "topics": repos.topics,
+            },
+        }
     else:
         return {"code": 400, "result": "invalid params"}
 
 
-# @app.route("/api/repos/info/detail")
-@app.get("/api/repos/info/detail")
-def get_repo_detailed_info(name: str, owner: str):
+@app.route("/api/repos/info/detail")
+def get_repo_detailed_info():
     """Get repo info by name/owner"""
-    repo = Repo.objects(Q(name=name) & Q(owner=owner)).first()
+    repo_name = request.args.get("name")
+    repo_owner = request.args.get("owner")
+    repo = Repo.objects(Q(name=repo_name) & Q(owner=repo_owner)).first()
     if repo:
         return {"code": 200, "result": get_repo_info_detailed(repo)}
     return {"code": 404, "result": "repo not found"}

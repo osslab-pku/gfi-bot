@@ -104,7 +104,7 @@ projects = [ # This list of 100 projects comes from RecGFI paper
 github_graphql_schema_path = "gfibot/data/github_graphql_schema.graphql"
 
 [mongodb]
-url = "mongodb://localhost:27021"
+url = "mongodb://localhost:27020"
 db = "gfibot"
 
 [tool.poetry]
@@ -154,7 +154,7 @@ gevent = "^21.12.0"
 APScheduler = "^3.9.1"
 # the official psutil wheel won't compile on armv8 :(
 psutil = [
-    {version="^5.9.1", markers="platform_machine=='x86_64'"},
+    {version="^5.9.1", markers="platform_machine!='aarch64'"},
     {url="https://github.com/ddelange/psutil/releases/download/release-5.9.1/psutil-5.9.1-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", markers="platform_machine=='aarch64'"},
     ]
 fastapi = "^0.78.0"

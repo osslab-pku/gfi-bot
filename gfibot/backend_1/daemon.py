@@ -1,17 +1,10 @@
-### Run scheduled tasks on APScheduler ###
-
 import argparse
 import mongoengine
 from apscheduler.schedulers.background import BackgroundScheduler
-from concurrent.futures import ThreadPoolExecutor
 import logging
 import random
 import datetime
-import requests
-import json
-import yagmail
 
-from gfibot import CONFIG, TOKENS
 from gfibot.data.update import update_repo
 from gfibot.collections import *
 from gfibot.check_tokens import check_tokens
@@ -21,92 +14,18 @@ from gfibot.model.predictor import (
     update_prediction,
     update_repo_prediction,
 )
+from gfibot.backend_1.utils import (
+    send_email,
+    executor,
+    add_comment_to_github_issue,
+    add_gfi_label_to_github_issue,
+)
 
-executor = ThreadPoolExecutor(max_workers=10)
+from gfibot import CONFIG, TOKENS
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_JOB_ID = "gfi_daemon"
-
-
-def add_comment_to_github_issue(
-    github_login, repo_name, repo_owner, issue_number, comment
-):
-    """
-    Add comment to GitHub issue
-    """
-    user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
-    if user_token:
-        headers = {
-            "Authorization": "token {}".format(user_token),
-            "Content-Type": "application/json",
-        }
-        url = "https://api.github.com/repos/{}/{}/issues/{}/comments".format(
-            repo_owner, repo_name, issue_number
-        )
-        r = requests.post(url, headers=headers, data=json.dumps({"body": comment}))
-        return r.status_code
-    else:
-        return 403
-
-
-def add_comment_to_github_issue(
-    github_login, repo_name, repo_owner, issue_number, comment
-):
-    """
-    Add comment to GitHub issue
-    """
-    user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
-    if user_token:
-        headers = {
-            "Authorization": "token {}".format(user_token),
-            "Content-Type": "application/json",
-        }
-        url = "https://api.github.com/repos/{}/{}/issues/{}/comments".format(
-            repo_owner, repo_name, issue_number
-        )
-        r = requests.post(url, headers=headers, data=json.dumps({"body": comment}))
-        return r.status_code
-    else:
-        return 403
-
-
-def add_gfi_label_to_github_issue(
-    github_login, repo_name, repo_owner, issue_number, label_name="good first issue"
-):
-    """
-    Add label to Github issue
-    """
-    user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
-    if user_token:
-        headers = {"Authorization": "token {}".format(user_token)}
-        url = "https://api.github.com/repos/{}/{}/issues/{}/labels".format(
-            repo_owner, repo_name, issue_number
-        )
-        r = requests.post(url, headers=headers, json=["{}".format(label_name)])
-        return r.status_code
-    else:
-        return 403
-
-
-def send_email(user_github_login, subject, body):
-    """
-    Send email to user
-    """
-
-    logger.info("send email to user {}".format(user_github_login))
-
-    user_email = GfiUsers.objects(github_login=user_github_login).first().github_email
-
-    email = GfiEmail.objects().first().email
-    password = GfiEmail.objects().first().password
-
-    logger.info("Sending email to {} using {}".format(user_email, email))
-
-    if user_email != None:
-        yag = yagmail.SMTP(email, password)
-        yag.send(user_email, subject, body)
-        yag.close()
 
 
 def tag_and_comment(github_login, owner, name):
@@ -162,7 +81,6 @@ def update_gfi_info(token: str, owner: str, name: str):
     begin_time = "2008.01.01"
     begin_datetime = datetime.strptime(begin_time, "%Y.%m.%d")
     get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
-    # update_training_summary(owner=owner, name=name)   # TODO: update training summary for a repo
     update_repo_prediction(owner, name)
     user_github_login = None
     query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
@@ -185,7 +103,7 @@ def update_gfi_info(token: str, owner: str, name: str):
         )
 
 
-def update_gfi_update_job(scheduler: BackgroundScheduler, job_id: str, name: str, owner: str):
+def update_gfi_update_job(scheduler, job_id, name, owner):
     query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if query:
         interval = query.update_config.interval
@@ -203,7 +121,15 @@ def update_gfi_update_job(scheduler: BackgroundScheduler, job_id: str, name: str
         )
 
 
-def start_scheduler() -> BackgroundScheduler:
+def start_scheduler():
+    mongoengine.connect(
+        CONFIG["mongodb"]["db"],
+        host=CONFIG["mongodb"]["url"],
+        tz_aware=True,
+        uuidRepresentation="standard",
+        connect=False,
+    )
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(daemon, "cron", hour=0, minute=0, id=DEFAULT_JOB_ID)
     tokens = [
@@ -238,54 +164,50 @@ def start_scheduler() -> BackgroundScheduler:
 
 
 def daemon(init=False):
-    """
-    Daemon updates repos without specific update config.
-    init: if True, it will update all repos.
-    """
-    logger.info("Daemon started at " + str(datetime.now()))
+    logger.info("Demon started. at " + str(datetime.now()))
 
-    tokens = [
-        user.github_access_token
-        for user in GfiUsers.objects()
-        if user.github_access_token is not None
-    ] + TOKENS
-    if not tokens:
-        logger.info("No tokens available.")
-        return
-
-    valid_tokens = list(set(tokens) - check_tokens(tokens))
-    if init:
-        logger.info("Fetching ALL repo data from github")
-        for i, project in enumerate(CONFIG["gfibot"]["projects"]):
-            owner, name = project.split("/")
-            update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
-    else:
+    if not init:
+        avaliable_tokens = [user.github_access_token for user in GfiUsers.objects()]
+        failed_tokens = check_tokens(avaliable_tokens)
+        valid_tokens = list(set(avaliable_tokens) - failed_tokens)
         for i, repo in enumerate(Repo.objects()):
-            repo_query = GfiQueries.objects(Q(name=repo.name) & Q(owner=repo.owner)).first()
-            if repo_query and not repo_query.update_config:
-                logger.info("Fetching repo data from github: %s/%s", repo.owner, repo.name)
-                update_repo(valid_tokens[i % len(valid_tokens)], repo.owner, repo.name)
+            update_config = (
+                GfiQueries.objects(Q(repo=repo.name) & Q(owner=repo.owner))
+                .first()
+                .update_config
+            )
+            if not update_config:
+                update_repo(
+                    valid_tokens[i % len(avaliable_tokens)], repo.owner, repo.name
+                )
+    else:
+        if TOKENS:
+            failed_tokens = check_tokens(TOKENS)
+            valid_tokens = list(set(TOKENS) - failed_tokens)
+            for i, project in enumerate(CONFIG["gfibot"]["projects"]):
+                owner, name = project.split("/")
+                update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
 
-    logger.info("Building dataset")
-    get_dataset_all(datetime(2008, 1, 1))
+    get_dataset_all("2008.01.01")
 
     for threshold in [1, 2, 3, 4, 5]:
+        logger.info(
+            "Update TrainingSummary and Prediction for threshold "
+            + str(threshold)
+            + "."
+        )
         update_training_summary(threshold)
-        logger.info("Training summary updated for threshold %d", threshold)
         update_prediction(threshold)
-        logger.info("Prediction updated for threshold %d", threshold)
 
-    logger.info("Daemon finished at " + str(datetime.now()))
+
+def initialize():
+    logger.info("Initializing...")
+    daemon(init=True)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("GFI-Bot Dataset Builder")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--init", action="store_true", default=False)
-    mongoengine.connect(
-        CONFIG["mongodb"]["db"],
-        host=CONFIG["mongodb"]["url"],
-        tz_aware=True,
-        uuidRepresentation="standard",
-        connect=False,
-    )
-    daemon(parser.parse_args().init)
+    should_init = parser.parse_args().init
+    if should_init:
+        initialize()
