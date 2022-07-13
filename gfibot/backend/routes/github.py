@@ -146,23 +146,23 @@ def redirect_from_github(code: str, redirect_from: str="github_app_login"):
     user_res = GitHubUserInfo(**json.loads(r.text))
     
     update_obj = {f"github_{k}": v for k, v in dict(user_res).items() if k not in ["twitter_username"]}
-    update_obj["twitter_username"] = user_res.get("twitter_username", None)
+    update_obj["twitter_user_name"] = user_res.twitter_username
     
     if redirect_from == "github_app_login":
         update_obj["github_app_token"] = access_token
     else:
         update_obj["github_access_token"] = access_token
 
-    GfiUsers.objects(github_id=user_res["id"]).upsert_one(**update_obj)
+    GfiUsers.objects(github_id=user_res.id).upsert_one(**update_obj)
 
-    logger.info(f"user {user_res['login']} logged in via {redirect_from}")
+    logger.info(f"user {user_res.login} logged in via {redirect_from}")
 
     params = {
-        "github_login": user_res["login"],
-        "github_name": user_res["name"],
-        "github_id": user_res["id"],
+        "github_login": user_res.login,
+        "github_name": user_res.name,
+        "github_id": user_res.id,
         "github_token": access_token,
-        "github_avatar_url": user_res["url"],
+        "github_avatar_url": user_res.avatar_url,
     }
 
     return RedirectResponse(url="/login/redirect?" + urlencode(params))

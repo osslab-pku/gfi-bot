@@ -1,4 +1,4 @@
-from typing import List, Tuple, TypeVar, Generic, Dict, Any
+from typing import List, Tuple, TypeVar, Generic, Dict, Any, Optional, Final
 from enum import Enum
 from datetime import datetime
 
@@ -124,7 +124,7 @@ class GitHubUserInfo(BaseModel):
     id: str
     login: str
     name: str
-    avatar_url: str
-    email: str
-    url: str
-    twitter_username: str
+    avatar_url: Optional[str] = None
+    email: Optional[str] = None
+    url: Optional[str] = None
+    twitter_username: Optional[str] = None
