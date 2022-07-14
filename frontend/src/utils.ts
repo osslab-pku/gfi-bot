@@ -22,7 +22,7 @@ export const checkIsPercentage = (val: string) => {
 
 // ↑ above shouldn't work with browsers
 export const checkIsGitRepoURL = (val: string) => {
-  return /((git|ssh|http(s)?)|(git@[\w\.]+))(:(\/\/)?)([\w\.@\:/\-~]+)(\.git)(\/)?/.test(
+  return /((git|ssh|http(s)?)|(git@[\w\.]+))(:(\/\/)?)([\w\.@\:/\-~]+)(\.git)?(\/)?/.test(
     val
   );
 };

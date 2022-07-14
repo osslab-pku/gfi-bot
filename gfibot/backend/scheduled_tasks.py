@@ -224,7 +224,7 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
             "GFI-Bot: Update done for {}/{}".format(owner, name)
         )
         _email_job.result()
-    logger.info("Manual update done for " + owner + "/" + name + " at {}.".format(datetime.now()))
+    logger.info("Update done for " + owner + "/" + name + " at {}.".format(datetime.now()))
     
     # 6. set state
     if q:

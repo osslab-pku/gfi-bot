@@ -36,8 +36,8 @@ class MonthlyCount(BaseModel):
 class RepoDetail(BaseModel):
     name: str
     owner: str
-    description: str
-    language: str
+    description: Optional[str]
+    language: Optional[str]
     topics: List[str]  
     monthly_stars: List[MonthlyCount]
     monthly_commits: List[MonthlyCount]

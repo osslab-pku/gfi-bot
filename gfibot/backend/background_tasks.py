@@ -29,10 +29,15 @@ def has_write_access(owner: str, name: str, user: Optional[str]=None, token: Opt
         token = user_record.github_access_token
     if not token:
         return False
-    url = f"https://api.github.com/repos/{owner}/{name}/collaborators/{user}"
+    url = f"https://api.github.com/repos/{owner}/{name}"
     response = requests.get(url, headers={"Authorization": f"token {token}"})
-    if response.status_code == 204:
-        return True
+    if response.status_code == 200:
+        data = response.json()
+        try:
+            if data["permissions"]["push"] or data["permissions"]["admin"] or data["permissions"]["maintain"]:
+                return True
+        except KeyError:
+            return False
     return False
 
 
@@ -42,18 +47,25 @@ def add_repo_to_gfibot(owner: str, name: str, user: str) -> None:
         -> temp_worker (run once)
         -> scheduled_worker (run every day from tomorrow)
     """
-    logger.info("Adding repo {}/{} on backend request", owner, name)
+    logger.info("Adding repo %s/%s on backend request", owner, name)
     user_record: GfiUsers = GfiUsers.objects(github_login=user).first()
     if not user_record:
         raise HTTPException(status_code=400, detail="User not found")
     if not has_write_access(owner, name, user):
         raise HTTPException(status_code=403, detail="You do not have write access to this repo")
     # add to user_queries
-    if not user_record.user_queries.filter(Q(owner=owner) & Q(repo=name)).first():
-        user_record.user_queries.append({"owner": owner, "repo": name, "created_at": datetime.now()})
+    if not user_record.user_queries.filter(owner=owner, repo=name).first():
+        user_record.user_queries.append(
+            GfiUsers.UserQuery(
+                owner=owner,
+                repo=name,
+                created_at=datetime.now(timezone.utc),
+                increment=len(user_record.user_queries)
+            )
+        )
         user_record.save()
     # add to repo_queries
-    q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    q: Optional[GfiQueries] = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if not q:
         q = GfiQueries(
             name=name,
@@ -66,7 +78,6 @@ def add_repo_to_gfibot(owner: str, name: str, user: str) -> None:
             _created_at=datetime.utcnow(),
             repo_config=GfiQueries.GfiRepoConfig()
         )
-        q.save()
     else:
         logger.info(f"update new query {name}/{owner}")
         q.update(
@@ -79,7 +90,7 @@ def add_repo_to_gfibot(owner: str, name: str, user: str) -> None:
                 task_id=f"{owner}-{name}-update",
                 interval=24 * 3600,
         )
-        q.save()
+    q.save()
 
     token = user_record.github_access_token if user_record.github_access_token else user_record.github_app_token
     schedule_repo_update_now(owner=owner, name=name, token=token)
@@ -131,7 +142,7 @@ def remove_repo_from_gfibot(owner: str, name: str, user: str) -> None:
     """
     Remove repo from GFI-Bot
     """
-    logger.info("Removing repo {}/{} on backend request", owner, name)
+    logger.info("Removing repo %s/%s on backend request", owner, name)
     GfiUsers.objects(github_login=user).update(
         __raw__={'$pull': {'user_queries': {'repo': name, 'owner': owner}}}
     )
@@ -139,3 +150,13 @@ def remove_repo_from_gfibot(owner: str, name: str, user: str) -> None:
     if not q:
         raise HTTPException(status_code=400, detail="Repo not found")
     q.delete()
+    # delete job
+    from .server import get_scheduler
+    scheduler = get_scheduler()
+    job_id = f"{owner}-{name}-update"
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+    # delete TrainingSummary
+    TrainingSummary.objects(owner=owner, name=name).delete()
+    # delete Repo
+    Repo.objects(owner=owner, name=name).delete()

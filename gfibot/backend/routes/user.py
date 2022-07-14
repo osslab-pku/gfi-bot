@@ -1,9 +1,10 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 from gfibot.collections import *
-from gfibot.backend.models import GFIResponse, RepoQuery, RepoSort, RepoConfig, UserSearchedRepo
+from gfibot.backend.models import GFIResponse, RepoBrief, RepoQuery, RepoSort, RepoConfig, UserSearchedRepo
 from gfibot.backend.routes.github import redirect_from_github, get_oauth_app_login_url
 from gfibot.backend.background_tasks import has_write_access, remove_repo_from_gfibot
 
@@ -28,7 +29,12 @@ def github_callback(code: str):
     return redirect_from_github(code, redirect_from="github_oauth_callback")
 
 
-@api.get("/queries", response_model=GFIResponse[List[RepoQuery]])
+class UserQueryModel(BaseModel):
+    nums: int
+    queries: List[RepoBrief]
+    finished_queries: List[RepoBrief]
+
+@api.get("/queries", response_model=GFIResponse[UserQueryModel])
 def get_user_queries(user: str, filter: Optional[str] = None):
     user_record: GfiUsers = GfiUsers.objects(github_login=user).only('user_queries').first()
     if not user_record:
@@ -54,28 +60,34 @@ def get_user_queries(user: str, filter: Optional[str] = None):
     else:
         q = q.order_by("name")
 
-    repos_list = list(q.only(*RepoQuery.__fields__))
-    repo_queries = []
-    for repo in repos_list:
-        repo_q=GfiQueries.objects(name=repo.name, owner=repo.owner).only(*RepoQuery.__fields__).first()
+    repos_list = [(repo.owner, repo.name) for repo in q.only(*RepoQuery.__fields__)]
+    for repo_q in user_record.user_queries:  # not been trained yet
+        if (repo_q.owner, repo_q.repo) not in repos_list:
+            repos_list.append((repo_q.owner, repo_q.repo))
+    pending_queries = []
+    finished_queries = []
+    for owner, name in repos_list:
+        repo_q:GfiQueries=GfiQueries.objects(name=name, owner=owner).only(*RepoQuery.__fields__).first()
         if repo_q:
-            repo_queries.append(RepoQuery(**repo_q.to_mongo(), created_at=repo_q._created_at, finished_at=repo_q._finished_at))
+            if repo_q.is_pending:
+                repo_i: Optional[RepoBrief] = Repo.objects(name=name, owner=owner).only(*RepoBrief.__fields__).first()
+                if repo_i:
+                    pending_queries.append(RepoBrief(**repo_i.to_mongo()))
+            else:
+                repo_i: Optional[RepoBrief] = Repo.objects(name=name, owner=owner).only(*RepoBrief.__fields__).first()
+                if repo_i:
+                    finished_queries.append(RepoBrief(**repo_i.to_mongo()))
 
-    return GFIResponse(result=repo_queries)
+    return GFIResponse(result=UserQueryModel(nums=len(pending_queries), queries=pending_queries, finished_queries=finished_queries))
 
     
 # TODO:R RepoQuery not right
-@api.delete("/queries", response_model=GFIResponse[List[RepoQuery]])
-def delete_user_queries(request: Request):
-    name = request.query_params.get("name")
-    owner = request.query_params.get("owner")
-    if not name or not owner:
-        raise HTTPException(status_code=400, detail="Missing name or owner")
-    user = request.query_params.get("user")
-    if not user:
-        raise HTTPException(status_code=400, detail="Missing user")
+@api.delete("/queries", response_model=GFIResponse[List[str]])
+def delete_user_queries(name: str, owner: str, user: str):
+    if not has_write_access(owner=owner, name=name, user=user):
+        raise HTTPException(status_code=403, detail="You don't have write access to this repo")
 
-    user_q = GfiUsers.objects(github_login=user).only('user_queries').filter(user_queries__repo=name, user_queries__owner=owner)
+    user_q = GfiUsers.objects(github_login=user).only('user_queries').filter(user_queries__repo=name, user_queries__owner=owner).first()
     if not user_q or not user_q.user_queries:
         raise HTTPException(status_code=404, detail="User query not found")
 
@@ -89,25 +101,18 @@ def get_user_queries_config(name: str, owner: str):
     repo_q = GfiQueries.objects(Q(name=name, owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not found")
-    return GFIResponse(result=RepoConfig(**repo_q.repo_config))
+    return GFIResponse(result=RepoConfig(**repo_q.repo_config.to_mongo()))
 
 
-@api.put("/queries/config")
-def update_user_queries_config(repo_config: RepoConfig, request: Request):
-    name = request.query_params.get("name")
-    owner = request.query_params.get("owner")
-    if not name or not owner:
-        raise HTTPException(status_code=400, detail="Missing name or owner")
-    user = request.query_params.get("user")
-    if not user:
-        raise HTTPException(status_code=400, detail="Missing user")
+@api.put("/queries/config", response_model=GFIResponse[str])
+def update_user_queries_config(repo_config: RepoConfig, name: str, owner: str, user: str):
     if not has_write_access(owner, name, user):
         raise HTTPException(status_code=403, detail="You don't have write access to this repository")
     repo_q = GfiQueries.objects(Q(name=name, owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not found")
     repo_q.update(repo_config=dict(repo_config))
-    return GFIResponse(result="Config updated")
+    return GFIResponse(result="success")
 
 
 @api.get("/searches", response_model=GFIResponse[List[UserSearchedRepo]])
@@ -120,24 +125,18 @@ def get_user_searches(user: str):
 
 
 @api.delete("/searches", response_model=GFIResponse[List[UserSearchedRepo]])
-def delete_user_searches(request: Request):
-    user = request.query_params.get("user", None)
-    sid = request.query_params.get("id", None)
-    if not user:
-        raise HTTPException(status_code=400, detail="user not specified")
-    if sid and not sid.isdigit():
-        raise HTTPException(status_code=400, detail="id must be an integer")
+def delete_user_searches(user: str, id: Optional[int] = None):
     user_record: GfiUsers = GfiUsers.objects(github_login=user).only("user_searches").first()
     if not user_record:
         raise HTTPException(status_code=404, detail="User not found")
-    if sid is not None:
+    if id is not None:
         # delete where increment == id
         # seems to be a bug in mongoengine: https://stackoverflow.com/questions/32301142
         GfiUsers.objects(github_login=user).update_one(
             __raw__={
                 "$pull": {
                     "user_searches": {
-                        "increment": int(sid)
+                        "increment": int(id)
                     }
                 }
             }

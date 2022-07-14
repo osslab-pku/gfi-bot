@@ -2,6 +2,7 @@ from typing import List, Optional, Any, Dict
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException, Response
+from pydantic import BaseModel
 import requests
 
 from gfibot.collections import *
@@ -25,7 +26,7 @@ def get_repo_num(language: Optional[str] = None):
 @api.get('/info', response_model=GFIResponse[RepoBrief])
 def get_repo_brief(name: str, owner: str):
     """
-    Get brief info of repository
+    Get brief info of repository 
     """
     repo = Repo.objects(Q(name=name) & Q(owner=owner)).only(*RepoBrief.__fields__).first()
     if repo:
@@ -120,7 +121,7 @@ def search_repo_detail(user: Optional[str]=None, repo: Optional[str]=None, url: 
 
     # text search
     query_str = repo if not owner else owner + " " + repo
-    repos_q = Repo.objects.search_text(query_str).only(*RepoDetail.__fields__).order_by("$text_score").limit(5)
+    repos_q = Repo.objects.search_text(query_str).only(*RepoDetail.__fields__).order_by("$text_score").limit(10)
     if repos_q.count() == 0:
         raise HTTPException(status_code=404, detail="Repository not found")
     repos_search = [RepoDetail(**repo.to_mongo()) for repo in repos_q]
@@ -129,12 +130,12 @@ def search_repo_detail(user: Optional[str]=None, repo: Optional[str]=None, url: 
         gfiuser = GfiUsers.objects(github_login=user).first()
         if gfiuser:
             for repo in repos_search:
-                user.update(
+                gfiuser.update(
                     push__user_searches={
                         "repo": repo.name,
                         "owner": repo.owner,
                         "created_at": datetime.utcnow(),
-                        "increment": len(user.user_searches) + 1,
+                        "increment": len(gfiuser.user_searches) + 1,
                     }
                 )
 
@@ -149,11 +150,17 @@ def get_repo_language():
     return GFIResponse(result=list(Repo.objects.filter(language__ne=None).distinct("language")))
 
 
+class RepoAddModel(BaseModel):
+    user: str
+    repo: str
+    owner: str
+
 @api.post('/add', response_model=GFIResponse[str])
-def add_repo(user: str, repo: str, owner: str):
+def add_repo(data: RepoAddModel):
     """
     Add repository to GFI-Bot
     """
+    user, repo, owner = data.user, data.repo, data.owner
     gfi_user = GfiUsers.objects(Q(github_login=user)).first()
     if not gfi_user:
         raise HTTPException(status_code=400, detail="User not registered")
@@ -180,12 +187,17 @@ def get_repo_update_config(name: str, owner: str):
         raise HTTPException(status_code=404, detail="Repository not found")
     return GFIResponse(result=Config(update_config=repo_q.update_config, repo_config=repo_q.repo_config))
 
+class UpdateModel(BaseModel):
+    name: str
+    owner: str
+    github_login: str
 
-@api.put("/update/")
-def force_repo_update(name: str, owner: str, github_login: str):
+@api.put("/update/", response_model=GFIResponse[str])
+def force_repo_update(data: UpdateModel):
     """
     Force update a repository (next update will be scheduled 24h later)
     """
+    owner, name, github_login = data.owner, data.name, data.github_login
     if not has_write_access(owner=owner, name=name, user=github_login):
         raise HTTPException(status_code=403, detail="You don't have write access to this repository")
     repo_q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
@@ -214,7 +226,7 @@ def force_repo_update(name: str, owner: str, github_login: str):
     user_q: GfiUsers = GfiUsers.objects(github_login=github_login).first()
     if user_q:
         token = user_q.github_access_token if user_q.github_access_token else user_q.github_app_token
-        schedule_repo_update_now(name=name, owner=owner, task_id=task_id, token=token)
+        schedule_repo_update_now(name=name, owner=owner, token=token)
     else:
         raise HTTPException(status_code=400, detail="User not registered")
 
