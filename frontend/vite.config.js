@@ -6,9 +6,16 @@ import { version } from './package.json';
 process.env.REACT_APP_VERSION = version;
 
 export default defineConfig(({command, mode}) => {
-    const env = loadEnv(mode, process.cwd(), 'REACT_APP_');
-    const processEnv = Object.fromEntries(Object.entries(env).filter(([key]) => key.startsWith('REACT_APP_')));
-    console.log(mode, {...env, ...processEnv});
+    let env = loadEnv(mode, process.cwd(), 'REACT_APP_');
+    const processEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('REACT_APP_')));
+    env = { ...env, ...processEnv };
+    console.log(mode, env);
+
+    let clientPort = 3000;
+    if ("GFIBOT_HTTPS_PORT" in process.env) {
+        clientPort = parseInt(process.env.GFIBOT_HTTPS_PORT);
+    }
+
     return {
         plugins: [
             react(),
@@ -20,7 +27,12 @@ export default defineConfig(({command, mode}) => {
         },
         define: {
             __APP_ENV__: env.APP_ENV,
-            'process.env': {...env, ...processEnv},
+            'process.env': env,
+        },
+        server: {
+            hmr: {
+                clientPort: 8443,
+            },
         }
     }
 });

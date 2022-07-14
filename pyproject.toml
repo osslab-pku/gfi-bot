@@ -107,6 +107,10 @@ github_graphql_schema_path = "gfibot/data/github_graphql_schema.graphql"
 url = "mongodb://localhost:27020"
 db = "gfibot"
 
+[mongodb_dev]
+url = "mongodb://localhost:27021"
+db = "gfibot"
+
 [tool.poetry]
 name = "gfi-bot"
 version = "0.1.0"

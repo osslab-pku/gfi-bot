@@ -25,6 +25,7 @@ services:
       - mongodb
     volumes:
       - ${GFIBOT_DATA_DIR}/models:/models
+      - ${GFIBOT_DATA_DIR}/nltk_data:/root/nltk_data
     # mem_limit: 16G
     restart: always
     logging:
