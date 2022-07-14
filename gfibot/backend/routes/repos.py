@@ -65,7 +65,7 @@ def get_paged_repo_detail(start: int, length: int, lang: Optional[str]=None, fil
         if filter == RepoSort.GFIS:
             q = q.order_by("-n_gfis")
         elif filter == RepoSort.ISSUE_CLOSE_TIME:
-            q = q.order_by("-issue_close_time")
+            q = q.order_by("issue_close_time")
         elif filter == RepoSort.NEWCOMER_RESOLVE_RATE:
             q = q.order_by("-r_newcomer_resolve")
         elif filter == RepoSort.STARS:
@@ -184,7 +184,7 @@ def get_repo_update_config(name: str, owner: str):
     """
     repo_q = GfiQueries.objects(Q(name=name, owner=owner)).first()
     if not repo_q:
-        raise HTTPException(status_code=404, detail="Repository not found")
+        raise HTTPException(status_code=404, detail="Repository not registered")
     return GFIResponse(result=Config(update_config=repo_q.update_config, repo_config=repo_q.repo_config))
 
 class UpdateModel(BaseModel):
@@ -230,7 +230,7 @@ def force_repo_update(data: UpdateModel):
     else:
         raise HTTPException(status_code=400, detail="User not registered")
 
-    return GFIResponse(result="Repository update config updated")
+    return GFIResponse(result="Repository update scheduled")
 
 
 @api.get("/badge", response_class=Response)
