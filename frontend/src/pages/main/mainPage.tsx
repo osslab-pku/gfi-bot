@@ -403,6 +403,15 @@ export function MainPage() {
         </Row>
         <Row>
           <GFINotiToast
+              show={showBannerMsg}
+              userName={userName || 'visitor'}
+              userAvatarUrl={userAvatarUrl}
+              onClose={() => {
+                setShowBannerMsg(false);
+              }}
+              context="GFI-Bot is under active development and not ready for production yet."
+          />
+          <GFINotiToast
             show={showLoginMsg}
             userName={userName || 'visitor'}
             userAvatarUrl={userAvatarUrl}
@@ -506,7 +515,7 @@ const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
         fontFamily: defaultFontFamily,
       }}
     >
-      <GFIAlphaWarning />
+      {/* <GFIAlphaWarning /> */}
       <div className="kanban wrapper">
         <div className="gfi-wrapper tags">
           <div style={{ marginBottom: '0.3rem' }}>Languages</div>

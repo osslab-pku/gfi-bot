@@ -1,0 +1,11 @@
+gfibot.io {
+	@backend path /api/* /docs /redoc /openapi.json
+	route {
+		reverse_proxy @backend http://host.docker.internal:{$GFIBOT_BACKEND_PORT} {
+			header_down +Access-Control-Allow-Origin "*"
+			header_down +Access-Control-Allow-Methods "OPTIONS, DELETE, GET, HEAD, POST, PUT"
+		}
+		reverse_proxy http://host.docker.internal:{$GFIBOT_FRONTEND_PORT}
+	}
+	log
+}

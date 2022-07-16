@@ -15,9 +15,16 @@ export const checkIsPercentage = (val: string) => {
   return /^\d+(\.\d+)?%$/.test(val);
 };
 
+// export const checkIsGitRepoURL = (val: string) => {
+//   const isGitUrl = require('is-git-url');
+//   return isGitUrl(val);
+// };
+
+// ↑ above shouldn't work with browsers
 export const checkIsGitRepoURL = (val: string) => {
-  const isGitUrl = require('is-git-url');
-  return isGitUrl(val);
+  return /((git|ssh|http(s)?)|(git@[\w\.]+))(:(\/\/)?)([\w\.@\:/\-~]+)(\.git)?(\/)?/.test(
+    val
+  );
 };
 
 export const defaultFontFamily =

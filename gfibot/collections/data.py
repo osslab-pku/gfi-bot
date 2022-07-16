@@ -271,7 +271,17 @@ class Repo(Document):
     monthly_issues: List[MonthCount] = EmbeddedDocumentListField(MonthCount, default=[])
     monthly_pulls: List[MonthCount] = EmbeddedDocumentListField(MonthCount, default=[])
 
-    meta = {"indexes": [{"fields": ["owner", "name"], "unique": True}]}
+    meta = {
+        "indexes": [
+            {"fields": ["owner", "name"], "unique": True},
+            "#language",
+            {
+                "fields": ["$owner", "$name", "$description"],
+                "language_override": "english",
+                "weights": {"owner": 2, "name": 2, "description": 1},
+            },
+        ]
+    }
 
 
 class RepoCommit(Document):

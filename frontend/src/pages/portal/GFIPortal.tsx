@@ -13,7 +13,8 @@ import {
 } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
 import { withRouter } from 'react-router-dom';
-import KeepAlive from 'react-activation';
+// rollup compatibility issue see:https://github.com/vitejs/vite/issues/2139#issuecomment-1024852072
+import { KeepAlive } from 'react-activation';
 
 import '../../style/gfiStyle.css';
 import { useDispatch, useSelector } from 'react-redux';
@@ -267,7 +268,7 @@ function AddProjectComponent() {
     fetchAddedRepos();
   }, []);
 
-  const [intervalID, setIntervalId] = useState<NodeJS.Timeout>();
+  const [intervalID, setIntervalId] = useState<number>();
   useEffect(() => {
     if (intervalID) {
       clearInterval(intervalID);

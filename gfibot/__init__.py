@@ -2,6 +2,7 @@ import sys
 import toml
 import nltk
 import logging
+import os
 
 from typing import List
 from pathlib import Path
@@ -24,5 +25,19 @@ else:
     with open(BASE_DIR / "tokens.txt") as f:
         TOKENS = f.read().strip().split("\n")
 
-nltk.download("wordnet")
-nltk.download("omw-1.4")
+# download if not exists to speedup startup
+try:
+    nltk.data.find("corpora/wordnet.zip")
+except LookupError:
+    nltk.download("wordnet")
+
+try:
+    nltk.data.find("corpora/omw-1.4.zip")
+except LookupError:
+    nltk.download("omw-1.4")
+
+# run in dev env
+is_dev_env = os.environ.get("GFI_ENV", "").lower()
+if is_dev_env in ["dev", "development"]:
+    logging.info("Running in development environment")
+    CONFIG["mongodb"] = CONFIG["mongodb_dev"]

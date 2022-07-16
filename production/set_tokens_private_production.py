@@ -1,4 +1,5 @@
 import pymongo
+import os
 from typing import Final
 import json
 import logging
@@ -17,9 +18,20 @@ if __name__ == "__main__":
     file_name = parser.parse_args().secret_file_name
 
     tokens_collection = gfi_db.get_collection("github_tokens")
-    tokens_collection.drop()
-
     email_collection = gfi_db.get_collection("gmail_email")
+
+    if not os.path.exists(file_name):
+        logging.error(f"No secret file found: {file_name}")
+        if tokens_collection.count_documents({}) == 0:
+            logging.error("No tokens found in database, exiting")
+            exit(1)
+        else:
+            logging.info(
+                "No secret file found, but tokens found in database, continuing"
+            )
+            exit(0)
+
+    tokens_collection.drop()
     email_collection.drop()
 
     with open(file_name, "r") as f:

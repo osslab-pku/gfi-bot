@@ -474,14 +474,14 @@ def update_user(token: str, login: str) -> int:
     return rate_state["cost"]
 
 
-def update_gfi_repo_add_query(owner: str, name: str) -> None:
-    """TODO: Remove this function after we have a better logging system"""
-    GfiQueries.objects(Q(owner=owner) & Q(name=name)).update_one(
-        set__is_pending=False,
-        set__is_finished=True,
-        set__is_updating=False,
-        set___finished_at=datetime.now(timezone.utc),
-    )
+# def update_gfi_repo_add_query(owner: str, name: str) -> None:
+#     """TODO: Remove this function after we have a better logging system"""
+#     GfiQueries.objects(Q(owner=owner) & Q(name=name)).update_one(
+#         set__is_pending=False,
+#         set__is_finished=True,
+#         set__is_updating=False,
+#         set___finished_at=datetime.now(timezone.utc),
+#     )
 
 
 def update_repo(
@@ -539,7 +539,7 @@ def update_repo(
     log.rate_resolved_issue = fetcher.rate_consumed - log.rate_repo_stat
     log.save()
 
-    update_gfi_repo_add_query(owner, name)
+    # update_gfi_repo_add_query(owner, name)
 
     open_issue_nums = [
         i["number"] for i in issues if i["state"] == "open" and not i["is_pull"]
@@ -552,7 +552,7 @@ def update_repo(
     )
     log.save()
 
-    update_gfi_repo_add_query(owner, name)
+    # update_gfi_repo_add_query(owner, name)
 
     all_users = _find_users(owner, name, commits, issues, open_issues, resolved_issues)
     log.rate_user = 0

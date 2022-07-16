@@ -1,6 +1,8 @@
 import pytest
+import logging
 import mongoengine
 import mongoengine.context_managers
+from gfibot.backend.routes.user import github_login
 import gfibot.model.predictor
 
 from datetime import datetime, timezone
@@ -20,6 +22,11 @@ def execute_before_any_test():
 
     gfibot.model.predictor.MODEL_ROOT_DIRECTORY = "models-test"
     os.makedirs("models-test", exist_ok=True)
+
+    # don't start scheduler in tests
+    os.environ["GFIBOT_SKIP_SCHEDULER"] = "1"
+    # limit since_date in tests
+    os.environ["CI"] = "1"
 
 
 @pytest.fixture(scope="function")
@@ -70,7 +77,11 @@ def mock_mongodb():
         Dataset,
         User,
         GfiUsers,
+        GithubTokens,
         GfiQueries,
+        GfiEmail,
+        TrainingSummary,
+        Prediction,
     ]
     for cls in collections:
         cls.drop_collection()
@@ -82,6 +93,8 @@ def mock_mongodb():
             owner="owner",
             name="name",
             language="Python",
+            topics=["topic1", "topic2"],
+            description="Your Awesome Random APP",
             repo_created_at=datetime(2022, 1, 1, tzinfo=timezone.utc),
             monthly_stars=[
                 Repo.MonthCount(
@@ -103,7 +116,37 @@ def mock_mongodb():
                     month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=1
                 )
             ],
-        )
+        ),
+        Repo(
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+            owner="owner2",
+            name="name2",
+            language="Python",
+            topics=["topic1", "topic2"],
+            description="Another Awesome Random Project",
+            repo_created_at=datetime(2022, 1, 1, tzinfo=timezone.utc),
+            monthly_stars=[
+                Repo.MonthCount(
+                    month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=1
+                )
+            ],
+            monthly_commits=[
+                Repo.MonthCount(
+                    month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=1
+                )
+            ],
+            monthly_issues=[
+                Repo.MonthCount(
+                    month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=3
+                )
+            ],
+            monthly_pulls=[
+                Repo.MonthCount(
+                    month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=1
+                )
+            ],
+        ),
     ]
     repo_commits = [
         RepoCommit(
@@ -402,6 +445,130 @@ def mock_mongodb():
             ],
         ),
     ]
+    github_tokens: List[GithubTokens] = [
+        GithubTokens(
+            app_name="app_name",
+            client_id="this_is_not_a_client_id",
+            client_secret="this_is_not_a_client_secret",
+        ),
+    ]
+    gfi_users: List[GfiUsers] = [
+        GfiUsers(
+            github_id=1,
+            github_access_token="this_is_not_access_token",
+            github_app_token="this_is_not_app_token",
+            github_login="chuchu",
+            github_name="chu^2",
+            user_queries=[
+                GfiUsers.UserQuery(
+                    repo="name",
+                    owner="owner",
+                    created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
+                    increment=1,
+                ),
+                GfiUsers.UserQuery(
+                    repo="name2",
+                    owner="owner2",
+                    created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
+                    increment=1,
+                ),
+            ],
+        ),
+        GfiUsers(
+            github_id=2,
+            github_access_token="this_is_not_access_token",
+            github_login="nobody",
+            github_name="nobody",
+            user_searches=[
+                GfiUsers.UserQuery(
+                    repo="name",
+                    owner="owner",
+                    created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
+                    increment=i,
+                )
+                for i in range(3)
+            ],
+        ),
+    ]
+    gfi_queries: List[GfiQueries] = [
+        GfiQueries(
+            name="name",
+            owner="owner",
+            is_pending=False,
+            is_finished=True,
+            is_updating=False,
+            is_github_app_repo=True,
+            app_user_github_login="",
+            _created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
+            _finished_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
+            update_config=GfiQueries.GfiUpdateConfig(
+                task_id="task_id",
+                interval=24 * 3600,
+                begin_time=datetime(1970, 1, 1, tzinfo=timezone.utc),
+            ),
+            repo_config=GfiQueries.GfiRepoConfig(
+                newcomer_threshold=5,
+                gfi_threshold=0.5,
+                need_comment=True,
+                issue_tag="good first issue",
+            ),
+        ),
+    ]
+    gfi_emails: List[GfiEmail] = [
+        GfiEmail(
+            email="not.a.email.address@email.com",
+            password="not_a.password",
+        )
+    ]
+    training_summaries: List[TrainingSummary] = [
+        TrainingSummary(
+            owner="owner",
+            name="name",
+            threshold=3,
+            issues_train=[["a1", "a2"], ["a3", "a4"]],
+            issues_test=[["a1", "a2"], ["a3", "a4"]],
+            n_resolved_issues=3,
+            n_newcomer_resolved=2,
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
+            r_newcomer_resolved=0.4,
+            n_stars=10,
+            n_gfis=2,
+            issue_close_time=114514,
+        ),
+        TrainingSummary(
+            owner="owner2",
+            name="name2",
+            threshold=3,
+            issues_train=[["a1", "a2"], ["a3", "a4"]],
+            issues_test=[["a1", "a2"], ["a3", "a4"]],
+            n_resolved_issues=3,
+            n_newcomer_resolved=0,
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
+            r_newcomer_resolved=0.0,
+            n_stars=15,
+            accuracy=0.5,
+            auc=0.6,
+            issue_close_time=114,
+        ),
+    ]
+    predictions: List[Prediction] = [
+        Prediction(
+            owner="owner",
+            name="name",
+            number=1,
+            threshold=3,
+            probability=0.9,
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
+        ),
+        Prediction(
+            owner="owner",
+            name="name",
+            number=2,
+            threshold=3,
+            probability=0.3,
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
+        ),
+    ]
 
     for repo in repos:
         repo.save()
@@ -422,6 +589,18 @@ def mock_mongodb():
         user.save()
     for dataset in datasets:
         dataset.save()
+    for github_token in github_tokens:
+        github_token.save()
+    for gfi_user in gfi_users:
+        gfi_user.save()
+    for gfi_query in gfi_queries:
+        gfi_query.save()
+    for gfi_email in gfi_emails:
+        gfi_email.save()
+    for training_summary in training_summaries:
+        training_summary.save()
+    for prediction in predictions:
+        prediction.save()
 
     yield
 

@@ -1,0 +1,36 @@
+version: "2.2"
+
+services:
+  mongodb:
+    image: mongo
+    volumes:
+      - ${GFIBOT_DATA_DIR}/mongodb:/data/db
+    ports:
+      - "${GFIBOT_MONGO_PORT}:27017"
+    mem_limit: 12G
+    restart: always
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  frontend:
+    image: caddy
+    ports:
+      - "${GFIBOT_HTTP_PORT}:80"
+      - "${GFIBOT_HTTPS_PORT}:443"
+    volumes:
+      - ./dev.caddyfile:/etc/caddy/Caddyfile
+      - ${GFIBOT_DATA_DIR}/certs/:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/
+    restart: always
+    environment:
+      - REACT_APP_BASE_URL
+      - GFIBOT_BACKEND_PORT
+      - GFIBOT_FRONTEND_PORT
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "5"
+    extra_hosts:
+      host.docker.internal: host-gateway
+      

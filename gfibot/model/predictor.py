@@ -7,7 +7,7 @@ import mongoengine
 import pandas as pd
 import xgboost as xgb
 
-from typing import Tuple
+from typing import Tuple, Optional
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 from gfibot import CONFIG
@@ -39,7 +39,9 @@ def get_update_set(
         query = Q(name=i.name, owner=i.owner, threshold=threshold)
         repo = TrainingSummary.objects(query)
         if repo.count() == 0:
-            logger.info("Repo not found in database, creating...")
+            logger.info(
+                "Repo %s/%s not found in database, creating...", i.owner, i.name
+            )
             repo = TrainingSummary(
                 owner=i.owner,
                 name=i.name,
@@ -54,6 +56,8 @@ def get_update_set(
                 batch_recall=[],
                 batch_f1=[],
                 last_updated=datetime.now(),
+                n_stars=i.n_stars,
+                issue_close_time=i.issue_close_time,
             )
             repo.save()
         else:
@@ -115,6 +119,12 @@ def update_basic_training_summary(
 
             i.issues_train = train_set
             i.issues_test = test_set
+
+        i.r_newcomer_resolved = (
+            i.n_newcomer_resolved / i.n_resolved_issues
+            if i.n_resolved_issues > 0
+            else 0
+        )
         i.save()
         logger.info(
             "%s/%s: train_set %d -> %d, test set %d -> %d",
@@ -181,6 +191,7 @@ def update_peformance_training_summary(
                 y_test, y_pred, y_prob
             )
             i.accuracy = accuracy_score(y_test, y_pred)
+        i.n_gfis = sum(y_pred) if len(y_pred) > 0 else 0
         i.last_updated = datetime.utcnow()
         i.save()
         logger.info(
@@ -294,7 +305,8 @@ def update_training_summary(
 ):
     """
     Under the condition that there are at least min_test_size test points for a repository, the ratio of training points and test points of the repository is maintained at 9:1.
-    If the number of resolved issues of a repository is less than min_test_size, all issues in the repository are used as test samples.
+    threshold: Threshold (#commits) to distinguish newcomer and resolved issues.
+    min_test_size:  If the number of resolved issues of a repository is less than min_test_size, all issues in the repository are used as test samples.
     dataset_size:  How many issues are read from Dataset in one iteration
     batch_size: the maximum number of training points allowed to be added in one-step update of models.
     prob_thres: threshold to distinguish two classes.
@@ -332,7 +344,13 @@ def update_training_summary(
             logger.info("No need to update performance.")
 
 
-def update_prediction_for_issue(issue: Dataset, threshold: int):
+def update_prediction_for_issue(issue: Dataset, newcomer_thres: int):
+    """
+    Update the prediction for an issue.
+    issue: Issue dataset object.
+    newcomer_thres: Threshold (#commits) to distinguish newcomer and resolved issues.
+    """
+    threshold = newcomer_thres
     model_full = xgb.Booster()
     model_full.load_model(model_full_path(threshold))
     issue_df = pd.DataFrame(utils.get_issue_data(issue, threshold), index=[0])
@@ -340,8 +358,6 @@ def update_prediction_for_issue(issue: Dataset, threshold: int):
     X_test = issue_df.drop(["is_gfi", "owner", "name", "number"], axis=1)
     xg_test = xgb.DMatrix(X_test, label=y_test)
     y_prob = model_full.predict(xg_test)
-    # print(xg_test)
-    # print(y_prob)
     Prediction.objects(
         owner=issue.owner, name=issue.name, number=issue.number
     ).upsert_one(
@@ -354,30 +370,52 @@ def update_prediction_for_issue(issue: Dataset, threshold: int):
     )
 
 
-def update_repo_prediction(owner: str, name: str):
-    for threshold in [1, 2, 3, 4, 5]:
+def update_repo_prediction(
+    owner: str, name: str, newcomer_thres: Union[int, List[int], None] = None
+):
+    """
+    Update the prediction for open issues in a repository.
+    owner: owner of the repository.
+    name: name of the repository.
+    """
+    if isinstance(newcomer_thres, int):
+        thres_list = [newcomer_thres]
+    elif newcomer_thres is None:
+        thres_list = [1, 2, 3, 4, 5]
+    else:
+        thres_list = newcomer_thres
+
+    for threshold in thres_list:
         for i in list(Dataset.objects(owner=owner, name=name, resolver_commit_num=-1)):
             update_prediction_for_issue(i, threshold)
 
 
-def update_prediction(threshold: int):
+def update_prediction(newcomer_thres: int):
+    """
+    Update the prediction for open issues in all repositories.
+    newcomer_thres: threshold (#commits) to distinguish newcomer and resolved issues.
+    """
     repos = [(r.owner, r.name) for r in Repo.objects()]
     for owner, name in repos:
         for i in list(Dataset.objects(owner=owner, name=name, resolver_commit_num=-1)):
             logger.info("Update prediction: %s/%s#%d", owner, name, i.number)
-            update_prediction_for_issue(i, threshold)
+            update_prediction_for_issue(i, newcomer_thres)
     logger.info(
-        "Get predictions for open issues under threshol Model updated"
-        + str(threshold)
-        + "."
+        "Prediction updated on OPEN issues in ALL repos newcomer_thres=%d.",
+        newcomer_thres,
     )
 
 
 def update(cleanup=False):
+    """
+    Update training summary and prediction for open issues in all repositories.
+    cleanup[DANGEROUS]: If True, drop the training summary and predictions.
+    """
     if cleanup:
+        logger.warning("Dropping all predictions and models")
         TrainingSummary.drop_collection()
         Prediction.drop_collection()
-        shutil.rmtree(MODEL_ROOT_DIRECTORY)
+        shutil.rmtree(MODEL_ROOT_DIRECTORY, ignore_errors=True)
         os.makedirs(MODEL_ROOT_DIRECTORY, exist_ok=True)
     for threshold in [1, 2, 3, 4, 5]:
         logger.info(
@@ -399,6 +437,7 @@ if __name__ == "__main__":
         host=CONFIG["mongodb"]["url"],
         tz_aware=True,
         uuidRepresentation="standard",
+        connect=False,
     )
 
     update(args.cleanup)

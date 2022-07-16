@@ -65,8 +65,19 @@ class TrainingSummary(Document):
     batch_recall: List[str] = ListField(StringField(), default=[])
     batch_f1: List[str] = ListField(StringField(), default=[])
     last_updated: datetime = DateTimeField(required=True)
+
+    # -- To accelerate backend sorts --
+    r_newcomer_resolved: float = FloatField(null=True)
+    n_stars: int = IntField(null=True)
+    n_gfis: int = IntField(null=True)
+    issue_close_time: float = FloatField(null=True)
+
     meta = {
         "indexes": [
             {"fields": ["owner", "name", "threshold"], "unique": True},
+            "r_newcomer_resolved",
+            "n_stars",
+            "n_gfis",
+            "issue_close_time",
         ]
     }
