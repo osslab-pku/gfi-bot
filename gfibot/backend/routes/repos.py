@@ -169,8 +169,8 @@ def search_repo_detail(
         .order_by("$text_score")
         .limit(10)
     )
-    if repos_q.count() == 0:
-        raise HTTPException(status_code=404, detail="Repository not found")
+    # if repos_q.count() == 0:
+    #     raise HTTPException(status_code=404, detail="Repository not found")
     repos_search = [RepoDetail(**repo.to_mongo()) for repo in repos_q]
 
     if user:  # append to user search history
