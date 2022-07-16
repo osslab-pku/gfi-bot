@@ -32,9 +32,9 @@ except LookupError:
     nltk.download("wordnet")
 
 try:
-    nltk.data.find("corpora/omw.zip")
+    nltk.data.find("corpora/omw-1.4.zip")
 except LookupError:
-    nltk.download("omw")
+    nltk.download("omw-1.4")
 
 # run in dev env
 is_dev_env = os.environ.get("GFI_ENV", "").lower()

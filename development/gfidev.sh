@@ -37,7 +37,7 @@ up(){
     if screen -list | grep -q "$SCREEN_NAME_VITE"; then
         screen -S "$SCREEN_NAME_VITE" -X quit
     fi
-    screen -dmS "$SCREEN_NAME_VITE" bash -c "cd ../frontend && npm ci && vite dev --host --port ${GFIBOT_FRONTEND_PORT}"
+    screen -dmS "$SCREEN_NAME_VITE" bash -c "cd ../frontend && npm ci && npx vite dev --host --port ${GFIBOT_FRONTEND_PORT}"
 }
 
 reload(){
