@@ -23,6 +23,11 @@ def execute_before_any_test():
     gfibot.model.predictor.MODEL_ROOT_DIRECTORY = "models-test"
     os.makedirs("models-test", exist_ok=True)
 
+    # don't start scheduler in tests
+    os.environ["GFIBOT_SKIP_SCHEDULER"] = "1"
+    # limit since_date in tests
+    os.environ["CI"] = "1"
+
 
 @pytest.fixture(scope="function")
 def real_mongodb():
@@ -76,6 +81,7 @@ def mock_mongodb():
         GfiQueries,
         GfiEmail,
         TrainingSummary,
+        Prediction,
     ]
     for cls in collections:
         cls.drop_collection()
@@ -501,23 +507,6 @@ def mock_mongodb():
                 newcomer_threshold=5, gfi_threshold=0.5, need_comment=True, issue_tag="good first issue"
             ),
         ),
-        GfiQueries(
-            name="name2",
-            owner="owner2",
-            is_pending=True,
-            is_finished=False,
-            is_updating=True,
-            is_github_app_repo=False,
-            app_user_github_login="",
-            _created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
-            _finished_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
-            update_config=GfiQueries.GfiUpdateConfig(
-                task_id="task_id", interval=24 * 3600, begin_time=datetime(1970, 1, 1, tzinfo=timezone.utc)
-            ),
-            repo_config=GfiQueries.GfiRepoConfig(
-                newcomer_threshold=5, gfi_threshold=0.5, need_comment=True, issue_tag="good first issue"
-            ),
-        ),
     ]
     gfi_emails: List[GfiEmail] = [
         GfiEmail(
@@ -551,9 +540,30 @@ def mock_mongodb():
             last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
             r_newcomer_resolved=0.,
             n_stars=15,
+            accuracy=0.5,
+            auc=0.6,
             issue_close_time=114,
         )
     ]
+    predictions: List[Prediction] = [
+        Prediction(
+            owner="owner",
+            name="name",
+            number=1,
+            threshold=3,
+            probability=0.9,
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc)
+        ),
+        Prediction(
+            owner="owner",
+            name="name",
+            number=2,
+            threshold=3,
+            probability=0.3,
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc)
+        ),
+    ]
+
 
     for repo in repos:
         repo.save()
@@ -584,6 +594,8 @@ def mock_mongodb():
         gfi_email.save()
     for training_summary in training_summaries:
         training_summary.save()
+    for prediction in predictions:
+        prediction.save()
 
     yield
 

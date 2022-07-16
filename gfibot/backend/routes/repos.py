@@ -185,7 +185,7 @@ def get_repo_update_config(name: str, owner: str):
     repo_q = GfiQueries.objects(Q(name=name, owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not registered")
-    return GFIResponse(result=Config(update_config=repo_q.update_config, repo_config=repo_q.repo_config))
+    return GFIResponse(result=Config(update_config=repo_q.update_config.to_mongo(), repo_config=repo_q.repo_config.to_mongo()))
 
 class UpdateModel(BaseModel):
     name: str

@@ -35,7 +35,7 @@ class UserQueryModel(BaseModel):
     finished_queries: List[RepoBrief]
 
 @api.get("/queries", response_model=GFIResponse[UserQueryModel])
-def get_user_queries(user: str, filter: Optional[str] = None):
+def get_user_queries(user: str, filter: Optional[RepoSort] = None):
     user_record: GfiUsers = GfiUsers.objects(github_login=user).only('user_queries').first()
     if not user_record:
         raise HTTPException(status_code=404, detail="User not found")
@@ -78,11 +78,11 @@ def get_user_queries(user: str, filter: Optional[str] = None):
                 if repo_i:
                     finished_queries.append(RepoBrief(**repo_i.to_mongo()))
 
-    return GFIResponse(result=UserQueryModel(nums=len(pending_queries), queries=pending_queries, finished_queries=finished_queries))
+    return GFIResponse(result=UserQueryModel(nums=len(pending_queries) + len(finished_queries), queries=pending_queries, finished_queries=finished_queries))
 
     
 # TODO:R RepoQuery not right
-@api.delete("/queries", response_model=GFIResponse[List[str]])
+@api.delete("/queries", response_model=GFIResponse[str])
 def delete_user_queries(name: str, owner: str, user: str):
     if not has_write_access(owner=owner, name=name, user=user):
         raise HTTPException(status_code=403, detail="You don't have write access to this repo")

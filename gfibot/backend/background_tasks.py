@@ -25,9 +25,11 @@ def has_write_access(owner: str, name: str, user: Optional[str]=None, token: Opt
         if not user_record:
             return False
         if user_record.github_app_token:  # user must have write access to install github app
+            logging.debug("User %s registered with github app", user)
             return True
         token = user_record.github_access_token
     if not token:
+        logging.debug("No token provided")
         return False
     url = f"https://api.github.com/repos/{owner}/{name}"
     response = requests.get(url, headers={"Authorization": f"token {token}"})
@@ -35,8 +37,10 @@ def has_write_access(owner: str, name: str, user: Optional[str]=None, token: Opt
         data = response.json()
         try:
             if data["permissions"]["push"] or data["permissions"]["admin"] or data["permissions"]["maintain"]:
+                logging.debug("User %s has privileges to write to %s/%s: %s", user, owner, name, str(data["permissions"]))
                 return True
         except KeyError:
+            logging.debug("User %s has no privileges to write to %s/%s: %s", user, owner, name, str(data["permissions"]))
             return False
     return False
 
@@ -104,6 +108,7 @@ def add_repo_to_gfibot(owner: str, name: str, user: str) -> None:
             next_run_time=datetime.utcnow() + timedelta(seconds=q.update_config.interval),
             id = f"{owner}-{name}-update",
             args=[token, owner, name, False],
+            replace_existing=True,
         )
 
 

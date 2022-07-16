@@ -97,8 +97,8 @@ class TrainingResult(BaseModel):
     issues_test: int
     n_resolved_issues: int
     n_newcomer_resolved: int
-    accuracy: float
-    auc: float
+    accuracy: Optional[float]
+    auc: Optional[float]
     last_updated: datetime
 
 
@@ -115,9 +115,11 @@ class GitHubRepo(BaseModel):
 class GitHubAppWebhookResponse(BaseModel):
     sender: Dict[str, Any]
     action: str
-    repositories: List[GitHubRepo]
-    repositories_added: List[GitHubRepo]
-    repositories_removed: List[GitHubRepo]
+    issue: Optional[Dict[str, Any]]
+    repository: Optional[GitHubRepo]
+    repositories: Optional[List[GitHubRepo]]
+    repositories_added: Optional[List[GitHubRepo]]
+    repositories_removed: Optional[List[GitHubRepo]]
 
 
 class GitHubUserInfo(BaseModel):

@@ -249,6 +249,7 @@ def start_scheduler() -> BackgroundScheduler:
                 seconds=interval,
                 next_run_time=datetime.utcnow(),
                 id=task_id,
+                replace_existing=True,
             )
             """update query begin time"""
             update_config.begin_time = datetime.utcnow()

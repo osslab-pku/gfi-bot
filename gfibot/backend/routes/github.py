@@ -60,42 +60,41 @@ def github_app_webhook_process(data: GitHubAppWebhookResponse, x_github_event: s
     Process Github App webhook
     """
     event = x_github_event
-
-    sender_id = data["sender"]["id"]
+    sender_id = data.sender["id"]
     user_collection: GfiUsers = GfiUsers.objects(github_id=sender_id).first()
     if not user_collection:
         logger.error(f"user with github id {sender_id} not found")
         raise HTTPException(status_code=404, detail="user not found")
 
     processed_repos = 0
-    expected_repos = len(data["repositories"])
     if event == "installation":
-        action = data["action"]
+        expected_repos = len(data.repositories)
+        action = data.action
         if action == "created":
-            processed_repos = add_repos_from_github_app(user_collection, data["repositories"])
+            processed_repos = add_repos_from_github_app(user_collection, data.repositories)
         elif action == "deleted":
-            processed_repos = delete_repos_from_github_app(user_collection, data["repositories"])
+            processed_repos = delete_repos_from_github_app(user_collection, data.repositories)
         elif action == "suspend":
-            processed_repos = delete_repos_from_github_app(user_collection, data["repositories"])
+            processed_repos = delete_repos_from_github_app(user_collection, data.repositories)
         elif action == "unsuspend":
-            processed_repos = add_repos_from_github_app(user_collection, data["repositories"])
+            processed_repos = add_repos_from_github_app(user_collection, data.repositories)
     elif event == "installation_repositories":
-        action = data["action"]
+        action = data.action
         if action == "added":
-            expected_repos = len(data["repositories_added"])
-            processed_repos = add_repos_from_github_app(user_collection, data["repositories_added"])
+            expected_repos = len(data.repositories_added)
+            processed_repos = add_repos_from_github_app(user_collection, data.repositories_added)
         elif action == "removed":
-            expected_repos = len(data["repositories_removed"])
-            processed_repos = delete_repos_from_github_app(user_collection, data["repositories_removed"])
+            expected_repos = len(data.repositories_removed)
+            processed_repos = delete_repos_from_github_app(user_collection, data.repositories_removed)
     elif event == "issues":
-        action = data["action"]
-        logger.info(f"{action} issue {data['issue']['number']} in {data['repository']['full_name']}")
+        action = data.action
+        logger.info(f"{action} issue {data.issue['number']} in {data.repository.full_name}")
         return GFIResponse(result="Not implemented: event=%s" % event)
     else:
         return GFIResponse(result="Not implemented: event=%s" % event)
 
     if processed_repos != expected_repos:
-        raise HTTPException(status_code=400, detail=f"{processed_repos} repos processed, {expected_repos} repos in total")
+        raise HTTPException(status_code=500, detail=f"{processed_repos} repos processed, {expected_repos} repos in total")
     return GFIResponse(result=f"{processed_repos} repos processed")
 
 

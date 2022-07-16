@@ -136,6 +136,7 @@ mongoengine = "^0.24.1"
 mongomock = "^4.0.0"
 # Network
 requests = "^2.26.0"
+requests_toolbelt = "^0.9.1"
 PyGithub = "^1.55"
 yagmail = "^0.15.277"
 gql = "^3.2.0"

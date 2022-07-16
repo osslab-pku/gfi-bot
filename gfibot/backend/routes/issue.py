@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @api.get("/num", response_model=GFIResponse[int])
 def get_issue_num():
     """
-    Get number of issues
+    Get number of open issues
     """
     return GFIResponse(result=OpenIssue.objects.count())
 
@@ -30,7 +30,7 @@ def get_repo_gfi_threshold(name: str, owner: str) -> float:
 def get_gfi_brief(repo: str, owner: str, start: Optional[int]=None, length: Optional[int]=None):
     """
     Get brief info of issue
-    """
+    """ 
     threshold = get_repo_gfi_threshold(name=repo, owner=owner)
 
     gfi_list: List[Prediction] = Prediction.objects(Q(name=repo) & Q(owner=owner) & Q(probability__gte=threshold)).only(*GFIBrief.__fields__).order_by("-probability")
