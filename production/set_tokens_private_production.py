@@ -26,7 +26,9 @@ if __name__ == "__main__":
             logging.error("No tokens found in database, exiting")
             exit(1)
         else:
-            logging.info("No secret file found, but tokens found in database, continuing")
+            logging.info(
+                "No secret file found, but tokens found in database, continuing"
+            )
             exit(0)
 
     tokens_collection.drop()

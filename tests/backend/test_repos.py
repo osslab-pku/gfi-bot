@@ -66,7 +66,9 @@ def test_get_repo_paged(mock_mongodb):
     res = GFIResponse[List[RepoDetail]].parse_obj(response.json())
     assert res.result[0].name == "name"  # 1st repo is the most GFIS
 
-    response = client.get("/api/repos/info/?start=0&length=3&filter=median_issue_resolve_time")
+    response = client.get(
+        "/api/repos/info/?start=0&length=3&filter=median_issue_resolve_time"
+    )
     assert response.status_code == 200
     res = GFIResponse[List[RepoDetail]].parse_obj(response.json())
     assert res.result[0].name == "name2"  # 2nd repo median_issue_resolve_time is lower
@@ -81,12 +83,12 @@ def test_get_repo_paged(mock_mongodb):
 # def test_search_repo(mock_mongodb):
 #     client = TestClient(app)
 #     # search by name
-#     response = client.get("/api/repos/info/search?repo=name")  
+#     response = client.get("/api/repos/info/search?repo=name")
 #     assert response.status_code == 200
 #     res = GFIResponse[List[RepoDetail]].parse_obj(response.json())
-    
+
 #     # search by url
-#     response = client.get("/api/repos/info/search?url=https://github.com/owner/name") 
+#     response = client.get("/api/repos/info/search?url=https://github.com/owner/name")
 #     assert response.status_code == 200
 #     res = GFIResponse[List[RepoDetail]].parse_obj(response.json())
 #     assert res.result[0].name == "name"
@@ -100,15 +102,17 @@ def test_get_repo_paged(mock_mongodb):
 
 def test_get_add_repo(mock_mongodb):
     client = TestClient(app)
-    response = client.post("/api/repos/add",
-        json={"repo": "name", "owner": "owner", "user": "chuchu"})
+    response = client.post(
+        "/api/repos/add", json={"repo": "name", "owner": "owner", "user": "chuchu"}
+    )
     assert response.status_code == 200  # expect to succeed
     res = GFIResponse[str].parse_obj(response.json())
     assert "exists" in res.result
-    response = client.post("/api/repos/add", 
-        json={"repo": "name2", "owner": "owner2", "user": "nobody"})
+    response = client.post(
+        "/api/repos/add", json={"repo": "name2", "owner": "owner2", "user": "nobody"}
+    )
     print(response.json())
-    assert response.status_code == 403   # expect to fail
+    assert response.status_code == 403  # expect to fail
 
 
 def test_get_update_config(mock_mongodb):
@@ -122,14 +126,18 @@ def test_get_update_config(mock_mongodb):
 
 def test_force_repo(mock_mongodb):
     client = TestClient(app)
-    response = client.put("/api/repos/update/",
-        json={"name": "name", "owner": "owner", "github_login": "chuchu"})
+    response = client.put(
+        "/api/repos/update/",
+        json={"name": "name", "owner": "owner", "github_login": "chuchu"},
+    )
     print(response.json())
     assert response.status_code == 200  # expect to succeed
-    response = client.put("/api/repos/update/", 
-        json={"name": "name", "owner": "owner", "github_login": "nobody"})
+    response = client.put(
+        "/api/repos/update/",
+        json={"name": "name", "owner": "owner", "github_login": "nobody"},
+    )
     print(response.json())
-    assert response.status_code == 403   # expect to fail
+    assert response.status_code == 403  # expect to fail
 
 
 def test_get_repo_badge(mock_mongodb):

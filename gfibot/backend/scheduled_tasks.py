@@ -98,7 +98,7 @@ def _send_email(user_github_login: str, subject: str, body: str) -> bool:
             return True
         except Exception as e:
             logger.warning("Error sending email: {}".format(e))
-        
+
     return False
 
 
@@ -150,7 +150,6 @@ def _tag_and_comment(github_login, owner, name):
                     predict.save()
 
 
-
 def get_valid_tokens() -> List[str]:
     """
     Get valid tokens
@@ -174,7 +173,7 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
     logger.info(
         "Updating gfi info for " + owner + "/" + name + " at {}.".format(datetime.now())
     )
-    
+
     # 0. set state
     q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if q:
@@ -182,7 +181,7 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
             logger.info("{}/{} is already updating.".format(owner, name))
             return
         q.update(is_updating=True, is_finished=False)
-    
+
     # 1. fetch repo data
     try:
         update_repo(token, owner, name)
@@ -200,14 +199,14 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
     # 2. rebuild repo dataset
     begin_datetime = datetime(2008, 1, 1)
     get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
-    
+
     # 3. update training summary
     # TODO: update training summary for a repo
-    # update_training_summary(owner=owner, name=name)   
-    
+    # update_training_summary(owner=owner, name=name)
+
     # 4. update gfi prediction
     update_repo_prediction(owner, name)
-    
+
     # 5. tag, comment and email (if needed)
     user_github_login = None
     query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
@@ -218,14 +217,17 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
         _tag_job = executor.submit(_tag_and_comment, user_github_login, owner, name)
         _tag_job.result()
     if user_github_login and send_email:
-        _email_job = executor.submit(_send_email,
+        _email_job = executor.submit(
+            _send_email,
             user_github_login,
             "GFI-Bot: Update done for {}/{}".format(owner, name),
-            "GFI-Bot: Update done for {}/{}".format(owner, name)
+            "GFI-Bot: Update done for {}/{}".format(owner, name),
         )
         _email_job.result()
-    logger.info("Update done for " + owner + "/" + name + " at {}.".format(datetime.now()))
-    
+    logger.info(
+        "Update done for " + owner + "/" + name + " at {}.".format(datetime.now())
+    )
+
     # 6. set state
     if q:
         q.update(is_updating=False, is_finished=True, is_pending=False)
@@ -279,9 +281,13 @@ def daemon(init=False):
             update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
     else:
         for i, repo in enumerate(Repo.objects()):
-            repo_query = GfiQueries.objects(Q(name=repo.name) & Q(owner=repo.owner)).first()
+            repo_query = GfiQueries.objects(
+                Q(name=repo.name) & Q(owner=repo.owner)
+            ).first()
             if repo_query and not repo_query.update_config:
-                logger.info("Fetching repo data from github: %s/%s", repo.owner, repo.name)
+                logger.info(
+                    "Fetching repo data from github: %s/%s", repo.owner, repo.name
+                )
                 update_repo(valid_tokens[i % len(valid_tokens)], repo.owner, repo.name)
 
     logger.info("Building dataset")
@@ -300,6 +306,7 @@ def mongoengine_fork_safe_wrapper(*mongoengine_args, **mongoengine_kwargs):
     """
     Wrap a mongoengine function to make it fork safe
     """
+
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -309,26 +316,43 @@ def mongoengine_fork_safe_wrapper(*mongoengine_args, **mongoengine_kwargs):
                 return func(*args, **kwargs)
             finally:
                 mongoengine.disconnect()
+
         return wrapper
+
     return decorator
 
 
-@mongoengine_fork_safe_wrapper(db=CONFIG["mongodb"]["db"], host=CONFIG["mongodb"]["url"], tz_aware=True, uuidRepresentation="standard")
+@mongoengine_fork_safe_wrapper(
+    db=CONFIG["mongodb"]["db"],
+    host=CONFIG["mongodb"]["url"],
+    tz_aware=True,
+    uuidRepresentation="standard",
+)
 def update_repo_mp(token: str, owner: str, name: str):
     update_repo(token, owner, name)
 
 
-@mongoengine_fork_safe_wrapper(db=CONFIG["mongodb"]["db"], host=CONFIG["mongodb"]["url"], tz_aware=True, uuidRepresentation="standard")
+@mongoengine_fork_safe_wrapper(
+    db=CONFIG["mongodb"]["db"],
+    host=CONFIG["mongodb"]["url"],
+    tz_aware=True,
+    uuidRepresentation="standard",
+)
 def update_training_summary_mp(threshold: int):
     update_training_summary(threshold)
 
 
-@mongoengine_fork_safe_wrapper(db=CONFIG["mongodb"]["db"], host=CONFIG["mongodb"]["url"], tz_aware=True, uuidRepresentation="standard")
+@mongoengine_fork_safe_wrapper(
+    db=CONFIG["mongodb"]["db"],
+    host=CONFIG["mongodb"]["url"],
+    tz_aware=True,
+    uuidRepresentation="standard",
+)
 def update_prediction_mp(threshold: int):
     update_prediction(threshold)
 
 
-def daemon_mp(init=False, n_workers: Optional[int]=None):
+def daemon_mp(init=False, n_workers: Optional[int] = None):
     """
     Daemon updates repos without specific update config.
     init: if True, it will update all repos.
@@ -336,7 +360,7 @@ def daemon_mp(init=False, n_workers: Optional[int]=None):
         note that workers eat up loads of memory (~10GB each during model training)
     """
     logger.info("Daemon started at %s, workers=%s", str(datetime.now()), str(n_workers))
-    
+
     mongoengine.connect(
         CONFIG["mongodb"]["db"],
         host=CONFIG["mongodb"]["url"],
@@ -350,10 +374,14 @@ def daemon_mp(init=False, n_workers: Optional[int]=None):
     # 1. fetch data from github
     repos_to_update = []
     if init:
-        repos_to_update = [(s.split('/')[0], s.split('/')[1]) for s in CONFIG["gfibot"]["projects"]]
+        repos_to_update = [
+            (s.split("/")[0], s.split("/")[1]) for s in CONFIG["gfibot"]["projects"]
+        ]
     else:
         for repo in Repo.objects():
-            repo_query = GfiQueries.objects(Q(name=repo.name) & Q(owner=repo.owner)).first()
+            repo_query = GfiQueries.objects(
+                Q(name=repo.name) & Q(owner=repo.owner)
+            ).first()
             if (not repo_query) or (repo_query and not repo_query.update_config):
                 repos_to_update.append((repo.owner, repo.name))
     logger.info("Fetching %d repos from github", len(repos_to_update))
@@ -361,7 +389,9 @@ def daemon_mp(init=False, n_workers: Optional[int]=None):
     if n_workers is not None:
         with ProcessPoolExecutor(max_workers=n_workers):
             for i, (owner, name) in enumerate(repos_to_update):
-                executor.submit(update_repo_mp, valid_tokens[i % len(valid_tokens)], owner, name)
+                executor.submit(
+                    update_repo_mp, valid_tokens[i % len(valid_tokens)], owner, name
+                )
     else:
         for i, (owner, name) in enumerate(repos_to_update):
             update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
@@ -395,8 +425,12 @@ def daemon_mp(init=False, n_workers: Optional[int]=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("GFI-Bot Dataset Builder")
-    parser.add_argument("--init", action="store_true", default=False, help="init dataset")
-    parser.add_argument("--n_workers", type=int, default=None, help="number of workers to use")
+    parser.add_argument(
+        "--init", action="store_true", default=False, help="init dataset"
+    )
+    parser.add_argument(
+        "--n_workers", type=int, default=None, help="number of workers to use"
+    )
     args = parser.parse_args()
 
     daemon_mp(args.init, args.n_workers)

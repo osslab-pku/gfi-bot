@@ -78,6 +78,6 @@ class TrainingSummary(Document):
             "r_newcomer_resolved",
             "n_stars",
             "n_gfis",
-            "issue_close_time"
+            "issue_close_time",
         ]
     }

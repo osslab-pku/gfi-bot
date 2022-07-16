@@ -5,11 +5,11 @@ from datetime import datetime
 from pydantic import BaseModel
 from pydantic.generics import GenericModel
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class GFIResponse(GenericModel, Generic[T]):
-    code: int=200
+    code: int = 200
     result: T
 
 
@@ -19,6 +19,7 @@ class RepoQuery(BaseModel):
 
 
 ### Repo Models ###
+
 
 class RepoBrief(BaseModel):
     name: str
@@ -38,7 +39,7 @@ class RepoDetail(BaseModel):
     owner: str
     description: Optional[str]
     language: Optional[str]
-    topics: List[str]  
+    topics: List[str]
     monthly_stars: List[MonthlyCount]
     monthly_commits: List[MonthlyCount]
     monthly_issues: List[MonthlyCount]
@@ -61,6 +62,7 @@ class UserSearchedRepo(BaseModel):
 
 ### GFI Config Models ###
 
+
 class UpdateConfig(BaseModel):
     task_id: str
     interval: int
@@ -80,6 +82,7 @@ class Config(BaseModel):
 
 
 ### GFI Data Models ###
+
 
 class GFIBrief(BaseModel):
     name: str
@@ -104,9 +107,11 @@ class TrainingResult(BaseModel):
 
 ### GitHub API Data Models ###
 
+
 class GitHubRepo(BaseModel):
     full_name: str
     name: str
+
     @property
     def owner(self) -> str:
         return self.full_name.split("/")[0]

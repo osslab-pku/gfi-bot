@@ -6,14 +6,26 @@ from pydantic import BaseModel
 import requests
 
 from gfibot.collections import *
-from gfibot.backend.models import GFIResponse, RepoQuery, RepoBrief, RepoDetail, RepoSort, Config
-from gfibot.backend.background_tasks import add_repo_to_gfibot, has_write_access, schedule_repo_update_now
+from gfibot.backend.models import (
+    GFIResponse,
+    RepoQuery,
+    RepoBrief,
+    RepoDetail,
+    RepoSort,
+    Config,
+)
+from gfibot.backend.background_tasks import (
+    add_repo_to_gfibot,
+    has_write_access,
+    schedule_repo_update_now,
+)
 from gfibot.backend.routes.issue import get_repo_gfi_threshold
 
 api = APIRouter()
 logger = logging.getLogger(__name__)
 
-@api.get('/num', response_model=GFIResponse[int])
+
+@api.get("/num", response_model=GFIResponse[int])
 def get_repo_num(language: Optional[str] = None):
     """
     Get number of repositories
@@ -23,36 +35,47 @@ def get_repo_num(language: Optional[str] = None):
     return GFIResponse(result=Repo.objects.count())
 
 
-@api.get('/info', response_model=GFIResponse[RepoBrief])
+@api.get("/info", response_model=GFIResponse[RepoBrief])
 def get_repo_brief(name: str, owner: str):
     """
-    Get brief info of repository 
+    Get brief info of repository
     """
-    repo = Repo.objects(Q(name=name) & Q(owner=owner)).only(*RepoBrief.__fields__).first()
+    repo = (
+        Repo.objects(Q(name=name) & Q(owner=owner)).only(*RepoBrief.__fields__).first()
+    )
     if repo:
         return GFIResponse(result=RepoBrief(**repo.to_mongo()))
     raise HTTPException(status_code=404, detail="Repository not found")
 
 
-@api.get('/info/detail', response_model=GFIResponse[RepoDetail])
+@api.get("/info/detail", response_model=GFIResponse[RepoDetail])
 def get_repo_detail(name: str, owner: str):
     """
     Get detail info of repository
     """
-    repo = Repo.objects(Q(name=name) & Q(owner=owner)).only(*RepoDetail.__fields__).first()
+    repo = (
+        Repo.objects(Q(name=name) & Q(owner=owner)).only(*RepoDetail.__fields__).first()
+    )
     if repo:
         return GFIResponse(result=RepoDetail(**repo.to_mongo()))
     raise HTTPException(status_code=404, detail="Repository not found")
 
 
-@api.get('/info/', response_model=GFIResponse[List[RepoDetail]])
-def get_paged_repo_detail(start: int, length: int, lang: Optional[str]=None, filter: Optional[RepoSort]=None):
+@api.get("/info/", response_model=GFIResponse[List[RepoDetail]])
+def get_paged_repo_detail(
+    start: int,
+    length: int,
+    lang: Optional[str] = None,
+    filter: Optional[RepoSort] = None,
+):
     """
     Get detailed info of repository (paged)
     """
     RANK_THRESHOLD = 3  # newcomer_thres used for ranking repos
 
-    q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(owner__ne="")  # "": global perf metrics
+    q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(
+        owner__ne=""
+    )  # "": global perf metrics
 
     if lang:
         # TODO: add language field to TrainingSummary (current code might be slow)
@@ -71,7 +94,10 @@ def get_paged_repo_detail(start: int, length: int, lang: Optional[str]=None, fil
         elif filter == RepoSort.STARS:
             q = q.order_by("-n_stars")
         else:
-            raise HTTPException(status_code=400, detail="Invalid filter: expect one in {}".format(RepoSort.__members__))
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid filter: expect one in {}".format(RepoSort.__members__),
+            )
     else:
         q = q.order_by("name")
 
@@ -79,9 +105,17 @@ def get_paged_repo_detail(start: int, length: int, lang: Optional[str]=None, fil
     repos_detail = []
 
     for repo in repos_list:
-        repo_detail = Repo.objects(Q(name=repo.name) & Q(owner=repo.owner)).only(*RepoDetail.__fields__).first()
+        repo_detail = (
+            Repo.objects(Q(name=repo.name) & Q(owner=repo.owner))
+            .only(*RepoDetail.__fields__)
+            .first()
+        )
         if not repo_detail:
-            logger.error("Repo {}/{} is present in TrainingSummary but not in Repo".format(repo.name, repo.owner))
+            logger.error(
+                "Repo {}/{} is present in TrainingSummary but not in Repo".format(
+                    repo.name, repo.owner
+                )
+            )
         else:
             repos_detail.append(RepoDetail(**repo_detail.to_mongo()))
 
@@ -98,8 +132,10 @@ def get_paged_repo_detail(start: int, length: int, lang: Optional[str]=None, fil
     # return GFIResponse(result=repos_brief)
 
 
-@api.get('/info/search', response_model=GFIResponse[List[RepoDetail]])
-def search_repo_detail(user: Optional[str]=None, repo: Optional[str]=None, url: Optional[str]=None):
+@api.get("/info/search", response_model=GFIResponse[List[RepoDetail]])
+def search_repo_detail(
+    user: Optional[str] = None, repo: Optional[str] = None, url: Optional[str] = None
+):
     """
     Search repository by owner, name, url or description
     url: GitHub repo url http(s)://github.com/<owner>/<repo>
@@ -113,19 +149,30 @@ def search_repo_detail(user: Optional[str]=None, repo: Optional[str]=None, url: 
             try:
                 owner, repo = url_parts.path.split("/")[1:]
             except IndexError:
-                raise HTTPException(status_code=400, detail="Invalid url: expect http(s)://github.com/<owner>/<repo>")
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid url: expect http(s)://github.com/<owner>/<repo>",
+                )
         else:
-            raise HTTPException(status_code=400, detail="Invalid url: expect http(s)://github.com/<owner>/<repo>")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid url: expect http(s)://github.com/<owner>/<repo>",
+            )
     if not repo:
         raise HTTPException(status_code=400, detail="Must specify repo or url")
 
     # text search
     query_str = repo if not owner else owner + " " + repo
-    repos_q = Repo.objects.search_text(query_str).only(*RepoDetail.__fields__).order_by("$text_score").limit(10)
+    repos_q = (
+        Repo.objects.search_text(query_str)
+        .only(*RepoDetail.__fields__)
+        .order_by("$text_score")
+        .limit(10)
+    )
     if repos_q.count() == 0:
         raise HTTPException(status_code=404, detail="Repository not found")
     repos_search = [RepoDetail(**repo.to_mongo()) for repo in repos_q]
-    
+
     if user:  # append to user search history
         gfiuser = GfiUsers.objects(github_login=user).first()
         if gfiuser:
@@ -142,12 +189,14 @@ def search_repo_detail(user: Optional[str]=None, repo: Optional[str]=None, url: 
     return GFIResponse(result=repos_search)
 
 
-@api.get('/language', response_model=GFIResponse[List[str]])
+@api.get("/language", response_model=GFIResponse[List[str]])
 def get_repo_language():
     """
     Get all languages
     """
-    return GFIResponse(result=list(Repo.objects.filter(language__ne=None).distinct("language")))
+    return GFIResponse(
+        result=list(Repo.objects.filter(language__ne=None).distinct("language"))
+    )
 
 
 class RepoAddModel(BaseModel):
@@ -155,7 +204,8 @@ class RepoAddModel(BaseModel):
     repo: str
     owner: str
 
-@api.post('/add', response_model=GFIResponse[str])
+
+@api.post("/add", response_model=GFIResponse[str])
 def add_repo(data: RepoAddModel):
     """
     Add repository to GFI-Bot
@@ -185,12 +235,19 @@ def get_repo_update_config(name: str, owner: str):
     repo_q = GfiQueries.objects(Q(name=name, owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not registered")
-    return GFIResponse(result=Config(update_config=repo_q.update_config.to_mongo(), repo_config=repo_q.repo_config.to_mongo()))
+    return GFIResponse(
+        result=Config(
+            update_config=repo_q.update_config.to_mongo(),
+            repo_config=repo_q.repo_config.to_mongo(),
+        )
+    )
+
 
 class UpdateModel(BaseModel):
     name: str
     owner: str
     github_login: str
+
 
 @api.put("/update/", response_model=GFIResponse[str])
 def force_repo_update(data: UpdateModel):
@@ -199,7 +256,9 @@ def force_repo_update(data: UpdateModel):
     """
     owner, name, github_login = data.owner, data.name, data.github_login
     if not has_write_access(owner=owner, name=name, user=github_login):
-        raise HTTPException(status_code=403, detail="You don't have write access to this repository")
+        raise HTTPException(
+            status_code=403, detail="You don't have write access to this repository"
+        )
     repo_q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not found")
@@ -225,7 +284,11 @@ def force_repo_update(data: UpdateModel):
     # alter update schedule
     user_q: GfiUsers = GfiUsers.objects(github_login=github_login).first()
     if user_q:
-        token = user_q.github_access_token if user_q.github_access_token else user_q.github_app_token
+        token = (
+            user_q.github_access_token
+            if user_q.github_access_token
+            else user_q.github_app_token
+        )
         schedule_repo_update_now(name=name, owner=owner, token=token)
     else:
         raise HTTPException(status_code=400, detail="User not registered")
@@ -239,8 +302,12 @@ def get_badge(name: str, owner: str):
     Get README badge for a repository
     """
     prob_thres = get_repo_gfi_threshold(name, owner)
-    n_gfis =  Prediction.objects(Q(name=name) & Q(owner=owner) & Q(probability__gte=prob_thres)).count()
-    img_src = "https://img.shields.io/badge/{}-{}".format(f"recommended good first issues - {n_gfis}", "success")
+    n_gfis = Prediction.objects(
+        Q(name=name) & Q(owner=owner) & Q(probability__gte=prob_thres)
+    ).count()
+    img_src = "https://img.shields.io/badge/{}-{}".format(
+        f"recommended good first issues - {n_gfis}", "success"
+    )
     svg = requests.get(img_src).content
     return Response(svg, media_type="image/svg+xml")
 

@@ -39,7 +39,9 @@ def get_update_set(
         query = Q(name=i.name, owner=i.owner, threshold=threshold)
         repo = TrainingSummary.objects(query)
         if repo.count() == 0:
-            logger.info("Repo %s/%s not found in database, creating...", i.owner, i.name)
+            logger.info(
+                "Repo %s/%s not found in database, creating...", i.owner, i.name
+            )
             repo = TrainingSummary(
                 owner=i.owner,
                 name=i.name,
@@ -118,7 +120,11 @@ def update_basic_training_summary(
             i.issues_train = train_set
             i.issues_test = test_set
 
-        i.r_newcomer_resolved = i.n_newcomer_resolved / i.n_resolved_issues if i.n_resolved_issues > 0 else 0
+        i.r_newcomer_resolved = (
+            i.n_newcomer_resolved / i.n_resolved_issues
+            if i.n_resolved_issues > 0
+            else 0
+        )
         i.save()
         logger.info(
             "%s/%s: train_set %d -> %d, test set %d -> %d",
@@ -364,7 +370,9 @@ def update_prediction_for_issue(issue: Dataset, newcomer_thres: int):
     )
 
 
-def update_repo_prediction(owner: str, name: str, newcomer_thres: Union[int, List[int], None]=None):
+def update_repo_prediction(
+    owner: str, name: str, newcomer_thres: Union[int, List[int], None] = None
+):
     """
     Update the prediction for open issues in a repository.
     owner: owner of the repository.
@@ -392,7 +400,10 @@ def update_prediction(newcomer_thres: int):
         for i in list(Dataset.objects(owner=owner, name=name, resolver_commit_num=-1)):
             logger.info("Update prediction: %s/%s#%d", owner, name, i.number)
             update_prediction_for_issue(i, newcomer_thres)
-    logger.info("Prediction updated on OPEN issues in ALL repos newcomer_thres=%d.", newcomer_thres)
+    logger.info(
+        "Prediction updated on OPEN issues in ALL repos newcomer_thres=%d.",
+        newcomer_thres,
+    )
 
 
 def update(cleanup=False):

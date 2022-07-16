@@ -146,7 +146,7 @@ def mock_mongodb():
                     month=datetime(2022, 1, 1, tzinfo=timezone.utc), count=1
                 )
             ],
-        )
+        ),
     ]
     repo_commits = [
         RepoCommit(
@@ -471,7 +471,7 @@ def mock_mongodb():
                     owner="owner2",
                     created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
                     increment=1,
-                )
+                ),
             ],
         ),
         GfiUsers(
@@ -485,7 +485,8 @@ def mock_mongodb():
                     owner="owner",
                     created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
                     increment=i,
-                ) for i in range(3)
+                )
+                for i in range(3)
             ],
         ),
     ]
@@ -501,10 +502,15 @@ def mock_mongodb():
             _created_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
             _finished_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
             update_config=GfiQueries.GfiUpdateConfig(
-                task_id="task_id", interval=24 * 3600, begin_time=datetime(1970, 1, 1, tzinfo=timezone.utc)
+                task_id="task_id",
+                interval=24 * 3600,
+                begin_time=datetime(1970, 1, 1, tzinfo=timezone.utc),
             ),
             repo_config=GfiQueries.GfiRepoConfig(
-                newcomer_threshold=5, gfi_threshold=0.5, need_comment=True, issue_tag="good first issue"
+                newcomer_threshold=5,
+                gfi_threshold=0.5,
+                need_comment=True,
+                issue_tag="good first issue",
             ),
         ),
     ]
@@ -538,12 +544,12 @@ def mock_mongodb():
             n_resolved_issues=3,
             n_newcomer_resolved=0,
             last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
-            r_newcomer_resolved=0.,
+            r_newcomer_resolved=0.0,
             n_stars=15,
             accuracy=0.5,
             auc=0.6,
             issue_close_time=114,
-        )
+        ),
     ]
     predictions: List[Prediction] = [
         Prediction(
@@ -552,7 +558,7 @@ def mock_mongodb():
             number=1,
             threshold=3,
             probability=0.9,
-            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc)
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
         ),
         Prediction(
             owner="owner",
@@ -560,10 +566,9 @@ def mock_mongodb():
             number=2,
             threshold=3,
             probability=0.3,
-            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc)
+            last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
         ),
     ]
-
 
     for repo in repos:
         repo.save()
