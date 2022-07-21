@@ -164,7 +164,7 @@ def get_paged_repo_brief(
     else:
         q = q.order_by("name")
 
-    repos_list = list(q.skip(start).limit(length).only(*RepoBrief.__fields__))
+    repos_list = [r.to_mongo() for r in q.skip(start).limit(length).only(*RepoBrief.__fields__)]
     return GFIResponse(result=repos_list)
 
 

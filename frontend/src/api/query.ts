@@ -51,7 +51,6 @@ export const asyncRequest: <T>(
       headers: params.headers,
       data: params.data,
     });
-
     if (200 <= res.status && res.status < 300 && res.data) {
       return res.data;
     } else {

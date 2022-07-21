@@ -33,7 +33,7 @@ import { getIssueByRepoInfo } from '../../api/githubApi';
 import { GFIRootReducers } from '../../storage/configureStorage';
 import { createPopoverAction } from '../../storage/reducers';
 import {
-  getGFIByRepoName,
+  getGFIByRepoName, getGFINum,
   getRepoDetailedInfo,
   getTrainingSummary,
 } from '../../api/api';
@@ -254,39 +254,42 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
   const [currentPageIdx, setCurrentPageIdx] = useState(1);
   const [pageInput, setPageInput] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
+  const [gfiNum, setGfiNum] = useState(0);
 
-  useEffect(() => {
-    if (!displayIssueList) {
-      getGFIByRepoName(repoInfo.name, repoInfo.owner).then((res) => {
-        if (Array.isArray(res) && res.length) {
-          setDisplayIssueList(res);
-          setShouldDisplayPagination(res.length > maxPageItems);
-        } else {
-          setDisplayIssueList(undefined);
-          setIsLoading(false);
-        }
-      });
+  const onUpdate = async () => {
+    if (!displayIssueList || !gfiNum){ // not loading
+      const num = await getGFINum(repoInfo.name, repoInfo.owner);
+      setGfiNum(num);
+      setShouldDisplayPagination(num > maxPageItems);
     }
-  }, [repoInfo]);
+    const pageLowerBound = (currentPageIdx - 1) * maxPageItems;
+    const res = await getGFIByRepoName(repoInfo.name, repoInfo.owner, pageLowerBound, maxPageItems);
+    if (Array.isArray(res) && res.length) {
+      setDisplayIssueList(res);
+    } else {
+      setDisplayIssueList(undefined);
+      setIsLoading(false);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect( () => {
+    onUpdate();
+  }, [currentPageIdx]);
 
   const render = () => {
-    const pageLowerBound = (currentPageIdx - 1) * maxPageItems;
-    const pageUpperBound = currentPageIdx * maxPageItems;
+    // const pageLowerBound = (currentPageIdx - 1) * maxPageItems;
+    // const pageUpperBound = currentPageIdx * maxPageItems;
     const randomId = Math.random() * 1000;
-    return displayIssueList?.map((issue, i) => {
-      if (pageLowerBound <= i && i < pageUpperBound) {
-        return (
-          <GFIIssueListItem
-            repoInfo={repoInfo}
-            issue={issue}
-            key={`gfi-issue-${repoInfo.name}-${issue}-${i}-${randomId}`}
-            useTips={!(i % maxPageItems)}
-            trainingSummary={trainingSummary}
-          />
-        );
-      }
-      return <></>;
-    });
+    return displayIssueList?.map((issue, i) => (
+      <GFIIssueListItem
+        repoInfo={repoInfo}
+        issue={issue}
+        key={`gfi-issue-${repoInfo.name}-${issue}-${i}-${randomId}`}
+        useTips={!(i % maxPageItems)}
+        trainingSummary={trainingSummary}
+      />
+    ))
   };
 
   const onPageBtnClicked = useCallback(() => {
@@ -294,7 +297,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
       const page = parseInt(pageInput, 10);
       if (
         page > 0 &&
-        page <= Math.ceil(displayIssueList.length / maxPageItems)
+        page <= Math.ceil(gfiNum / maxPageItems)
       ) {
         setCurrentPageIdx(parseInt(pageInput, 10));
       }
@@ -323,7 +326,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
         >
           <GFIPagination
             maxPagingCount={3}
-            pageNums={Math.ceil(displayIssueList.length / maxPageItems)}
+            pageNums={Math.ceil(gfiNum / maxPageItems)}
             pageIdx={currentPageIdx}
             toPage={(page) => setCurrentPageIdx(page)}
             needInputArea
@@ -349,10 +352,10 @@ type IssueState = 'closed' | 'open' | 'resolved';
 interface IssueDisplayData {
   issueId: number;
   title: string;
-  body: string;
+  body?: string;
   state: IssueState;
   url: string;
-  gfi: GFIInfo;
+  gfi?: GFIInfo;
 }
 
 function GFIIssueListItem(props: GFIIssueListItem) {
@@ -361,48 +364,78 @@ function GFIIssueListItem(props: GFIIssueListItem) {
   const { repoInfo, issue, useTips, trainingSummary } = props;
   const [displayData, setDisplayData] = useState<IssueDisplayData>();
 
-  useEffect(() => {
-    getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number).then(
-      (res) => {
-        // if (res && res.status === 200) {
-        //   if (res.data && !checkHasUndefinedProperty(res.data)) {
-        //     let issueState = 'open';
-        //     if (res.data.state === 'closed') {
-        //       issueState = 'closed';
-        //     }
-        //     if (res.data.active_lock_reason === 'resolved') {
-        //       issueState = 'resolved';
-        //     }
-        //     setDisplayData({
-        //       issueId: res.data.number as number,
-        //       title: res.data.title as string,
-        //       body: res.data.body as string,
-        //       state: issueState as IssueState,
-        //       url: res.data.html_url as string,
-        //       gfi: issue,
-        //     });
-        //   }
-        // } else {
-        // }
-        if (res) {
-          let issueState: IssueState = 'open';
-          if (res.state === 'closed') {
-            issueState = 'closed';
-          }
-          if (res.active_lock_reason === 'resolved') {
-            issueState = 'resolved';
-          }
-          setDisplayData({
-            issueId: res.number,
-            title: res.title,
-            body: res.body,
-            state: issueState,
-            url: res.html_url,
-            gfi: issue,
-          });
-        }
+  const updateIssue = async () => {
+    const res = await getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number);
+    if (res) {
+      let issueState: IssueState = 'open';
+      if (res.state === 'closed') {
+        issueState = 'closed';
       }
-    );
+      if (res.active_lock_reason === 'resolved') {
+        issueState = 'resolved';
+      }
+      setDisplayData({
+        issueId: res.number,
+        title: res.title,
+        body: res.body,
+        state: issueState,
+        url: res.html_url,
+        gfi: issue,
+      });
+    }
+  }
+
+  useEffect(() => {
+    // getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number).then(
+    //   (res) => {
+    //     // if (res && res.status === 200) {
+    //     //   if (res.data && !checkHasUndefinedProperty(res.data)) {
+    //     //     let issueState = 'open';
+    //     //     if (res.data.state === 'closed') {
+    //     //       issueState = 'closed';
+    //     //     }
+    //     //     if (res.data.active_lock_reason === 'resolved') {
+    //     //       issueState = 'resolved';
+    //     //     }
+    //     //     setDisplayData({
+    //     //       issueId: res.data.number as number,
+    //     //       title: res.data.title as string,
+    //     //       body: res.data.body as string,
+    //     //       state: issueState as IssueState,
+    //     //       url: res.data.html_url as string,
+    //     //       gfi: issue,
+    //     //     });
+    //     //   }
+    //     // } else {
+    //     // }
+    //     if (res) {
+    //       let issueState: IssueState = 'open';
+    //       if (res.state === 'closed') {
+    //         issueState = 'closed';
+    //       }
+    //       if (res.active_lock_reason === 'resolved') {
+    //         issueState = 'resolved';
+    //       }
+    //       setDisplayData({
+    //         issueId: res.number,
+    //         title: res.title,
+    //         body: res.body,
+    //         state: issueState,
+    //         url: res.html_url,
+    //         gfi: issue,
+    //       });
+    //     }
+
+    // use backend data first
+    setDisplayData({
+      issueId: issue.number,
+      title: issue.title,
+      state: issue.state,
+      url: `https://github.com/${repoInfo.owner}/${repoInfo.name}/issues/${issue.number}`,
+      gfi: issue,
+    });
+    // update from github later
+    updateIssue();
   }, []);
 
   const issueBtn = () => {
@@ -545,7 +578,7 @@ function IssueOverlayItem(props: IssueOverlayItem) {
         {simpleTrainDataProps && (
           <div className="flex-row issue-demo-data-container-overlay">
             {simpleTrainDataProps.map((prop) => (
-              <SimpleTrainInfoTag title={prop.title} data={prop.data} />
+              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={prop.title}/>
             ))}
           </div>
         )}

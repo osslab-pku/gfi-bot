@@ -43,7 +43,7 @@ def get_gfi_brief(
             Q(name=repo) & Q(owner=owner) & Q(probability__gte=threshold)
         )
         .only("name", "owner", "number", "threshold", "probability", "last_updated")
-        .order_by("-probability")
+        .order_by("-probability", "-number")  # probability may be the same -> repeated issue
     )
 
     if start is not None and length is not None:

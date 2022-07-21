@@ -2,9 +2,19 @@ import {asyncRequest, getBaseURL} from './query';
 import type { RequestParams } from './query';
 import { userInfo } from "../storage";
 
-import type { RepoSort, RepoBrief, RepoDetail, RepoGFIConfig, SearchedRepo, RepoUpdateConfig } from "../model/api";
-import type { GFIInfo, GFITrainingSummary } from "../model/api";
-import type { GFIResponse, GFIFailure } from "../model/api";
+import type {
+  RepoSort,
+  RepoBrief,
+  RepoDetail,
+  RepoGFIConfig,
+  SearchedRepo,
+  RepoUpdateConfig,
+  UserQueryHistory,
+  GFIInfo,
+  GFITrainingSummary,
+  GFIResponse,
+  GFIFailure
+} from "../model/api";
 
 const requestGFI = async <T>(params: RequestParams) => {
   // if token exists, add token to headers
@@ -12,6 +22,7 @@ const requestGFI = async <T>(params: RequestParams) => {
   if (githubToken)
     params.headers = {"Authorization": `token ${githubToken}`}
   const res = await asyncRequest<GFIResponse<T>>(params);
+  if (!res) return undefined;
   if (200 <= res.code && res.code < 300 && res.result) {
     return res.result;
   } else if (typeof params.onError === "function") {
@@ -81,8 +92,8 @@ export const searchRepoInfoByNameOrURL = async (
 };
 
 export const getGFIByRepoName = async (
-  owner: string,
   name: string,
+  owner: string,
   start?: number,
   length?: number
 ) => await requestGFI<GFIInfo[]>({
@@ -94,7 +105,7 @@ export const getGFINum = async (repoName?: string, repoOwner?: string) => {
   return await requestGFI<number | undefined>({
     url: '/api/issue/gfi/num',
     params: {
-      repo: repoName,
+      name: repoName,
       owner: repoOwner,
     },
   });
@@ -124,11 +135,7 @@ export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
 
 export const getAddRepoHistory = async (filter?: RepoSort) => {
   const { githubLogin } = userInfo();
-  return await requestGFI<{
-    nums?: number;
-    queries: RepoBrief[];
-    finished_queries?: RepoBrief[];
-  }>({
+  return await requestGFI<UserQueryHistory>({
     url: '/api/user/queries',
     params: {
       user: githubLogin,

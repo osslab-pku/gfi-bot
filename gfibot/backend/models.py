@@ -24,8 +24,8 @@ class RepoQuery(BaseModel):
 class RepoBrief(BaseModel):
     name: str
     owner: str
-    description: str
-    language: str
+    description: Optional[str]
+    language: Optional[str]
     topics: List[str]
 
 

@@ -12,12 +12,13 @@ export const requestGitHub = async <T>(params: RequestParams) => {
   if (githubToken)
     params.headers = {"Authorization": `token ${githubToken}`}
   const res = await asyncRequest<GitHubHTTPResponse<T>>(params);
-  if (200 <= res.status && res.status < 300 && res.data) {
-    return res.data;
+  if (!res) return undefined;
+  if (res && !res.error) {
+    return res.data? res.data : res;
   } else if (typeof params.onError === "function") {
     // normally when an error occurs, status code != 200
     // but in this case, we want to keep the compatibility
-    params.onError(new Error(String(res.data)));
+    params.onError(new Error(String(res.error)));
   }
   return undefined;
 }
@@ -73,8 +74,6 @@ export const getIssueByRepoInfo = async (
   issueId?: string | number
 ) => {
   // url such as https://api.github.com/repos/pallets/flask/issues/4333
-
   const url = `https://api.github.com/repos/${owner}/${repoName}/issues/${issueId}`;
-
   return await requestGitHub<Partial<GitHubIssueResponse>>({url});
 };

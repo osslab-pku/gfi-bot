@@ -21,6 +21,7 @@ import {
   getPagedRepoDetailedInfo,
   getTrainingSummary,
   getRepoInfo,
+  getPagedRepoBrief,
 } from '../../api/api';
 import { checkGithubLogin } from '../../api/githubApi';
 
@@ -75,9 +76,8 @@ export function MainPage() {
     language: '',
     topics: [],
   };
-  const [displayRepoInfo, setDisplayRepoInfo] = useState<
-    RepoBrief[] | undefined
-  >([emptyRepoInfo]);
+
+  const [displayRepoInfo, setDisplayRepoInfo] = useState<RepoBrief[] | undefined>([emptyRepoInfo]);
   const [alarmConfig, setAlarmConfig] = useState({ show: false, msg: '' });
 
   const showAlarm = (msg: string) => {
@@ -200,7 +200,7 @@ export function MainPage() {
         setTotalRepos(res);
       }
     });
-    getPagedRepoDetailedInfo(beginIdx, repoCapacity, tag, filter).then(
+    getPagedRepoBrief(beginIdx, repoCapacity, tag, filter).then(
       (repoList) => {
         if (repoList && Array.isArray(repoList)) {
           const repoInfoList = repoList.map((repo) => {
@@ -448,7 +448,7 @@ interface GFIDadaKanban {
   onTagClicked: (tag?: string) => void;
 }
 
-const GFIDadaKanban = forwardRef((props: GFIDadaKanban) => {
+const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
   const { onTagClicked } = props;
   const [langTags, setLangTags] = useState<any[]>([]);
   const globalSelectedTag = useSelector<

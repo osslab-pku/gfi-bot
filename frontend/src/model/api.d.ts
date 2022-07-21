@@ -65,7 +65,7 @@ export type GFIInfo = {
     /** ISO datestring */
     last_updated: string;
     title?: string;
-    state?: string;
+    state?: 'closed' | 'open' | 'resolved';
 };
 
 export type GFITrainingSummary = {
