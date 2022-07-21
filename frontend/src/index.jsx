@@ -14,7 +14,7 @@ import { DescriptionPage } from './pages/descriptionPage';
 import { GFIHeader } from './pages/GFIHeader';
 import { Repositories } from './pages/repositories/repositories';
 
-import { persistor, store } from './module/storage/configureStorage';
+import { persistor, store } from './storage/configureStorage';
 import reportWebVitals from './reportWebVitals';
 import { MainPage } from './pages/main/mainPage';
 import { LoginRedirect } from './pages/login/GFILoginComponents';

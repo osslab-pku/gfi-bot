@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { ListGroup } from 'react-bootstrap';
 import { DeleteOutlined } from '@ant-design/icons';
-import { GFIRepoInfo, GFIUserSearch } from '../../module/data/dataModel';
+import type { RepoBrief, SearchedRepo } from '../../model/api';
 import { deleteUserSearch, getRepoInfo, getUserSearches } from '../../api/api';
 
 import '../../style/gfiStyle.css';
@@ -15,12 +15,12 @@ import { GFIOverlay } from '../GFIComponents';
 import { useIsMobile } from '../app/windowContext';
 
 export function SearchHistory() {
-  const [searchHistory, setSearchHistory] = useState<GFIUserSearch[]>();
+  const [searchHistory, setSearchHistory] = useState<SearchedRepo[]>();
   const [showPopover, setShowPopover] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const setSearchRes = (res: GFIUserSearch[]) => {
+  const setSearchRes = (res: SearchedRepo[]) => {
     const res_reversed = res.reverse();
     setSearchHistory(res_reversed);
     setSelectedList(res_reversed.map((_, idx) => !idx));
@@ -35,7 +35,7 @@ export function SearchHistory() {
   }, []);
 
   const [selectedList, setSelectedList] = useState<boolean[]>();
-  const [repoDisplay, setRepoDisplay] = useState<GFIRepoInfo>();
+  const [repoDisplay, setRepoDisplay] = useState<RepoBrief>();
 
   const onItemClicked = (name: string, owner: string, idx: number) => {
     if (repoDisplay?.name !== name || repoDisplay?.owner !== owner) {

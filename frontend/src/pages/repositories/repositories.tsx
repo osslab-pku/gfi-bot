@@ -14,7 +14,7 @@ import { getRepoNum, getPagedRepoDetailedInfo } from '../../api/api';
 import {
   createAccountNavStateAction,
   createGlobalProgressBarAction,
-} from '../../module/storage/reducers';
+} from '../../storage/reducers';
 
 export function Repositories() {
   const repoListCapacity = 5;

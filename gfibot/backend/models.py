@@ -91,6 +91,8 @@ class GFIBrief(BaseModel):
     threshold: float
     probability: float
     last_updated: datetime
+    state: Optional[str] = None
+    title: Optional[str] = None
 
 
 class TrainingResult(BaseModel):

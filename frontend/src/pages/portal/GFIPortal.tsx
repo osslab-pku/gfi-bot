@@ -21,18 +21,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   createAccountNavStateAction,
   createGlobalProgressBarAction,
-} from '../../module/storage/reducers';
-import { GFIRootReducers } from '../../module/storage/configureStorage';
-import { checkIsGitRepoURL } from '../../utils';
+} from '../../storage/reducers';
+import { GFIRootReducers } from '../../storage/configureStorage';
+import {checkIsGitRepoURL, convertFilter} from '../../utils';
 
 import importTips from '../../assets/git-add-demo.png';
 import { checkHasRepoPermissions } from '../../api/githubApi';
 import { GFIAlarm, GFIAlarmPanelVariants, GFIOverlay } from '../GFIComponents';
 import { addRepoToGFIBot, getAddRepoHistory } from '../../api/api';
-import {
-  GFIRepoInfo,
-  GFIUserQueryHistoryItem,
-} from '../../module/data/dataModel';
+import type {
+  RepoBrief,
+} from '../../model/api';
 import {
   GFIIssueMonitor,
   GFIRepoDisplayView,
@@ -44,6 +43,10 @@ import { SearchHistory } from './SearchHistory';
 import { RepoSetting } from './RepoSetting';
 
 export interface GFIPortal {}
+type GFIUserQueryHistoryItem = {
+  pending: boolean;
+  repo: RepoBrief;
+};
 
 type SubPanelIDs = 'Add Project' | 'Search History' | 'My Account';
 const SubPanelTitles: SubPanelIDs[] & string[] = [
@@ -215,7 +218,7 @@ function AddProjectComponent() {
   const [addedRepos, setAddedRepos] = useState<GFIUserQueryHistoryItem[]>();
   const [addedRepoIncrement, setAddedRepoIncrement] = useState(false);
   const fetchAddedRepos = (onComplete?: () => void) => {
-    getAddRepoHistory(filterSelected).then((res) => {
+    getAddRepoHistory(convertFilter(filterSelected)).then((res) => {
       const finishedQueries: GFIUserQueryHistoryItem[] | undefined =
         res?.finished_queries?.map((info) => ({
           pending: false,
@@ -352,7 +355,7 @@ function AddProjectComponent() {
 
   const repoInfoPanelRef = useRef<HTMLDivElement>(null);
   const [addedRepoDisplayPanelConfig, setAddedRepoDisplayPanelConfig] =
-    useState<GFIRepoInfo>();
+    useState<RepoBrief>();
   const [showPopover, setShowPopover] = useState(false);
 
   type FilterType = GFIRepoSearchingFilterType;
@@ -365,7 +368,7 @@ function AddProjectComponent() {
     'Newcomer Friendliness',
   ];
 
-  const onRepoHistoryClicked = (repoInfo: GFIRepoInfo) => {
+  const onRepoHistoryClicked = (repoInfo: RepoBrief) => {
     setAddedRepoDisplayPanelConfig(repoInfo);
     setShowPopover(true);
   };
@@ -389,6 +392,9 @@ function AddProjectComponent() {
         repoInfo={{
           name: 'None',
           owner: 'Try to add your projects!',
+          description: '',
+          language: '',
+          topics: [],
         }}
         available={false}
       />
@@ -605,9 +611,9 @@ function AddProjectComponent() {
 
 function RepoHistoryTag(props: {
   pending: boolean;
-  repoInfo: GFIRepoInfo;
+  repoInfo: RepoBrief;
   available: boolean;
-  onClick?: (repoInfo: GFIRepoInfo) => void;
+  onClick?: (repoInfo: RepoBrief) => void;
 }) {
   const { pending, repoInfo, available, onClick } = props;
   const isPending = available

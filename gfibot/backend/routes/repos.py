@@ -132,6 +132,42 @@ def get_paged_repo_detail(
     # return GFIResponse(result=repos_brief)
 
 
+@api.get("/info/paged", response_model=GFIResponse[List[RepoBrief]])
+def get_paged_repo_brief(
+    start: int,
+    length: int,
+    lang: Optional[str] = None,
+    filter: Optional[RepoSort] = None,
+):
+    """
+    Get brief info of repository (paged)
+    """
+    q = Repo.objects()
+
+    if lang:
+        q = q.filter(language=lang)
+
+    if filter:
+        if filter == RepoSort.GFIS:
+            q = q.order_by("-n_gfis")
+        elif filter == RepoSort.ISSUE_CLOSE_TIME:
+            q = q.order_by("issue_close_time")
+        elif filter == RepoSort.NEWCOMER_RESOLVE_RATE:
+            q = q.order_by("-r_newcomer_resolve")
+        elif filter == RepoSort.STARS:
+            q = q.order_by("-n_stars")
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid filter: expect one in {}".format(RepoSort.__members__),
+            )
+    else:
+        q = q.order_by("name")
+
+    repos_list = list(q.skip(start).limit(length).only(*RepoBrief.__fields__))
+    return GFIResponse(result=repos_list)
+
+
 @api.get("/info/search", response_model=GFIResponse[List[RepoDetail]])
 def search_repo_detail(
     user: Optional[str] = None, repo: Optional[str] = None, url: Optional[str] = None

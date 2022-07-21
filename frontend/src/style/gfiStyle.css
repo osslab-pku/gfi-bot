@@ -206,6 +206,7 @@ code {
 }
 
 .sign-in {
+  width: max-content;
   width: -webkit-max-content;
   width: -moz-fit-content;
 }

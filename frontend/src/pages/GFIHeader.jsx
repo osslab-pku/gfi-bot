@@ -29,7 +29,7 @@ import { gitHubLogin } from '../api/githubApi';
 import {
   createAccountNavStateAction,
   createLogoutAction,
-} from '../module/storage/reducers';
+} from '../storage/reducers';
 import '../style/gfiStyle.css';
 
 import navLogo from '../assets/favicon-thumbnail.png';

@@ -25,13 +25,13 @@ import {
 } from '../GFIComponents';
 import {
   GFIInfo,
-  GFIRepoInfo,
-  GetRepoDetailedInfo,
+  RepoBrief,
+  RepoDetail,
   GFITrainingSummary,
-} from '../../module/data/dataModel';
+} from '../../model/api';
 import { getIssueByRepoInfo } from '../../api/githubApi';
-import { GFIRootReducers } from '../../module/storage/configureStorage';
-import { createPopoverAction } from '../../module/storage/reducers';
+import { GFIRootReducers } from '../../storage/configureStorage';
+import { createPopoverAction } from '../../storage/reducers';
 import {
   getGFIByRepoName,
   getRepoDetailedInfo,
@@ -48,7 +48,7 @@ export interface RepoShouldDisplayPopoverState {
 }
 
 export interface GFIRepoBasicProp {
-  repoInfo: GFIRepoInfo;
+  repoInfo: RepoBrief;
 }
 
 export interface GFIRepoDisplayView extends GFIRepoBasicProp {
@@ -364,25 +364,42 @@ function GFIIssueListItem(props: GFIIssueListItem) {
   useEffect(() => {
     getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number).then(
       (res) => {
-        if (res && res.status === 200) {
-          if (res.data && !checkHasUndefinedProperty(res.data)) {
-            let issueState = 'open';
-            if (res.data.state === 'closed') {
-              issueState = 'closed';
-            }
-            if (res.data.active_lock_reason === 'resolved') {
-              issueState = 'resolved';
-            }
-            setDisplayData({
-              issueId: res.data.number as number,
-              title: res.data.title as string,
-              body: res.data.body as string,
-              state: issueState as IssueState,
-              url: res.data.html_url as string,
-              gfi: issue,
-            });
+        // if (res && res.status === 200) {
+        //   if (res.data && !checkHasUndefinedProperty(res.data)) {
+        //     let issueState = 'open';
+        //     if (res.data.state === 'closed') {
+        //       issueState = 'closed';
+        //     }
+        //     if (res.data.active_lock_reason === 'resolved') {
+        //       issueState = 'resolved';
+        //     }
+        //     setDisplayData({
+        //       issueId: res.data.number as number,
+        //       title: res.data.title as string,
+        //       body: res.data.body as string,
+        //       state: issueState as IssueState,
+        //       url: res.data.html_url as string,
+        //       gfi: issue,
+        //     });
+        //   }
+        // } else {
+        // }
+        if (res) {
+          let issueState: IssueState = 'open';
+          if (res.state === 'closed') {
+            issueState = 'closed';
           }
-        } else {
+          if (res.active_lock_reason === 'resolved') {
+            issueState = 'resolved';
+          }
+          setDisplayData({
+            issueId: res.number,
+            title: res.title,
+            body: res.body,
+            state: issueState,
+            url: res.html_url,
+            gfi: issue,
+          });
         }
       }
     );
@@ -573,7 +590,7 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
   (props: GFIRepoStaticsDemonstrator, ref) => {
     const { repoInfo, trainingSummary, paging } = props;
     const usePaging = !(paging === false && paging !== undefined);
-    const [displayInfo, setDisplayInfo] = useState<GetRepoDetailedInfo>();
+    const [displayInfo, setDisplayInfo] = useState<RepoDetail>();
     const simpleTrainDataProps: SimpleTrainInfoTagProp[] | [] = trainingSummary
       ? [
           {
@@ -623,7 +640,7 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
 
     useEffect(() => {
       getRepoDetailedInfo(repoInfo.name, repoInfo.owner).then((res) => {
-        const result = res as GetRepoDetailedInfo;
+        const result = res as RepoDetail;
         setDisplayInfo(result);
       });
     }, []);

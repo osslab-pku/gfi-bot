@@ -42,7 +42,7 @@ def get_gfi_brief(
         Prediction.objects(
             Q(name=repo) & Q(owner=owner) & Q(probability__gte=threshold)
         )
-        .only(*GFIBrief.__fields__)
+        .only("name", "owner", "number", "threshold", "probability", "last_updated")
         .order_by("-probability")
     )
 
@@ -50,7 +50,12 @@ def get_gfi_brief(
         gfi_list = gfi_list.skip(start).limit(length)
 
     if gfi_list:
-        return GFIResponse(result=[GFIBrief(**gfi.to_mongo()) for gfi in gfi_list])
+        res_list: List[GFIBrief] = []
+        for gfi in gfi_list:
+            issue: RepoIssue = RepoIssue.objects(Q(name=repo) & Q(owner=owner) & Q(number=gfi.number)).first()
+            res_dict = {**gfi.to_mongo(), **issue.to_mongo()} if issue else gfi.to_mongo()
+            res_list.append(GFIBrief(**res_dict))
+        return GFIResponse(result=res_list)
     raise HTTPException(status_code=404, detail="Good first issue not found")
 
 

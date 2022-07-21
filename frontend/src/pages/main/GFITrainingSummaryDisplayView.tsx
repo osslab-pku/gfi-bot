@@ -1,5 +1,5 @@
 import React, { ForwardedRef, forwardRef, useEffect, useState } from 'react';
-import { GFITrainingSummary } from '../../module/data/dataModel';
+import type { GFITrainingSummary } from '../../model/api';
 import { getGFINum, getTrainingSummary } from '../../api/api';
 
 import '../../style/gfiStyle.css';

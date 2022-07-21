@@ -12,7 +12,7 @@ import {
   mainPageLangTagSelectedStateReducer,
   showMainPagePopoverReducer,
 } from './reducers';
-import { RepoShouldDisplayPopoverState } from '../../pages/main/GFIRepoDisplayView';
+import { RepoShouldDisplayPopoverState } from '../pages/main/GFIRepoDisplayView';
 
 const persistConfig = {
   key: 'root',

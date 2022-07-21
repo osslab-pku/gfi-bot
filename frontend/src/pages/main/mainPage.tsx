@@ -9,7 +9,7 @@ import '../../style/gfiStyle.css';
 import {
   checkIsNumber,
   defaultFontFamily,
-  checkIsGitRepoURL,
+  checkIsGitRepoURL, convertFilter,
 } from '../../utils';
 
 import { GFINotiToast } from '../login/GFILoginComponents';
@@ -30,7 +30,7 @@ import {
   createMainPageLangTagSelectedAction,
   createPopoverAction,
   MainPageLangTagSelectedState,
-} from '../../module/storage/reducers';
+} from '../../storage/reducers';
 import { GFI_REPO_FILTER_NONE, GFIMainPageHeader } from './mainHeader';
 
 import {
@@ -38,10 +38,9 @@ import {
   GFIRepoDisplayView,
   GFIRepoStaticsDemonstrator,
 } from './GFIRepoDisplayView';
-import { GFIRepoInfo, GFITrainingSummary } from '../../module/data/dataModel';
-import { GFIRootReducers } from '../../module/storage/configureStorage';
+import {RepoBrief, GFITrainingSummary, RepoSort} from '../../model/api';
+import { GFIRootReducers } from '../../storage/configureStorage';
 import { GFITrainingSummaryDisplayView } from './GFITrainingSummaryDisplayView';
-import { GFIAlphaWarning } from './GFIBanners';
 
 export function MainPage() {
   const dispatch = useDispatch();
@@ -69,15 +68,15 @@ export function MainPage() {
     return state.loginReducer?.avatar;
   });
 
-  const emptyRepoInfo: GFIRepoInfo = {
+  const emptyRepoInfo: RepoBrief = {
     name: '',
     owner: '',
     description: '',
-    url: '',
+    language: '',
     topics: [],
   };
   const [displayRepoInfo, setDisplayRepoInfo] = useState<
-    GFIRepoInfo[] | undefined
+    RepoBrief[] | undefined
   >([emptyRepoInfo]);
   const [alarmConfig, setAlarmConfig] = useState({ show: false, msg: '' });
 
@@ -145,7 +144,7 @@ export function MainPage() {
 
   useEffect(() => {
     if (selectedTag || selectedFilter) {
-      fetchRepoInfoList(1, selectedTag, selectedFilter);
+      fetchRepoInfoList(1, selectedTag, convertFilter(selectedFilter));
       setPageIdx(1);
       dispatch(
         createMainPageLangTagSelectedAction({
@@ -157,7 +156,7 @@ export function MainPage() {
 
   useEffect(() => {
     if (pageIdx) {
-      fetchRepoInfoList(pageIdx, selectedTag, selectedFilter);
+      fetchRepoInfoList(pageIdx, selectedTag, convertFilter(selectedFilter));
     }
   }, [pageIdx]);
 
@@ -192,7 +191,7 @@ export function MainPage() {
   const fetchRepoInfoList = (
     pageNum: number,
     tag?: string,
-    filter?: string
+    filter?: RepoSort
   ) => {
     const beginIdx = (pageNum - 1) * repoCapacity;
     dispatch(createGlobalProgressBarAction({ hidden: false }));
@@ -204,15 +203,14 @@ export function MainPage() {
     getPagedRepoDetailedInfo(beginIdx, repoCapacity, tag, filter).then(
       (repoList) => {
         if (repoList && Array.isArray(repoList)) {
-          const repoInfoList = repoList.map((repo, i) => {
+          const repoInfoList = repoList.map((repo) => {
             if ('name' in repo && 'owner' in repo) {
               return {
                 name: repo.name,
                 owner: repo.owner,
-                description:
-                  'description' in repo ? repo.description : undefined,
+                language: repo.language ? repo.language : undefined,
+                description: repo.description? repo.description : undefined,
                 topics: 'topics' in repo ? repo.topics : undefined,
-                url: '',
               };
             }
             return emptyRepoInfo;
@@ -450,7 +448,7 @@ interface GFIDadaKanban {
   onTagClicked: (tag?: string) => void;
 }
 
-const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
+const GFIDadaKanban = forwardRef((props: GFIDadaKanban) => {
   const { onTagClicked } = props;
   const [langTags, setLangTags] = useState<any[]>([]);
   const globalSelectedTag = useSelector<
@@ -492,7 +490,7 @@ const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
         <button
           className={`gfi-rounded ${selected}`}
           key={`lang-tag ${index}`}
-          onClick={(e) => {
+          onClick={() => {
             if (index !== selectedIdx) {
               setSelectedIdx(index);
               onTagClicked(val);
