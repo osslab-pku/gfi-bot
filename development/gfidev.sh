@@ -31,7 +31,7 @@ up(){
     if screen -list | grep -q "$SCREEN_NAME_BACKEND"; then
         screen -S "$SCREEN_NAME_BACKEND" -X quit
     fi
-    screen -dmS "$SCREEN_NAME_BACKEND" bash -c "cd ../ && poetry run python3 -m gfibot.backend.server --host 0.0.0.0 --port ${GFIBOT_BACKEND_PORT} --reload"
+    screen -dmS "$SCREEN_NAME_BACKEND" bash -c "cd ../ && poetry run uvicorn gfibot.backend.server:app --host 0.0.0.0 --port ${GFIBOT_BACKEND_PORT} --reload --reload-dir gfibot/"
 
     echo "[${COMPOSE_PROJECT_NAME}] Starting vite..."
     if screen -list | grep -q "$SCREEN_NAME_VITE"; then
