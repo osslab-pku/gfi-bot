@@ -463,7 +463,7 @@ function GFIIssueListItem(props: GFIIssueListItem) {
               useTips ? 'tool-tips' : ''
             }`}
           >
-            {`${(issue.probability * 100).toFixed(2)}%`}
+            {`${(issue.probability * 100).toFixed(issue.probability > 0.99995 ? 1 : 2)}%`}
             {useTips && (
               <div className="tool-tips-text-top flex-row align-center justify-content-center">
                 GFI Probability
