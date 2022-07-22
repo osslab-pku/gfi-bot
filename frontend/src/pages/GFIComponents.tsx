@@ -470,6 +470,8 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>(
   }
 );
 
+GFIOverlay.displayName = 'GFIOverlay';
+
 export function GFISimplePagination(props: {
   nums: number;
   onClick: (idx: number) => void;

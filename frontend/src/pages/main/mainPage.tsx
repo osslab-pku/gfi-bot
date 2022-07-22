@@ -9,7 +9,8 @@ import '../../style/gfiStyle.css';
 import {
   checkIsNumber,
   defaultFontFamily,
-  checkIsGitRepoURL, convertFilter,
+  checkIsGitRepoURL,
+  convertFilter,
 } from '../../utils';
 
 import { GFINotiToast } from '../login/GFILoginComponents';
@@ -39,7 +40,7 @@ import {
   GFIRepoDisplayView,
   GFIRepoStaticsDemonstrator,
 } from './GFIRepoDisplayView';
-import {RepoBrief, GFITrainingSummary, RepoSort} from '../../model/api';
+import { RepoBrief, GFITrainingSummary, RepoSort } from '../../model/api';
 import { GFIRootReducers } from '../../storage/configureStorage';
 import { GFITrainingSummaryDisplayView } from './GFITrainingSummaryDisplayView';
 
@@ -77,7 +78,9 @@ export function MainPage() {
     topics: [],
   };
 
-  const [displayRepoInfo, setDisplayRepoInfo] = useState<RepoBrief[] | undefined>([emptyRepoInfo]);
+  const [displayRepoInfo, setDisplayRepoInfo] = useState<
+    RepoBrief[] | undefined
+  >([emptyRepoInfo]);
   const [alarmConfig, setAlarmConfig] = useState({ show: false, msg: '' });
 
   const showAlarm = (msg: string) => {
@@ -200,26 +203,24 @@ export function MainPage() {
         setTotalRepos(res);
       }
     });
-    getPagedRepoBrief(beginIdx, repoCapacity, tag, filter).then(
-      (repoList) => {
-        if (repoList && Array.isArray(repoList)) {
-          const repoInfoList = repoList.map((repo) => {
-            if ('name' in repo && 'owner' in repo) {
-              return {
-                name: repo.name,
-                owner: repo.owner,
-                language: repo.language ? repo.language : undefined,
-                description: repo.description? repo.description : undefined,
-                topics: 'topics' in repo ? repo.topics : undefined,
-              };
-            }
-            return emptyRepoInfo;
-          });
-          setDisplayRepoInfo(repoInfoList);
-        }
-        dispatch(createGlobalProgressBarAction({ hidden: true }));
+    getPagedRepoBrief(beginIdx, repoCapacity, tag, filter).then((repoList) => {
+      if (repoList && Array.isArray(repoList)) {
+        const repoInfoList = repoList.map((repo) => {
+          if ('name' in repo && 'owner' in repo) {
+            return {
+              name: repo.name,
+              owner: repo.owner,
+              language: repo.language ? repo.language : undefined,
+              description: repo.description ? repo.description : undefined,
+              topics: 'topics' in repo ? repo.topics : undefined,
+            };
+          }
+          return emptyRepoInfo;
+        });
+        setDisplayRepoInfo(repoInfoList);
       }
-    );
+      dispatch(createGlobalProgressBarAction({ hidden: true }));
+    });
   };
 
   const onPageBtnClicked = () => {
@@ -266,10 +267,15 @@ export function MainPage() {
             repoInfo={item}
             tags={['GFI', 'Repo Data']}
             panels={[
-              <GFIIssueMonitor repoInfo={item} trainingSummary={summary} />,
+              <GFIIssueMonitor
+                repoInfo={item}
+                trainingSummary={summary}
+                key={1}
+              />,
               <GFIRepoStaticsDemonstrator
                 repoInfo={item}
                 trainingSummary={summary}
+                key={2}
               />,
             ]}
             style={{
@@ -401,13 +407,13 @@ export function MainPage() {
         </Row>
         <Row>
           <GFINotiToast
-              show={showBannerMsg}
-              userName={userName || 'visitor'}
-              userAvatarUrl={userAvatarUrl}
-              onClose={() => {
-                setShowBannerMsg(false);
-              }}
-              context="GFI-Bot is under active development and not ready for production yet."
+            show={showBannerMsg}
+            userName={userName || 'visitor'}
+            userAvatarUrl={userAvatarUrl}
+            onClose={() => {
+              setShowBannerMsg(false);
+            }}
+            context="GFI-Bot is under active development and not ready for production yet."
           />
           <GFINotiToast
             show={showLoginMsg}
@@ -525,3 +531,5 @@ const GFIDadaKanban = forwardRef((props: GFIDadaKanban, ref) => {
     </div>
   );
 });
+
+GFIDadaKanban.displayName = 'GFIDadaKanban';

@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Badge, Col, Container, ListGroup, Row } from 'react-bootstrap';
 import '../../style/gfiStyle.css';
 
-// @ts-ignore
-import Fade from '@stahl.luke/react-reveal/Fade';
 import { useDispatch } from 'react-redux';
 import { checkIsNumber } from '../../utils';
 import { GFIAlarm, GFIPagination } from '../GFIComponents';

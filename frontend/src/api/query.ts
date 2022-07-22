@@ -39,7 +39,7 @@ export const getBaseURL = () => {
 /** request wrapper */
 export const asyncRequest: <T>(
   params: RequestParams
-) => Promise< T | undefined > = async (params: RequestParams) => {
+) => Promise<T | undefined> = async (params: RequestParams) => {
   try {
     const method = params.method || 'GET';
     const baseURL = params.baseURL || getBaseURL();
@@ -60,7 +60,7 @@ export const asyncRequest: <T>(
     }
   } catch (error: any | AxiosError) {
     // log
-    console.error("%s %s: %s", params.url, error.name, error.message);
+    console.error('%s %s: %s', params.url, error.name, error.message);
     if (typeof params.onError === 'function') {
       params.onError(error);
     }

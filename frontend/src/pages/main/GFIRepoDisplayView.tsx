@@ -33,7 +33,8 @@ import { getIssueByRepoInfo } from '../../api/githubApi';
 import { GFIRootReducers } from '../../storage/configureStorage';
 import { createPopoverAction } from '../../storage/reducers';
 import {
-  getGFIByRepoName, getGFINum,
+  getGFIByRepoName,
+  getGFINum,
   getRepoDetailedInfo,
   getTrainingSummary,
 } from '../../api/api';
@@ -127,7 +128,11 @@ export const GFIRepoDisplayView = forwardRef(
     function Title() {
       const ProjectTags = () => {
         return repoInfo.topics?.map((item, i) => {
-          return <div className="repo-display-info-repo-tag" key={i}>{item}</div>;
+          return (
+            <div className="repo-display-info-repo-tag" key={i}>
+              {item}
+            </div>
+          );
         });
       };
 
@@ -209,6 +214,8 @@ export const GFIRepoDisplayView = forwardRef(
   }
 );
 
+GFIRepoDisplayView.displayName = 'GFIRepoDisplayView';
+
 function PanelTag(props: {
   name: string;
   id: number;
@@ -259,13 +266,19 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
   const [gfiNum, setGfiNum] = useState(0);
 
   const onUpdate = async () => {
-    if (!displayIssueList || !gfiNum){ // not loading
+    if (!displayIssueList || !gfiNum) {
+      // not loading
       const num = await getGFINum(repoInfo.name, repoInfo.owner);
       setGfiNum(num);
       setShouldDisplayPagination(num > maxPageItems);
     }
     const pageLowerBound = (currentPageIdx - 1) * maxPageItems;
-    const res = await getGFIByRepoName(repoInfo.name, repoInfo.owner, pageLowerBound, maxPageItems);
+    const res = await getGFIByRepoName(
+      repoInfo.name,
+      repoInfo.owner,
+      pageLowerBound,
+      maxPageItems
+    );
     if (Array.isArray(res) && res.length) {
       setDisplayIssueList(res);
     } else {
@@ -275,7 +288,7 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
     setIsLoading(false);
   };
 
-  useEffect( () => {
+  useEffect(() => {
     onUpdate();
   }, [currentPageIdx]);
 
@@ -291,16 +304,13 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
         useTips={!(i % maxPageItems)}
         trainingSummary={trainingSummary}
       />
-    ))
+    ));
   };
 
   const onPageBtnClicked = useCallback(() => {
     if (pageInput && checkIsNumber(pageInput) && displayIssueList) {
       const page = parseInt(pageInput, 10);
-      if (
-        page > 0 &&
-        page <= Math.ceil(gfiNum / maxPageItems)
-      ) {
+      if (page > 0 && page <= Math.ceil(gfiNum / maxPageItems)) {
         setCurrentPageIdx(parseInt(pageInput, 10));
       }
     }
@@ -344,6 +354,8 @@ export const GFIIssueMonitor = forwardRef((props: GFIIssueMonitor, ref) => {
   );
 });
 
+GFIIssueMonitor.displayName = 'GFIIssueMonitor';
+
 export interface GFIIssueListItem extends GFIRepoBasicProp {
   issue: GFIInfo;
   useTips: boolean;
@@ -367,7 +379,11 @@ function GFIIssueListItem(props: GFIIssueListItem) {
   const [displayData, setDisplayData] = useState<IssueDisplayData>();
 
   const updateIssue = async () => {
-    const res = await getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number);
+    const res = await getIssueByRepoInfo(
+      repoInfo.name,
+      repoInfo.owner,
+      issue.number
+    );
     if (res) {
       let issueState: IssueState = 'open';
       if (res.state === 'closed') {
@@ -385,10 +401,9 @@ function GFIIssueListItem(props: GFIIssueListItem) {
         gfi: issue,
       });
     }
-  }
+  };
 
   useEffect(() => {
-
     // use backend data first
     setDisplayData({
       issueId: issue.number,
@@ -463,7 +478,9 @@ function GFIIssueListItem(props: GFIIssueListItem) {
               useTips ? 'tool-tips' : ''
             }`}
           >
-            {`${(issue.probability * 100).toFixed(issue.probability > 0.99995 ? 1 : 2)}%`}
+            {`${(issue.probability * 100).toFixed(
+              issue.probability > 0.99995 ? 1 : 2
+            )}%`}
             {useTips && (
               <div className="tool-tips-text-top flex-row align-center justify-content-center">
                 GFI Probability
@@ -514,6 +531,7 @@ function IssueOverlayItem(props: IssueOverlayItem) {
       ]
     : [];
 
+  /* eslint-disable  react/no-children-prop */
   return (
     <div
       className="flex-col repo-overlay-item"
@@ -535,13 +553,15 @@ function IssueOverlayItem(props: IssueOverlayItem) {
           style={{ marginBottom: '0.2rem' }}
         >
           {repoInfo.topics?.map((item, i) => (
-            <div className="repo-display-info-repo-tag" key={i}>{item}</div>
+            <div className="repo-display-info-repo-tag" key={i}>
+              {item}
+            </div>
           ))}
         </div>
         {simpleTrainDataProps && (
           <div className="flex-row issue-demo-data-container-overlay">
             {simpleTrainDataProps.map((prop, i) => (
-              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={i}/>
+              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={i} />
             ))}
           </div>
         )}
@@ -575,6 +595,7 @@ function IssueOverlayItem(props: IssueOverlayItem) {
       )}
     </div>
   );
+  /* eslint-enable  react/no-children-prop */
 }
 
 export interface GFIRepoStaticsDemonstrator extends GFIRepoBasicProp {
@@ -688,7 +709,7 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
         {simpleTrainDataProps && (
           <div className="flex-row issue-demo-data-container">
             {simpleTrainDataProps.map((prop, i) => (
-              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={i}/>
+              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={i} />
             ))}
           </div>
         )}
@@ -712,6 +733,8 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
     );
   }
 );
+
+GFIRepoStaticsDemonstrator.displayName = 'GFIRepoStaticsDemonstrator';
 
 interface SimpleTrainInfoTagProp {
   title: string;

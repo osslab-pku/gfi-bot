@@ -23,15 +23,13 @@ import {
   createGlobalProgressBarAction,
 } from '../../storage/reducers';
 import { GFIRootReducers } from '../../storage/configureStorage';
-import {checkIsGitRepoURL, convertFilter} from '../../utils';
+import { checkIsGitRepoURL, convertFilter } from '../../utils';
 
 import importTips from '../../assets/git-add-demo.png';
 import { checkHasRepoPermissions } from '../../api/githubApi';
 import { GFIAlarm, GFIAlarmPanelVariants, GFIOverlay } from '../GFIComponents';
 import { addRepoToGFIBot, getAddRepoHistory } from '../../api/api';
-import type {
-  RepoBrief,
-} from '../../model/api';
+import type { RepoBrief } from '../../model/api';
 import {
   GFIIssueMonitor,
   GFIRepoDisplayView,
@@ -164,6 +162,7 @@ function AccountSideBar(props: AccountSideBar) {
             }
           }}
           variant={selectedList[i] ? 'primary' : 'light'}
+          key={i}
         >
           {title}
         </ListGroup.Item>
@@ -375,13 +374,14 @@ function AddProjectComponent() {
 
   const renderRepoHistory = () => {
     if (addedRepos && addedRepos.length) {
-      return addedRepos.map((item) => {
+      return addedRepos.map((item, i) => {
         return (
           <RepoHistoryTag
             pending={item.pending}
             repoInfo={item.repo}
             available
             onClick={item.pending ? () => {} : onRepoHistoryClicked}
+            key={i}
           />
         );
       });
@@ -435,7 +435,7 @@ function AddProjectComponent() {
       <div className="project-add-comp-tips">
         <p>
           {' '}
-          <strong>Notice: </strong> We'll register the repository to our
+          <strong>Notice: </strong> We&apos;ll register the repository to our
           database and use it for data training and predictions.{' '}
         </p>
         <p>
@@ -475,7 +475,6 @@ function AddProjectComponent() {
                 </div>
                 <Overlay
                   show={showOverlay}
-                  // @ts-ignore
                   target={overlayTarget}
                   container={overlayContainer}
                   placement="bottom-start"
@@ -525,6 +524,7 @@ function AddProjectComponent() {
                       onFilterSelected(item);
                     }}
                     style={{ fontSize: 'small' }}
+                    key={item}
                   >
                     {item as string}
                   </Dropdown.Item>
@@ -575,11 +575,15 @@ function AddProjectComponent() {
             repoInfo={addedRepoDisplayPanelConfig}
             tags={['Settings', 'GFI', 'Repo Data']}
             panels={[
-              <RepoSetting repoInfo={addedRepoDisplayPanelConfig} />,
-              <GFIIssueMonitor repoInfo={addedRepoDisplayPanelConfig} />,
+              <RepoSetting repoInfo={addedRepoDisplayPanelConfig} key={1} />,
+              <GFIIssueMonitor
+                repoInfo={addedRepoDisplayPanelConfig}
+                key={2}
+              />,
               <GFIRepoStaticsDemonstrator
                 repoInfo={addedRepoDisplayPanelConfig}
                 paging={false}
+                key={3}
               />,
             ]}
             style={{

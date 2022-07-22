@@ -1,5 +1,5 @@
 import { GFIRepoSearchingFilterType } from './pages/main/mainHeader';
-import {RepoSort} from "./model/api";
+import { RepoSort } from './model/api';
 
 export const checkIsNumber = (val: string | number | undefined) => {
   const reg = /^\d+.?\d*/;
@@ -48,15 +48,15 @@ const repoFilters = [
 ];
 
 const filterNames = {
-  'popularity': 'Popularity',
-  'median_issue_resolve_time': 'Median Issue Resolve Time',
-  'newcomer_friendly': 'Newcomer Friendliness',
-  'gfis': 'GFIs'
-}
+  popularity: 'Popularity',
+  median_issue_resolve_time: 'Median Issue Resolve Time',
+  newcomer_friendly: 'Newcomer Friendliness',
+  gfis: 'GFIs',
+};
 
 const nameToFilter = Object.fromEntries(
-    Object.entries(filterNames).map(([k,v]) => [v,k])
-)
+  Object.entries(filterNames).map(([k, v]) => [v, k])
+);
 
 /** convert semantic filter names -> backend args */
 export const convertFilter = (s: string): RepoSort | undefined => {

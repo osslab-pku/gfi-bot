@@ -1,6 +1,6 @@
-import {asyncRequest, getBaseURL} from './query';
+import { asyncRequest, getBaseURL } from './query';
 import type { RequestParams } from './query';
-import { userInfo } from "../storage";
+import { userInfo } from '../storage';
 
 import type {
   RepoSort,
@@ -13,29 +13,29 @@ import type {
   GFIInfo,
   GFITrainingSummary,
   GFIResponse,
-  GFIFailure
-} from "../model/api";
+  GFIFailure,
+} from '../model/api';
 
 const requestGFI = async <T>(params: RequestParams) => {
   // if token exists, add token to headers
-  const { githubToken } = userInfo()
-  if (githubToken)
-    params.headers = {"Authorization": `token ${githubToken}`}
+  const { githubToken } = userInfo();
+  if (githubToken) params.headers = { Authorization: `token ${githubToken}` };
   const res = await asyncRequest<GFIResponse<T>>(params);
   if (!res) return undefined;
   if (200 <= res.code && res.code < 300 && res.result) {
     return res.result;
-  } else if (typeof params.onError === "function") {
+  } else if (typeof params.onError === 'function') {
     // normally when an error occurs, status code != 200
     // but in this case, we want to keep the compatibility
     params.onError(new Error(String(res.result)));
   }
   return undefined;
-}
+};
 
 export const getRepoNum = async (lang?: string) => {
   return await requestGFI<number>({
-    url: '/api/repos/num', params: {lang}
+    url: '/api/repos/num',
+    params: { lang },
   });
 };
 
@@ -47,7 +47,7 @@ export const getPagedRepoDetailedInfo = async (
 ) => {
   return await requestGFI<RepoDetail[]>({
     url: '/api/repos/info/',
-    params: {start, length, lang, filter},
+    params: { start, length, lang, filter },
     baseURL: getBaseURL(),
   });
 };
@@ -57,10 +57,11 @@ export const getPagedRepoBrief = async (
   length: number,
   lang?: string,
   filter?: RepoSort
-) => await requestGFI<RepoBrief[]>({
-  url: '/api/repos/info/paged',
-  params: { start, length, lang, filter }
-})
+) =>
+  await requestGFI<RepoBrief[]>({
+    url: '/api/repos/info/paged',
+    params: { start, length, lang, filter },
+  });
 
 export const getRepoDetailedInfo = async (name: string, owner: string) => {
   return await requestGFI<RepoDetail>({
@@ -96,10 +97,11 @@ export const getGFIByRepoName = async (
   owner: string,
   start?: number,
   length?: number
-) => await requestGFI<GFIInfo[]>({
+) =>
+  await requestGFI<GFIInfo[]>({
     url: '/api/issue/gfi',
-    params: {owner, repo: name, start, length}
-})
+    params: { owner, repo: name, start, length },
+  });
 
 export const getGFINum = async (repoName?: string, repoOwner?: string) => {
   return await requestGFI<number | undefined>({
@@ -240,6 +242,6 @@ export const updateRepoConfig = async (
       name,
       owner,
     },
-    data: config
+    data: config,
   });
 };

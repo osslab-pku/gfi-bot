@@ -1,4 +1,4 @@
-import { RepoBrief } from "./api";
+import { RepoBrief } from './api';
 
 export const MockedRepoInfo: RepoBrief = {
   name: 'scikit-learn',

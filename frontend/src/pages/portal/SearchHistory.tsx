@@ -70,7 +70,7 @@ export function SearchHistory() {
           numTag += ' gfi-list-last';
         }
         return (
-          <div className="flex-row align-center">
+          <div className="flex-row align-center" key={idx}>
             <ListGroup.Item
               className={`gfi-search-history-item-wrapper ${numTag}`}
               id={`gfi-search-history-item-${item.owner}-${item.name}-${idx}`}
@@ -125,10 +125,11 @@ export function SearchHistory() {
             repoInfo={repoDisplay}
             tags={['GFI', 'Repo Data']}
             panels={[
-              <GFIIssueMonitor repoInfo={repoDisplay} paging={14} />,
+              <GFIIssueMonitor repoInfo={repoDisplay} paging={14} key={1} />,
               <GFIRepoStaticsDemonstrator
                 repoInfo={repoDisplay}
                 paging={false}
+                key={2}
               />,
             ]}
             style={{

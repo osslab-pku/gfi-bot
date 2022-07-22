@@ -203,3 +203,5 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
     </Container>
   );
 });
+
+GFIMainPageHeader.displayName = 'GFIMainPageHeader';

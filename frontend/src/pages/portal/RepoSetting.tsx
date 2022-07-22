@@ -171,6 +171,7 @@ export function RepoSetting(props: RepoSettingPops) {
                       {[0, 1, 2, 3, 4].map((i, idx) => (
                         <option
                           selected={idx + 1 === newcomerThresholdSelected}
+                          key={idx}
                         >
                           {i + 1}
                         </option>
@@ -246,8 +247,8 @@ export function RepoSetting(props: RepoSettingPops) {
         {showDeleteAlarm && (
           <GFIAlarm className="no-btn gfi-repo-setting-alarm">
             <div>
-              {' '}
-              Warning: You're going to delete your repository in GFI-Bot{' '}
+              &nbsp;Warning: You&apos;re going to delete your repository in
+              GFI-Bot&nbsp;
             </div>
             <div className="flex-row gfi-repo-setting-alarm-btns">
               <Button

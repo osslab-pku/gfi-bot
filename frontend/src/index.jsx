@@ -28,9 +28,7 @@ import { GFICopyright } from './pages/GFIComponents';
 ReactDOM.render(
   <React.StrictMode>
     <HelmetProvider>
-      <Helmet>
-        <title> GFI Bot </title>
-      </Helmet>
+      <Helmet></Helmet>
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <WindowContextProvider>
