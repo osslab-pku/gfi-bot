@@ -53,6 +53,7 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
         style={{
           fontSize: 'small',
         }}
+        key={title}
       >
         {title}
       </Dropdown.Item>

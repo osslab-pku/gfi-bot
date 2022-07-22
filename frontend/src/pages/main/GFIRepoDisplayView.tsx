@@ -112,6 +112,7 @@ export const GFIRepoDisplayView = forwardRef(
             <div
               className="flex-col"
               style={i === selectedTag ? {} : { display: 'none' }}
+              key={i}
             >
               <RepoDisplayOverlayIDProvider id={overlayID}>
                 {node}
@@ -126,7 +127,7 @@ export const GFIRepoDisplayView = forwardRef(
     function Title() {
       const ProjectTags = () => {
         return repoInfo.topics?.map((item, i) => {
-          return <div className="repo-display-info-repo-tag">{item}</div>;
+          return <div className="repo-display-info-repo-tag" key={i}>{item}</div>;
         });
       };
 
@@ -150,6 +151,7 @@ export const GFIRepoDisplayView = forwardRef(
             <PanelTag
               name={item}
               id={i}
+              key={i}
               onClick={(id) => {
                 if (id !== selectedTag) {
                   setSelectedTag(id);
@@ -386,45 +388,6 @@ function GFIIssueListItem(props: GFIIssueListItem) {
   }
 
   useEffect(() => {
-    // getIssueByRepoInfo(repoInfo.name, repoInfo.owner, issue.number).then(
-    //   (res) => {
-    //     // if (res && res.status === 200) {
-    //     //   if (res.data && !checkHasUndefinedProperty(res.data)) {
-    //     //     let issueState = 'open';
-    //     //     if (res.data.state === 'closed') {
-    //     //       issueState = 'closed';
-    //     //     }
-    //     //     if (res.data.active_lock_reason === 'resolved') {
-    //     //       issueState = 'resolved';
-    //     //     }
-    //     //     setDisplayData({
-    //     //       issueId: res.data.number as number,
-    //     //       title: res.data.title as string,
-    //     //       body: res.data.body as string,
-    //     //       state: issueState as IssueState,
-    //     //       url: res.data.html_url as string,
-    //     //       gfi: issue,
-    //     //     });
-    //     //   }
-    //     // } else {
-    //     // }
-    //     if (res) {
-    //       let issueState: IssueState = 'open';
-    //       if (res.state === 'closed') {
-    //         issueState = 'closed';
-    //       }
-    //       if (res.active_lock_reason === 'resolved') {
-    //         issueState = 'resolved';
-    //       }
-    //       setDisplayData({
-    //         issueId: res.number,
-    //         title: res.title,
-    //         body: res.body,
-    //         state: issueState,
-    //         url: res.html_url,
-    //         gfi: issue,
-    //       });
-    //     }
 
     // use backend data first
     setDisplayData({
@@ -571,14 +534,14 @@ function IssueOverlayItem(props: IssueOverlayItem) {
           className="flex-row align-center justify-content-start flex-wrap"
           style={{ marginBottom: '0.2rem' }}
         >
-          {repoInfo.topics?.map((item) => (
-            <div className="repo-display-info-repo-tag">{item}</div>
+          {repoInfo.topics?.map((item, i) => (
+            <div className="repo-display-info-repo-tag" key={i}>{item}</div>
           ))}
         </div>
         {simpleTrainDataProps && (
           <div className="flex-row issue-demo-data-container-overlay">
-            {simpleTrainDataProps.map((prop) => (
-              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={prop.title}/>
+            {simpleTrainDataProps.map((prop, i) => (
+              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={i}/>
             ))}
           </div>
         )}
@@ -707,6 +670,7 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
                   ? {}
                   : { display: 'none' }
               }
+              key={idx}
             >
               <RepoGraphContainer
                 title={dataTitle[idx]}
@@ -723,8 +687,8 @@ export const GFIRepoStaticsDemonstrator = forwardRef(
       <>
         {simpleTrainDataProps && (
           <div className="flex-row issue-demo-data-container">
-            {simpleTrainDataProps.map((prop) => (
-              <SimpleTrainInfoTag title={prop.title} data={prop.data} />
+            {simpleTrainDataProps.map((prop, i) => (
+              <SimpleTrainInfoTag title={prop.title} data={prop.data} key={i}/>
             ))}
           </div>
         )}

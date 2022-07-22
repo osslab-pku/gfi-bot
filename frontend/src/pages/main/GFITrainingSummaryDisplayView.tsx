@@ -330,7 +330,7 @@ function AucAccBarDisplayer(props: {
       <Group>
         {data.map((d, idx) => {
           return (
-            <>
+            <div key={idx}>
               <Bar
                 x={10}
                 y={margin + idx * (barWidth + margin) + paddingTop}
@@ -356,7 +356,7 @@ function AucAccBarDisplayer(props: {
               >
                 {Math.round(d.value * 100) / 100}
               </text>
-            </>
+            </div>
           );
         })}
       </Group>
@@ -417,6 +417,7 @@ function ActivityDisplayer(props: {
               cx={(graphWidth / data.length) * idx + marginX}
               cy={yScale(d.num) + marginY}
               fill="white"
+              key={idx}
             />
           ))}
           <LinePath<RepoActivity>
@@ -436,6 +437,7 @@ function ActivityDisplayer(props: {
               textAnchor="middle"
               dominantBaseline="middle"
               className="gfi-training-activity-displayer-label"
+              key={idx}
             >
               {' '}
               {d.time}{' '}
