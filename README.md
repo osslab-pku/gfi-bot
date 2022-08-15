@@ -105,4 +105,5 @@ The Zenodo dataset can be dumped using the following script. See [Zenodo](https:
 
 ```shell script
 mongodump --uri=mongodb://localhost:27020 --db=gfibot --collection=dataset --query="{\"resolver_commit_num\":{\"\$ne\":-1}}" --gzip
+mongodump --uri=mongodb://localhost:27020 --db=gfibot --collection=resolved_issue --query="{\"resolver_commit_num\":{\"\$ne\":-1}}" --gzip
 ```
