@@ -14,4 +14,4 @@ jobs:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: 'frontend'
-          command: pages publish --project-name=${{ secrets.CF_PROJECT_NAME }}
+          command: pages publish . --project-name=${{ secrets.CF_PROJECT_NAME }}
