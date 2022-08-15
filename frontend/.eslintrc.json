@@ -6,9 +6,10 @@
     },
     "extends": [
       "plugin:react/recommended",
-      "prettier",
+      "plugin:react-svg/recommended",
+      "plugin:@typescript-eslint/recommended",
       "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended"
+      "prettier"
     ],
     "globals": {
       "Atomics": "readonly",
@@ -35,8 +36,12 @@
       "react/jsx-indent": ["warn", 2, { "indentLogicalExpressions": true }],
       "react/prop-types": "off",
       "react/jsx-no-target-blank": "off",
-      "no-unused-vars": ["warn", { "args": "none" }],
       "prefer-const": "warn",
-      "typescript-eslint/ban-ts-comment": "off"
+      "@typescript-eslint/ban-ts-comment": "off",
+      "no-empty-function": "warn",
+      "@typescript-eslint/no-empty-function": "warn",
+      "no-unused-expressions": "warn",
+      "no-unused-vars": "warn",
+      "@typescript-eslint/no-empty-interface": "warn"
     }
   }

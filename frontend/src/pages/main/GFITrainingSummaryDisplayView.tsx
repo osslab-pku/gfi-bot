@@ -1,5 +1,5 @@
 import React, { ForwardedRef, forwardRef, useEffect, useState } from 'react';
-import { GFITrainingSummary } from '../../module/data/dataModel';
+import type { GFITrainingSummary } from '../../model/api';
 import { getGFINum, getTrainingSummary } from '../../api/api';
 
 import '../../style/gfiStyle.css';
@@ -254,6 +254,8 @@ export const GFITrainingSummaryDisplayView = forwardRef(
   }
 );
 
+GFITrainingSummaryDisplayView.displayName = 'GFITrainingSummaryDisplayView';
+
 function NumInfoDisplayer(props: {
   width: number;
   height: number;
@@ -264,10 +266,9 @@ function NumInfoDisplayer(props: {
 }) {
   const { width, height, gradient, gradientId, num, title } = props;
 
+  // @ts-nocheck
   return (
     <>
-      {/*
-       // @ts-ignore */}
       <svg
         width={width}
         height={height}
@@ -390,6 +391,7 @@ function ActivityDisplayer(props: {
   const marginX = (width - graphWidth * 0.8) / 2.0;
   const marginY = (height - graphHeight) / 2.0 - 4;
 
+  /* eslint-disable  react/jsx-key */
   return (
     <svg width={width} height={height}>
       <g className="flex-row align-center justify-content-center">
@@ -445,4 +447,5 @@ function ActivityDisplayer(props: {
       </g>
     </svg>
   );
+  /* eslint-enable  react/jsx-key */
 }

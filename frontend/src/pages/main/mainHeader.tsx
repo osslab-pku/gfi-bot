@@ -11,8 +11,8 @@ import './mainPage.css';
 import '../../style/gfiStyle.css';
 import { useSelector } from 'react-redux';
 import { getLanguageTags } from '../../api/api';
-import { GFIRootReducers } from '../../module/storage/configureStorage';
-import { MainPageLangTagSelectedState } from '../../module/storage/reducers';
+import { GFIRootReducers } from '../../storage/configureStorage';
+import { MainPageLangTagSelectedState } from '../../storage/reducers';
 
 export type GFIRepoSearchingFilterType =
   | 'None'
@@ -53,6 +53,7 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
         style={{
           fontSize: 'small',
         }}
+        key={title}
       >
         {title}
       </Dropdown.Item>
@@ -202,3 +203,5 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
     </Container>
   );
 });
+
+GFIMainPageHeader.displayName = 'GFIMainPageHeader';

@@ -17,7 +17,7 @@ import { Variant as AlarmPanelVariants } from 'react-bootstrap/types';
 
 export function GFICopyright() {
   const copyright =
-    'Copyright © 2021 OSS Lab, Peking University. All rights reserved.';
+    'Copyright © 2022 OSS Lab, Peking University. All rights reserved.';
 
   return (
     <Container
@@ -469,6 +469,8 @@ export const GFIOverlay = forwardRef<HTMLDivElement, GFIOverlay>(
     );
   }
 );
+
+GFIOverlay.displayName = 'GFIOverlay';
 
 export function GFISimplePagination(props: {
   nums: number;

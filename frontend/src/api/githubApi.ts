@@ -1,15 +1,37 @@
-import { store } from '../module/storage/configureStorage';
-import { asyncRequest, getBaseURL } from './query';
-import { userInfo } from './api';
+import { asyncRequest, RequestParams } from './query';
+import { userInfo } from '../storage';
 import {
   GitHubIssueResponse,
-  RepoPermissions,
-  StandardHTTPResponse,
-} from '../module/data/dataModel';
+  GitHubRepoPermissions,
+  GitHubHTTPResponse,
+} from '../model/github';
+
+export const requestGitHub = async <T>(params: RequestParams) => {
+  // if token exists, add token to headers
+  const { githubToken } = userInfo();
+  if (githubToken) params.headers = { Authorization: `token ${githubToken}` };
+  const res = await asyncRequest<GitHubHTTPResponse<T>>(params);
+  if (!res) return undefined;
+  if (res && !res.error) {
+    return res.data ? res.data : res;
+  } else if (typeof params.onError === 'function') {
+    // normally when an error occurs, status code != 200
+    // but in this case, we want to keep the compatibility
+    params.onError(new Error(String(res.error)));
+  }
+  return undefined;
+};
+
+/** redirect to gh oauth login */
+const gitHubOAuthLogin = async () => {
+  return await asyncRequest<string>({
+    url: '/api/user/github/login',
+  });
+};
 
 export const gitHubLogin = () => {
-  const [hasLogin, userName] = userInfo();
-  if (hasLogin && userName !== undefined) {
+  const { hasLogin, name } = userInfo();
+  if (hasLogin && name !== undefined) {
     window.location.reload();
     return;
   }
@@ -21,51 +43,32 @@ export const gitHubLogin = () => {
 };
 
 export const checkGithubLogin = async () => {
-  const userToken = store.getState().loginReducer.token;
-  const userLoginName = store.getState().loginReducer.loginName;
-  if (userToken) {
-    const res = await asyncRequest<StandardHTTPResponse<any>>({
-      url: `https://api.github.com/users/${userLoginName}`,
-      headers: {
-        Authorization: `token ${userToken}`,
-      },
-      customRequestResponse: false,
+  const { githubLogin, githubToken } = userInfo();
+  if (githubToken) {
+    const res = await requestGitHub<any>({
+      url: `https://api.github.com/users/${githubLogin}`,
     });
-    if (res?.status === 200) {
-      return true;
-    }
+    if (res) return true;
   }
   return false;
 };
 
-const gitHubOAuthLogin = async () => {
-  return await asyncRequest<string>({
-    url: '/api/user/github/login',
-    baseURL: getBaseURL(),
-  });
-};
-
+/** User must have write access */
 export const checkHasRepoPermissions = async (
   repoName: string,
   owner: string
 ) => {
-  const { hasLogin } = store.getState().loginReducer;
-  const userToken = store.getState().loginReducer.token;
-  if (!hasLogin) {
-    return false;
-  }
-  const res = await asyncRequest<
-    StandardHTTPResponse<{ permissions?: RepoPermissions }>
-  >({
+  const { hasLogin, githubToken } = userInfo();
+  if (!hasLogin) return false;
+  const res = await requestGitHub<{ permissions: GitHubRepoPermissions }>({
     url: `https://api.github.com/repos/${owner}/${repoName}`,
-    headers: {
-      Authorization: `token ${userToken}`,
-    },
-    customRequestResponse: false,
   });
-
-  if (res === undefined) return false;
-  return !!res.data?.permissions?.maintain;
+  if (!res || !res.permissions) return false;
+  return (
+    !!res.permissions.maintain ||
+    !!res.permissions.admin ||
+    !!res.permissions.push
+  );
 };
 
 export const getIssueByRepoInfo = async (
@@ -74,18 +77,6 @@ export const getIssueByRepoInfo = async (
   issueId?: string | number
 ) => {
   // url such as https://api.github.com/repos/pallets/flask/issues/4333
-
   const url = `https://api.github.com/repos/${owner}/${repoName}/issues/${issueId}`;
-  const { hasLogin } = store.getState().loginReducer;
-  const userToken = store.getState().loginReducer.token;
-  const headers: any | undefined =
-    hasLogin && userToken ? { Authorization: `token ${userToken}` } : undefined;
-
-  return await asyncRequest<StandardHTTPResponse<Partial<GitHubIssueResponse>>>(
-    {
-      url,
-      headers,
-      customRequestResponse: false,
-    }
-  );
+  return await requestGitHub<Partial<GitHubIssueResponse>>({ url });
 };

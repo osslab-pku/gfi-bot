@@ -10,7 +10,7 @@ import {
   updateRepoConfig,
   updateRepoInfo,
 } from '../../api/api';
-import { GFIRepoConfig } from '../../module/data/dataModel';
+import type { RepoGFIConfig } from '../../model/api';
 import { checkIsNumber } from '../../utils';
 
 export type RepoSettingPops = GFIRepoBasicProp;
@@ -24,7 +24,7 @@ export function RepoSetting(props: RepoSettingPops) {
   const [showComment, setShowComment] = useState(false);
   const [newcomerThresholdSelected, setNewcomerThresholdSelected] = useState(1);
   const [showDeleteAlarm, setShowDeleteAlarm] = useState(false);
-  const [currentRepoConfig, setCurrentRepoConfig] = useState<GFIRepoConfig>();
+  const [currentRepoConfig, setCurrentRepoConfig] = useState<RepoGFIConfig>();
   const [showConfigAlarmBanner, setShowConfigAlarmBanner] = useState(false);
   const [configAlarmBanner, setConfigAlarmBanner] = useState<{
     variant: GFIAlarmPanelVariants;
@@ -69,7 +69,7 @@ export function RepoSetting(props: RepoSettingPops) {
         parseFloat(gfiThreshold) < 1 &&
         gfiTag
       ) {
-        const repoConfig: GFIRepoConfig = {
+        const repoConfig: RepoGFIConfig = {
           newcomer_threshold: newcomerThresholdSelected,
           issue_tag: gfiTag,
           gfi_threshold: parseFloat(gfiThreshold),
@@ -171,6 +171,7 @@ export function RepoSetting(props: RepoSettingPops) {
                       {[0, 1, 2, 3, 4].map((i, idx) => (
                         <option
                           selected={idx + 1 === newcomerThresholdSelected}
+                          key={idx}
                         >
                           {i + 1}
                         </option>
@@ -246,8 +247,8 @@ export function RepoSetting(props: RepoSettingPops) {
         {showDeleteAlarm && (
           <GFIAlarm className="no-btn gfi-repo-setting-alarm">
             <div>
-              {' '}
-              Warning: You're going to delete your repository in GFI-Bot{' '}
+              &nbsp;Warning: You&apos;re going to delete your repository in
+              GFI-Bot&nbsp;
             </div>
             <div className="flex-row gfi-repo-setting-alarm-btns">
               <Button

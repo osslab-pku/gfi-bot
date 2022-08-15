@@ -6,7 +6,7 @@ import { Container, ToastContainer, Toast, Button } from 'react-bootstrap';
 import '../../style/gfiStyle.css';
 import { UserOutlined } from '@ant-design/icons';
 import { defaultFontFamily } from '../../utils';
-import { createLoginAction } from '../../module/storage/reducers';
+import { createLoginAction } from '../../storage/reducers';
 
 export function LoginRedirect(props: any) {
   const dispatch = useDispatch();

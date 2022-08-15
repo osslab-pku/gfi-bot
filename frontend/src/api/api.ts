@@ -1,71 +1,79 @@
 import { asyncRequest, getBaseURL } from './query';
-import {
-  GetRepoDetailedInfo,
-  GFIInfo,
-  GFIRepoConfig,
-  GFIRepoInfo,
-  GFITrainingSummary,
-  GFIUserSearch,
-} from '../module/data/dataModel';
-import { store } from '../module/storage/configureStorage';
-import { convertFilter } from '../utils';
+import type { RequestParams } from './query';
+import { userInfo } from '../storage';
 
-export const userInfo = () => {
-  return [
-    store.getState().loginReducer.hasLogin,
-    store.getState().loginReducer.name,
-    store.getState().loginReducer.loginName,
-    store.getState().loginReducer.token,
-  ];
+import type {
+  RepoSort,
+  RepoBrief,
+  RepoDetail,
+  RepoGFIConfig,
+  SearchedRepo,
+  RepoUpdateConfig,
+  UserQueryHistory,
+  GFIInfo,
+  GFITrainingSummary,
+  GFIResponse,
+  GFIFailure,
+} from '../model/api';
+
+const requestGFI = async <T>(params: RequestParams) => {
+  // if token exists, add token to headers
+  const { githubToken } = userInfo();
+  if (githubToken) params.headers = { Authorization: `token ${githubToken}` };
+  const res = await asyncRequest<GFIResponse<T>>(params);
+  if (!res) return undefined;
+  if (200 <= res.code && res.code < 300 && res.result) {
+    return res.result;
+  } else if (typeof params.onError === 'function') {
+    // normally when an error occurs, status code != 200
+    // but in this case, we want to keep the compatibility
+    params.onError(new Error(String(res.result)));
+  }
+  return undefined;
 };
 
 export const getRepoNum = async (lang?: string) => {
-  return await asyncRequest<number | undefined>({
+  return await requestGFI<number>({
     url: '/api/repos/num',
-    params: {
-      lang,
-    },
-    baseURL: getBaseURL(),
+    params: { lang },
   });
 };
 
 export const getPagedRepoDetailedInfo = async (
-  beginIdx: string | number,
-  capacity: string | number,
+  start: string | number,
+  length: string | number,
   lang?: string,
-  filter?: string
+  filter?: RepoSort
 ) => {
-  return await asyncRequest<GetRepoDetailedInfo>({
+  return await requestGFI<RepoDetail[]>({
     url: '/api/repos/info/',
-    params: {
-      start: beginIdx,
-      length: capacity,
-      lang,
-      filter: convertFilter(filter),
-    },
+    params: { start, length, lang, filter },
     baseURL: getBaseURL(),
   });
 };
 
+export const getPagedRepoBrief = async (
+  start: number,
+  length: number,
+  lang?: string,
+  filter?: RepoSort
+) =>
+  await requestGFI<RepoBrief[]>({
+    url: '/api/repos/info/paged',
+    params: { start, length, lang, filter },
+  });
+
 export const getRepoDetailedInfo = async (name: string, owner: string) => {
-  return await asyncRequest<GetRepoDetailedInfo>({
+  return await requestGFI<RepoDetail>({
     url: '/api/repos/info/detail',
-    params: {
-      name,
-      owner,
-    },
-    baseURL: getBaseURL(),
+    params: { name, owner },
   });
 };
 
 export const getRepoInfo = async (name: string, owner: string) => {
-  return await asyncRequest<GFIRepoInfo>({
+  return await requestGFI<RepoBrief>({
     url: '/api/repos/info',
-    params: {
-      name,
-      owner,
-    },
-    baseURL: getBaseURL(),
+    params: { name, owner },
   });
 };
 
@@ -73,99 +81,88 @@ export const searchRepoInfoByNameOrURL = async (
   repoName?: string,
   repoURL?: string
 ) => {
-  const [hasLogin, _, userLogin] = userInfo();
-  return await asyncRequest<[GFIRepoInfo]>({
+  const { githubLogin } = userInfo();
+  return await requestGFI<[RepoBrief]>({
     url: '/api/repos/info/search',
     params: {
       repo: repoName,
       url: repoURL,
-      user: userLogin,
+      user: githubLogin,
     },
-    baseURL: getBaseURL(),
   });
 };
 
-export const getGFIByRepoName = async (repoName: string, repoOwner: string) => {
-  return await asyncRequest<GFIInfo>({
+export const getGFIByRepoName = async (
+  name: string,
+  owner: string,
+  start?: number,
+  length?: number
+) =>
+  await requestGFI<GFIInfo[]>({
     url: '/api/issue/gfi',
-    params: {
-      repo: repoName,
-      owner: repoOwner,
-    },
-    baseURL: getBaseURL(),
+    params: { owner, repo: name, start, length },
   });
-};
 
 export const getGFINum = async (repoName?: string, repoOwner?: string) => {
-  return await asyncRequest<number | undefined>({
+  return await requestGFI<number | undefined>({
     url: '/api/issue/gfi/num',
     params: {
-      repo: repoName,
+      name: repoName,
       owner: repoOwner,
     },
-    baseURL: getBaseURL(),
   });
 };
 
 export const getLanguageTags = async () => {
-  return await asyncRequest<string[]>({
+  return await requestGFI<string[]>({
     url: '/api/repos/language',
-    baseURL: getBaseURL(),
   });
 };
 
 export const addRepoToGFIBot = async (repoName: string, repoOwner: string) => {
-  const [hasLogin, _, loginName] = userInfo();
-  return await asyncRequest<any>({
+  const { githubLogin } = userInfo();
+  return await requestGFI<any>({
     method: 'POST',
     url: '/api/repos/add',
     headers: {
       'Content-Type': 'application/json',
     },
     data: {
-      user: loginName,
+      user: githubLogin,
       repo: repoName,
       owner: repoOwner,
     },
-    baseURL: getBaseURL(),
   });
 };
 
-export const getAddRepoHistory = async (filter?: string) => {
-  const [_, __, loginName] = userInfo();
-  return await asyncRequest<{
-    nums?: number;
-    queries: GFIRepoInfo[];
-    finished_queries?: GFIRepoInfo[];
-  }>({
+export const getAddRepoHistory = async (filter?: RepoSort) => {
+  const { githubLogin } = userInfo();
+  return await requestGFI<UserQueryHistory>({
     url: '/api/user/queries',
     params: {
-      user: loginName,
-      filter: convertFilter(filter),
+      user: githubLogin,
+      filter: filter,
     },
-    baseURL: getBaseURL(),
   });
 };
 
 export const getTrainingSummary = async (name?: string, owner?: string) => {
-  return await asyncRequest<GFITrainingSummary[]>({
+  return await requestGFI<GFITrainingSummary[]>({
     url: '/api/model/training/result',
     params: {
       name,
       owner,
     },
-    baseURL: getBaseURL(),
   });
 };
 
 export const getUserSearches = async () => {
-  const [_, __, githubLogin] = userInfo();
-  return await asyncRequest<GFIUserSearch[]>({
+  const { githubLogin } = userInfo();
+  return await requestGFI<SearchedRepo[]>({
     url: '/api/user/searches',
     params: {
       user: githubLogin,
     },
-    baseURL: getBaseURL(),
   });
 };
 
@@ -174,8 +171,8 @@ export const deleteUserSearch = async (
   owner: string,
   id: number
 ) => {
-  const [_, __, githubLogin] = userInfo();
-  return await asyncRequest<GFIUserSearch[]>({
+  const { githubLogin } = userInfo();
+  return await requestGFI<SearchedRepo[]>({
     method: 'DELETE',
     url: '/api/user/searches',
     params: {
@@ -184,16 +181,15 @@ export const deleteUserSearch = async (
       owner,
       id,
     },
-    baseURL: getBaseURL(),
   });
 };
 
 export const deleteRepoQuery = async (name: string, owner: string) => {
-  const [_, __, githubLogin] = userInfo();
-  return await asyncRequest<{
+  const { githubLogin } = userInfo();
+  return await requestGFI<{
     nums?: number;
-    queries: GFIRepoInfo[];
-    finished_queries?: GFIRepoInfo[];
+    queries: RepoBrief[];
+    finished_queries?: RepoBrief[];
   }>({
     method: 'DELETE',
     url: '/api/user/queries',
@@ -207,8 +203,8 @@ export const deleteRepoQuery = async (name: string, owner: string) => {
 };
 
 export const updateRepoInfo = async (name: string, owner: string) => {
-  const [_, __, githubLogin] = userInfo();
-  return await asyncRequest<string>({
+  const { githubLogin } = userInfo();
+  return await requestGFI<string>({
     method: 'PUT',
     url: '/api/repos/update/',
     data: {
@@ -221,25 +217,24 @@ export const updateRepoInfo = async (name: string, owner: string) => {
 };
 
 export const getRepoConfig = async (name: string, owner: string) => {
-  const [_, __, githubLogin] = userInfo();
-  return await asyncRequest<GFIRepoConfig>({
+  const { githubLogin } = userInfo();
+  return await requestGFI<RepoGFIConfig>({
     url: '/api/user/queries/config',
     params: {
       user: githubLogin,
       name,
       owner,
     },
-    baseURL: getBaseURL(),
   });
 };
 
 export const updateRepoConfig = async (
   name: string,
   owner: string,
-  config: GFIRepoConfig
+  config: RepoGFIConfig
 ) => {
-  const [_, __, githubLogin] = userInfo();
-  return await asyncRequest<string>({
+  const { githubLogin } = userInfo();
+  return await requestGFI<string>({
     method: 'PUT',
     url: '/api/user/queries/config',
     params: {
@@ -247,12 +242,6 @@ export const updateRepoConfig = async (
       name,
       owner,
     },
-    data: {
-      newcomer_threshold: config.newcomer_threshold,
-      gfi_threshold: config.gfi_threshold,
-      need_comment: config.need_comment,
-      issue_tag: config.issue_tag,
-    },
-    baseURL: getBaseURL(),
+    data: config,
   });
 };

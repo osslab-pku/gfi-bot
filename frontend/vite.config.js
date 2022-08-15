@@ -11,7 +11,7 @@ export default defineConfig(({command, mode}) => {
     env = { ...env, ...processEnv };
     console.log(mode, env);
 
-    let clientPort = 3000;
+    let clientPort = undefined;
     if ("GFIBOT_HTTPS_PORT" in process.env) {
         clientPort = parseInt(process.env.GFIBOT_HTTPS_PORT);
     }
@@ -31,7 +31,7 @@ export default defineConfig(({command, mode}) => {
         },
         server: {
             hmr: {
-                clientPort: 8443,
+                clientPort: clientPort,
             },
         }
     }

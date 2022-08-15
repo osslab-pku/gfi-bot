@@ -20,12 +20,20 @@ export const RepoGraphContainer = (props: RepoGraphContainerProps) => {
     });
   };
 
+  // desciption for ISO date format
+  // https://www.w3schools.com/js/js_date_methods.asp
+  const dateDescriptor = (date: string) =>
+    new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+    });
+
   const issueDataParser = (info: any[] | undefined) => {
     if (typeof info !== 'undefined') {
       return info.map((tempInfo, i) => {
         return {
           count: tempInfo.count,
-          month: tempInfo.month.slice(8, 16),
+          month: dateDescriptor(tempInfo.month),
         };
       });
     }

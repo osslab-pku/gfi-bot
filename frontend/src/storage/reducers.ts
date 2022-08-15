@@ -1,5 +1,5 @@
 import { Reducer } from 'redux';
-import { RepoShouldDisplayPopoverState } from '../../pages/main/GFIRepoDisplayView';
+import { RepoShouldDisplayPopoverState } from '../pages/main/GFIRepoDisplayView';
 
 export type LoginState = {
   hasLogin: boolean;

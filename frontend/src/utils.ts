@@ -1,4 +1,5 @@
 import { GFIRepoSearchingFilterType } from './pages/main/mainHeader';
+import { RepoSort } from './model/api';
 
 export const checkIsNumber = (val: string | number | undefined) => {
   const reg = /^\d+.?\d*/;
@@ -46,27 +47,24 @@ const repoFilters = [
   'gfis',
 ];
 
-export const convertFilter = (filter: string | undefined) => {
-  let filterConverted: string | undefined;
-  if (filter) {
-    switch (filter as GFIRepoSearchingFilterType) {
-      case 'Popularity':
-        filterConverted = repoFilters[0];
-        break;
-      case 'Median Issue Resolve Time':
-        filterConverted = repoFilters[1];
-        break;
-      case 'Newcomer Friendliness':
-        filterConverted = repoFilters[2];
-        break;
-      case 'GFIs':
-        filterConverted = repoFilters[3];
-        break;
-      default:
-        break;
-    }
-  }
-  return filterConverted;
+const filterNames = {
+  popularity: 'Popularity',
+  median_issue_resolve_time: 'Median Issue Resolve Time',
+  newcomer_friendly: 'Newcomer Friendliness',
+  gfis: 'GFIs',
+};
+
+const nameToFilter = Object.fromEntries(
+  Object.entries(filterNames).map(([k, v]) => [v, k])
+);
+
+/** convert semantic filter names -> backend args */
+export const convertFilter = (s: string): RepoSort | undefined => {
+  if (s in Object.keys(filterNames)) {
+    return s as RepoSort;
+  } else if (s in Object.keys(nameToFilter)) {
+    return nameToFilter[s] as RepoSort;
+  } else return undefined;
 };
 
 export const checkIsValidUrl = (url: string) => {
