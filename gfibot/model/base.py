@@ -1,5 +1,4 @@
 from typing import Tuple, Union, Dict, Literal, Optional
-import logging
 import pickle
 import os
 
@@ -11,13 +10,11 @@ from .utils import SklearnRFCompatibleClassifier, get_binary_classifier_metrics
 
 class GFIModel(object):
     def __init__(
-        self, classifier: SklearnRFCompatibleClassifier, log_level: int = logging.INFO
+        self,
+        classifier: SklearnRFCompatibleClassifier,
     ):
         self._clf = classifier
         self._X_train, self._X_test, self._y_train, self._y_test = [None] * 4
-
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(log_level)
 
     def load_dataset(
         self,
@@ -30,16 +27,13 @@ class GFIModel(object):
         self._y_train = y_train
         self._X_test = X_test
         self._y_test = y_test
-        self._logger.info(
-            "dataset loaded: %d train, %d test", len(self._X_train), len(self._X_test)
-        )
 
     def fit(self, *args, **kwargs):
         if self._X_train is None:
             raise ValueError("Dataset not loaded: call load_dataset first")
         self._clf.fit(self._X_train, self._y_train, *args, **kwargs)
 
-    def predict(self, X: pd.DataFrame, *args, **kwargs) -> pd.Series:
+    def predict(self, X: pd.DataFrame, *args, **kwargs) -> np.ndarray:
         return self._clf.predict(X, *args, **kwargs)
 
     def get_metrics(self, gfi_thres: int = 0.5):
@@ -64,6 +58,8 @@ class GFIModel(object):
         return cls(clf, *args, **kwargs)
 
     def to_pickle(self, path: str):
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
         with open(path, "wb") as f:
             pickle.dump(self._clf, f)
 

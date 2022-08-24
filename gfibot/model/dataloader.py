@@ -1,5 +1,4 @@
 import logging
-import os.path
 import time
 from typing import Final, List, Union, Any, Dict, Tuple, Literal, Optional
 
@@ -42,6 +41,8 @@ class GFIDataLoader(object):
         :param random_seed: Random seed for sampling. (default: 0)
         :param downcast_df: downcast dataframe to save memory. (default: True)
         :param log_level: logger log level (default: INFO)
+        :param just_latest_record: Whether to only use the latest record for each issue. (default: True)
+        :param drop_open_issues: Whether to drop open issues. (default: False)
         """
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(log_level)

@@ -1,9 +1,18 @@
-from typing import Dict, Protocol, runtime_checkable, Tuple, Literal
+from typing import Dict, Protocol, runtime_checkable, Tuple, Literal, List
+import os
+
 import mongoengine
 from pymongo import MongoClient
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_curve, auc, precision_score, recall_score, f1_score
+from sklearn.metrics import (
+    roc_curve,
+    auc,
+    precision_score,
+    recall_score,
+    f1_score,
+    accuracy_score,
+)
 from sklearn.model_selection import train_test_split
 
 from gfibot import CONFIG
@@ -23,7 +32,7 @@ def reconnect_mongoengine() -> MongoClient:
 
 def downcast_df(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Downcast the dataframe to minimal memory usage.
+    Downcast the dataframe to reduce memory usage.
     credit: https://www.kaggle.com/code/anshuls235/time-series-forecasting-eda-fe-modelling
     """
     cols = df.dtypes.index.tolist()
@@ -86,7 +95,14 @@ def get_binary_classifier_metrics(
     precision = precision_score(y_test, pred_labels)
     recall = recall_score(y_test, pred_labels)
     f1 = f1_score(y_test, pred_labels)
-    return {"auc": _auc, "precision": precision, "recall": recall, "f1": f1}
+    accuracy = accuracy_score(y_test, pred_labels)
+    return {
+        "auc": _auc,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "accuracy": accuracy,
+    }
 
 
 @runtime_checkable
@@ -112,10 +128,12 @@ class SklearnRFCompatibleClassifier(Protocol):
         ...
 
 
-def _get_x_y(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+def get_x_y(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     # drop only if exists
     df_x = df.drop(
-        df.filter(["owner", "name", "number", "is_gfi", "created_at", "closed_at"])
+        columns=df.filter(
+            ["owner", "name", "number", "is_gfi", "created_at", "closed_at"]
+        )
     )
     s_y = df["is_gfi"]
     return df_x, s_y
@@ -127,8 +145,14 @@ def split_train_test(
     random_seed: int = 0,
     test_size: float = 0.2,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    """
+    Split dataframe into train and test sets.
+    :return: train, test, y_train, y_test
+    """
     if by == "random":
-        X, y = _get_x_y(df_data)
+        if test_size == 0:
+            test_size = 1
+        X, y = get_x_y(df_data)
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_seed
         )
@@ -143,7 +167,17 @@ def split_train_test(
                 f"invalid by: {by}, expected: random, created_at, closed_at"
             )
         _train_len = int(len(_df_sorted) * (1 - test_size))
-        X_train, y_train = _get_x_y(_df_sorted.iloc[:_train_len])
-        X_test, y_test = _get_x_y(_df_sorted.iloc[_train_len:])
+        if _train_len == len(df_data):
+            _train_len = len(df_data) - 1
+        X_train, y_train = get_x_y(_df_sorted.iloc[:_train_len])
+        X_test, y_test = get_x_y(_df_sorted.iloc[_train_len:])
 
     return X_train, X_test, y_train, y_test
+
+
+def get_full_path(*args: str):
+    return os.path.expanduser(os.path.abspath(os.path.join(*args)))
+
+
+def get_model_path(model_name: str) -> str:
+    return get_full_path(f"models", f"{model_name}.pkl")
