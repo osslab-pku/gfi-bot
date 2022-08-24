@@ -11,9 +11,12 @@ from typing import Tuple, Optional
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 from gfibot import CONFIG
-from gfibot.model import utils
+from gfibot.model import _utils
 from gfibot.collections import *
 from sklearn.metrics import accuracy_score
+
+import warnings
+warnings.warn("This model interface is deprecated. Please use model.predict instead.", DeprecationWarning)
 
 
 logger = logging.getLogger(__name__)

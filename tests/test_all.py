@@ -3,7 +3,7 @@ import gfibot
 import gfibot.data.update as update
 import gfibot.data.rest as rest
 import gfibot.data.dataset as dataset
-import gfibot.model.predictor as predictor
+import gfibot.model._predictor as predictor
 
 from gfibot.collections import *
 from gfibot.data.dataset import *

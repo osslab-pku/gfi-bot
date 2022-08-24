@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from pandas.testing import assert_frame_equal
 from gfibot.collections import *
-from gfibot.model.predictor import *
-from gfibot.model.utils import *
+from gfibot.model._predictor import *
+from gfibot.model._utils import *
 
 
 example1 = {

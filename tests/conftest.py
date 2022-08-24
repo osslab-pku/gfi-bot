@@ -3,7 +3,7 @@ import logging
 import mongoengine
 import mongoengine.context_managers
 from gfibot.backend.routes.user import github_login
-import gfibot.model.predictor
+import gfibot.model._predictor
 
 from datetime import datetime, timezone
 from gfibot import CONFIG, TOKENS

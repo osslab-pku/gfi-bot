@@ -25,7 +25,7 @@ from gfibot.data.update import update_repo
 from gfibot.collections import *
 from gfibot.check_tokens import check_tokens
 from gfibot.data.dataset import get_dataset_for_repo, get_dataset_all
-from gfibot.model.predictor import (
+from gfibot.model._predictor import (
     update_training_summary,
     update_prediction,
     update_repo_prediction,
