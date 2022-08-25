@@ -77,16 +77,22 @@ def update_repo_training_summary(
     if name is None:
         name = df_head["name"]
 
-    _issue_close_time, _n_stars, _n_resolved_issues = (
+    _issue_close_time, _n_stars = (
         float(df_head["issue_close_time"])
         if df_head["issue_close_time"] is not None
         else float(np.nan),
         int(df_head["n_stars"]) if df_head["n_stars"] is not None else float(np.nan),
-        int(df_head["n_closed_issues"])
-        if df_head["n_closed_issues"] is not None
-        else float(np.nan),
     )
 
+    _n_resolved_issues = np.sum(~df["closed_at"].isna())
+    if _n_resolved_issues != len(df):
+        logging.warning(
+            "%s/%s: Number of resolved issues (%d) does not match number of rows (%d)",
+            owner,
+            name,
+            _n_resolved_issues,
+            len(df),
+        )
     _n_newcomer_resolved = np.sum(df["is_gfi"] == 1)
     _r_newcomer_resolved = (
         _n_newcomer_resolved / _n_resolved_issues if _n_resolved_issues > 0 else 0
