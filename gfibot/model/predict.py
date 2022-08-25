@@ -16,8 +16,8 @@ from .update_database import update_repo_training_summary, update_repo_predictio
 GFIBOT_MODEL_PATH = "./models"
 GFIBOT_CACHE_PATH = "./.cache"
 # which model to load
-MODEL_NAME_EVALUATION = lambda newcomer_thres: f"xgb_{newcomer_thres}_created_at_0.1"
-MODEL_NAME_PREDICTION = lambda newcomer_thres: f"xgb_{newcomer_thres}_created_at_0.0"
+MODEL_NAME_EVALUATION = lambda newcomer_thres: f"xgb_{newcomer_thres}_created_at_0.1_default_lite"
+MODEL_NAME_PREDICTION = lambda newcomer_thres: f"xgb_{newcomer_thres}_created_at_0_default_lite"
 
 
 class GFIModelLoader(object):

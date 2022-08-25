@@ -206,7 +206,7 @@ def train_all(
     fit_params: Optional[Dict[str, Any]] = None,
     # # update database
     # update_db_with_workers: bool = False,
-    dry_run: bool = False,
+    update_database: bool = False,
 ):
     """
     Train all models from full dataset and save to disk.
@@ -286,7 +286,7 @@ def train_all(
 
             _counter += 1
 
-            if dry_run:
+            if not update_database:
                 continue
 
             if 0 < test_size < 1:
@@ -401,7 +401,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--run-once", action="store_true", help="Run once and exit")
     parser.add_argument(
-        "--dry-run", action="store_true", help="if True, do not write to database"
+        "--update-database", action="store_true", help="if True, write predictions to database"
     )
     args = parser.parse_args()
 
@@ -431,15 +431,14 @@ if __name__ == "__main__":
                 model_params=_params,
                 fit_params=_fit_params,
                 drop_insignificant_features=not args.all_features,
-                dry_run=args.dry_run,
+                update_database=args.update_database,
             )
 
     if args.repeat_hours > 0 and not args.run_once:
         logging.info("Repeating training every %d hours", args.repeat_hours)
-        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.schedulers.blocking import BlockingScheduler
 
-        scheduler = BackgroundScheduler()
-        scheduler.start()
+        scheduler = BlockingScheduler()
         scheduler.add_job(
             train_worker,
             "interval",
@@ -447,6 +446,7 @@ if __name__ == "__main__":
             args=[args],
             next_run_time=datetime.now(),
         )
+        scheduler.start()
 
     else:
         train_worker(args)

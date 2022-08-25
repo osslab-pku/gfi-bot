@@ -8,12 +8,12 @@ services:
     command: mongod --bind_ip=0.0.0.0 --port=27020
     ports:
       - "${GFIBOT_MONGO_PORT}:27020"
-    # mem_limit: 12G
+    mem_limit: 10g
     restart: always
     logging:
       options:
-        max-size: "10m"
-        max-file: "5"
+        max-size: 10m
+        max-file: 5
 
   gfi-bot:
     build:
@@ -26,12 +26,31 @@ services:
     volumes:
       - ${GFIBOT_DATA_DIR}/models:/models
       - ${GFIBOT_DATA_DIR}/nltk_data:/root/nltk_data
-    # mem_limit: 16G
+    mem_limit: 6g
     restart: always
     logging:
       options:
-        max-size: "10m"
-        max-file: "5"
+        max-size: 10m
+        max-file: 5
+
+  gfi-trainer:
+    build:
+      context: ../
+      dockerfile: ./production/gfibot.dockerfile
+    depends_on:
+      - mongodb
+    volumes:
+      - ${GFIBOT_DATA_DIR}/cache:/.cache
+      - ${GFIBOT_DATA_DIR}/models:/models
+      - ${GFIBOT_DATA_DIR}/nltk_data:/root/nltk_data
+    command: python3 -m gfibot.model.train
+    mem_limit: 10g
+    cpu_count: 3
+    restart: always
+    logging:
+      options:
+        max-size: 10m
+        max-file: 5
 
   frontend:
     build:
@@ -48,9 +67,11 @@ services:
       - REACT_APP_BASE_URL
     logging:
       options:
-        max-size: "10m"
-        max-file: "5"
+        max-size: 10m
+        max-file: 5
+    mem_limit: 2g
     volumes:
       - ${GFIBOT_DATA_DIR}/certs/:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/
     depends_on:
       - gfi-bot
+
