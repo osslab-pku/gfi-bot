@@ -71,7 +71,7 @@ def predict_repo(owner: str, name: str, newcomer_thres: int) -> None:
     _model_pred = GFIModelLoader.load_model(MODEL_NAME_PREDICTION(newcomer_thres))
     update_repo_prediction(df=_df, newcomer_thres=newcomer_thres, model=_model_pred)
     # update training summary
-    _df_closed = _df.drop(columns=["closed_at"])  # exclude open issues
+    _df_closed = _df.dropna(subset=_df.filter(["closed_at"]))  # exclude open issues
     if _df_closed.empty:
         return
     _model_eval = GFIModelLoader.load_model(MODEL_NAME_EVALUATION(newcomer_thres))
