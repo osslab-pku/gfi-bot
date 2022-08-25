@@ -45,19 +45,6 @@ def _update_training_summary_in_db(name: str, owner: str, threshold: int, **kwar
     q.save()
 
 
-def _update_prediction_in_db(
-    name: str, owner: str, number: int, threshold: int, **kwargs
-):
-    logging.debug(
-        "Updating training summary for %s/%s@%d: %s", owner, name, number, kwargs
-    )
-    Prediction.objects(
-        name=name, owner=owner, number=number, threshold=threshold
-    ).upsert_one(
-        name=name, owner=owner, number=number, last_updated=datetime.now(), **kwargs
-    )
-
-
 def update_repo_training_summary(
     newcomer_thres: int,
     df: pd.DataFrame,
@@ -86,9 +73,13 @@ def update_repo_training_summary(
         name = df_head["name"]
 
     _issue_close_time, _n_stars, _n_resolved_issues = (
-        df_head["issue_close_time"],
-        df_head["n_stars"],
-        df_head["n_closed_issues"],
+        df_head["issue_close_time"]
+        if df_head["issue_close_time"] is not None
+        else float(np.nan),
+        df_head["n_stars"] if df_head["n_stars"] is not None else float(np.nan),
+        df_head["n_closed_issues"]
+        if df_head["n_closed_issues"] is not None
+        else float(np.nan),
     )
 
     _n_newcomer_resolved = np.sum(df["is_gfi"] == 1)
@@ -98,15 +89,6 @@ def update_repo_training_summary(
 
     X, y = get_x_y(df)
     y_pred = model.predict(X)
-
-    for i, row in enumerate(df.iterrows()):
-        _update_prediction_in_db(
-            name=name,
-            owner=owner,
-            threshold=newcomer_thres,
-            number=row["number"],
-            probability=y_pred[i],
-        )
 
     _n_gfis = np.sum(y_pred > gfi_thres)
 
@@ -162,3 +144,54 @@ def update_global_training_summary(
         n_gfis=_n_gfis,
         **metrics
     )
+
+
+def _update_prediction_in_db(
+    name: str, owner: str, number: int, threshold: int, **kwargs
+):
+    logging.debug(
+        "Updating training summary for %s/%s@%d: %s", owner, name, number, kwargs
+    )
+    Prediction.objects(
+        name=name, owner=owner, number=number, threshold=threshold
+    ).upsert_one(
+        name=name, owner=owner, number=number, last_updated=datetime.now(), **kwargs
+    )
+
+
+def update_repo_prediction(
+    newcomer_thres: int,
+    df: pd.DataFrame,
+    model: GFIModel,
+    name: Optional[str] = None,
+    owner: Optional[str] = None,
+):
+    """
+    Update the prediction for a given model and a given repository.
+    newcomer_thres: threshold #commits for newcomers
+    df: dataset dataframe
+    model: the model used for the training
+    name: the name of the repository (default: None -> inferred from df, "" -> global)
+    owner: the owner of the repository (default: None -> inferred from df, "" -> global)
+    """
+    if df.empty:
+        logging.warning("dataframe is empty: %s/%s", owner, name)
+        return
+
+    df_head = df.iloc[0]
+    if owner is None:
+        owner = df_head["owner"]
+    if name is None:
+        name = df_head["name"]
+
+    X, y = get_x_y(df)
+    y_pred = model.predict(X)
+
+    for i, (idx, row) in enumerate(df.iterrows()):
+        _update_prediction_in_db(
+            name=name,
+            owner=owner,
+            threshold=newcomer_thres,
+            number=row["number"],
+            probability=y_pred[i],
+        )

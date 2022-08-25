@@ -1,4 +1,4 @@
-from typing import Dict, Protocol, runtime_checkable, Tuple, Literal, List
+from typing import Dict, Protocol, runtime_checkable, Tuple, Literal, List, Union
 import os
 
 import mongoengine
@@ -143,15 +143,19 @@ def split_train_test(
     df_data: pd.DataFrame,
     by: Literal["random", "created_at", "closed_at"] = "random",
     random_seed: int = 0,
-    test_size: float = 0.2,
+    test_size: Union[float, int] = 0.2,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
     Split dataframe into train and test sets.
+    :param df_data: dataframe to split; (pd.DataFrame)
+    :param by: split by; (default: "random", Literal["random", "created_at", "closed_at"])
+    :param random_seed: random seed; (default: 0, int)
+    :param test_size: test size; (default: 0.2, float for % of examples; use positive int for # of samples)
     :return: train, test, y_train, y_test
     """
+    if test_size == 0:
+        test_size = 1
     if by == "random":
-        if test_size == 0:
-            test_size = 1
         X, y = get_x_y(df_data)
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_seed
@@ -166,9 +170,12 @@ def split_train_test(
             raise ValueError(
                 f"invalid by: {by}, expected: random, created_at, closed_at"
             )
-        _train_len = int(len(_df_sorted) * (1 - test_size))
-        if _train_len == len(df_data):
-            _train_len = len(df_data) - 1
+        if test_size >= 1:  # mocks train_test_split
+            _train_len = len(_df_sorted) - test_size
+        elif 0 < test_size < 1:
+            _train_len = int(len(_df_sorted) * (1 - test_size))
+        else:
+            raise ValueError(f"invalid test_size: {test_size}, only accept >= 0")
         X_train, y_train = get_x_y(_df_sorted.iloc[:_train_len])
         X_test, y_test = get_x_y(_df_sorted.iloc[_train_len:])
 
@@ -176,7 +183,12 @@ def split_train_test(
 
 
 def get_full_path(*args: str):
-    return os.path.expanduser(os.path.abspath(os.path.join(*args)))
+    _path = os.path.expanduser(os.path.abspath(os.path.join(*args)))
+    if not os.path.exists(os.path.dirname(_path)) and not os.path.isdir(
+        os.path.dirname(_path)
+    ):
+        os.makedirs(os.path.dirname(_path))
+    return _path
 
 
 def get_model_path(model_name: str) -> str:
