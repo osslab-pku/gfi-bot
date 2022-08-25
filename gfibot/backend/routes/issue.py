@@ -66,16 +66,30 @@ def get_gfi_brief(
 
 
 @api.get("/gfi/num", response_model=GFIResponse[int])
-def get_gfi_num(name: Optional[str] = None, owner: Optional[str] = None):
+def get_gfi_num(
+    name: Optional[str] = None,
+    owner: Optional[str] = None,
+    threshold: Optional[float] = None,
+):
     """
     Get number of issues
     """
-    if name is None or owner is None:
-        return GFIResponse(result=Prediction.objects(Q(probability__gte=0.5)).count())
 
-    threshold = get_repo_gfi_threshold(name, owner)
+    if not threshold:
+        threshold = 3
+    if name is None or owner is None:
+        return GFIResponse(
+            result=Prediction.objects(
+                Q(probability__gte=0.5, threshold=threshold)
+            ).count()
+        )
+
+    gfi_thres = get_repo_gfi_threshold(name, owner)
     return GFIResponse(
         result=Prediction.objects(
-            Q(name=name) & Q(owner=owner) & Q(probability__gte=threshold)
+            Q(name=name)
+            & Q(owner=owner)
+            & Q(probability__gte=gfi_thres)
+            & Q(threshold=threshold)
         ).count()
     )
