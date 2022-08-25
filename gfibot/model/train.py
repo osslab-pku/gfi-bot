@@ -401,7 +401,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("--run-once", action="store_true", help="Run once and exit")
     parser.add_argument(
-        "--update-database", action="store_true", help="if True, write predictions to database"
+        "--update-database",
+        action="store_true",
+        help="if True, write predictions to database",
     )
     args = parser.parse_args()
 

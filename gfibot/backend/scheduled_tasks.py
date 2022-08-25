@@ -300,7 +300,10 @@ def daemon(init=False):
             ).first()
             if not repo_query or not repo_query.update_config:
                 logger.info(
-                    "Updating training summary and prediction: %s/%s@%d", repo.owner, repo.name, threshold
+                    "Updating training summary and prediction: %s/%s@%d",
+                    repo.owner,
+                    repo.name,
+                    threshold,
                 )
                 predict_repo(repo.owner, repo.name, newcomer_thres=threshold)
 
@@ -345,6 +348,7 @@ def update_repo_mp(token: str, owner: str, name: str):
 )
 def update_training_summary_and_prediction_mp(owner: str, name: str, threshold: int):
     predict_repo(owner, name, newcomer_thres=threshold)
+
 
 # @mongoengine_fork_safe_wrapper(
 #     db=CONFIG["mongodb"]["db"],
@@ -411,7 +415,10 @@ def daemon_mp(init=False, n_workers: Optional[int] = None):
             for threshold in [1, 2, 3, 4, 5]:
                 for i, (owner, name) in enumerate(repos_to_update):
                     executor.submit(
-                        update_training_summary_and_prediction_mp, owner, name, threshold
+                        update_training_summary_and_prediction_mp,
+                        owner,
+                        name,
+                        threshold,
                     )
     else:
         for threshold in [1, 2, 3, 4, 5]:

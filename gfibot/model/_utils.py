@@ -12,7 +12,11 @@ from sklearn.metrics import roc_curve
 from sklearn.metrics import auc
 
 import warnings
-warnings.warn("This model interface is deprecated. Please use model.predict instead.", DeprecationWarning)
+
+warnings.warn(
+    "This model interface is deprecated. Please use model.predict instead.",
+    DeprecationWarning,
+)
 
 
 def cat_comment(comment: list) -> str:
