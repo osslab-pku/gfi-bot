@@ -4,7 +4,7 @@
 ![GFI-Bot Tests](https://github.com/osslab-pku/gfi-bot/actions/workflows/test-gfi-bot.yml/badge.svg)
 ![GFI-Bot Coverage](https://img.shields.io/codecov/c/github/osslab-pku/gfi-bot?label=GFI-Bot%20Coverage)
 ![License](https://img.shields.io/github/license/osslab-pku/gfi-bot?label=License)
-[![GFI-Bot](https://gfibot.io/api/repo/badge?owner=osslab-pku&name=gfi-bot)](https://gfibot.io/?owner=osslab-pku&name=gfi-bot)
+[![GFI-Bot](https://gfibot.io/api/repos/badge?owner=osslab-pku&name=gfi-bot)](https://gfibot.io/?owner=osslab-pku&name=gfi-bot)
 
 ML-powered 🤖 for finding and labeling good first issues in your GitHub project!
 
