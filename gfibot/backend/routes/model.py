@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from gfibot.collections import *
 from gfibot.backend.models import GFIResponse, TrainingResult
+from .issue import get_repo_newcomer_threshold
 
 api = APIRouter()
 logger = logging.getLogger(__name__)
@@ -14,19 +15,18 @@ logger = logging.getLogger(__name__)
 def get_training_result(
     name: Union[None, str] = None,
     owner: Union[None, str] = None,
-    threshold: Optional[int] = None,
 ):
     """
     get training result
     """
-    if threshold is None:
-        threshold = 3
+    newcomer_thres = get_repo_newcomer_threshold(name=name, owner=owner)
 
     if name != None and owner != None:
         query: TrainingSummary = (
-            TrainingSummary.objects(Q(name=name, owner=owner) & Q(threshold=threshold))
+            TrainingSummary.objects(
+                Q(name=name, owner=owner) & Q(threshold=newcomer_thres)
+            )
             .only(*TrainingResult.__fields__)
-            .order_by("-threshold")
             .first()
         )
         if not query:
@@ -43,12 +43,14 @@ def get_training_result(
     else:
         training_result: List[TrainingResult] = []
         for repo in Repo.objects():
+            newcomer_thres = get_repo_newcomer_threshold(
+                name=repo.name, owner=repo.owner
+            )
             query: TrainingSummary = (
                 TrainingSummary.objects(
-                    Q(name=repo.name, owner=repo.owner) & Q(threshold=threshold)
+                    Q(name=repo.name, owner=repo.owner) & Q(threshold=newcomer_thres)
                 )
                 .only(*TrainingResult.__fields__)
-                .order_by("-threshold")
                 .first()
             )
             if query:

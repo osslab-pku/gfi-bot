@@ -19,7 +19,10 @@ from gfibot.backend.background_tasks import (
     has_write_access,
     schedule_repo_update_now,
 )
-from gfibot.backend.routes.issue import get_repo_gfi_threshold
+from gfibot.backend.routes.issue import (
+    get_repo_gfi_threshold,
+    get_repo_newcomer_threshold,
+)
 
 api = APIRouter()
 logger = logging.getLogger(__name__)
@@ -340,8 +343,12 @@ def get_badge(name: str, owner: str):
     Get README badge for a repository
     """
     prob_thres = get_repo_gfi_threshold(name, owner)
+    newcomer_thres = get_repo_newcomer_threshold(name, owner)
     n_gfis = Prediction.objects(
-        Q(name=name) & Q(owner=owner) & Q(probability__gte=prob_thres)
+        Q(name=name)
+        & Q(owner=owner)
+        & Q(probability__gte=prob_thres)
+        & Q(threshold=newcomer_thres)
     ).count()
     img_src = "https://img.shields.io/badge/{}-{}".format(
         f"recommended good first issues - {n_gfis}", "success"
