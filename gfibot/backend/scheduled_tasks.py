@@ -284,7 +284,7 @@ def daemon(init=False):
             repo_query = GfiQueries.objects(
                 Q(name=repo.name) & Q(owner=repo.owner)
             ).first()
-            if repo_query and not repo_query.update_config:
+            if not repo_query or not repo_query.update_config:
                 logger.info(
                     "Fetching repo data from github: %s/%s", repo.owner, repo.name
                 )
