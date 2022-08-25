@@ -8,10 +8,10 @@ import numpy as np
 import pandas as pd
 
 from gfibot.collections import *
-from .utils import split_train_test, reconnect_mongoengine, get_full_path
+from .utils import split_train_test, reconnect_mongoengine, get_full_path, get_x_y
 from .base import GFIModel
 from .dataloader import GFIDataLoader
-from .summary import (
+from .update_database import (
     update_repo_training_summary,
     update_global_training_summary,
     update_repo_prediction,
@@ -25,7 +25,7 @@ GFIBOT_CACHE_PATH = "./.cache"
 
 # tuned by optuna: check https://github.com/optuna/optuna-examples
 OPTIMAL_XGB_PARAMS: Final = {
-    "eval_metric": "logloss",
+    "booster": "gbtree",
     "reg_lambda": 0.0081576574992808,
     "reg_alpha": 0.0006758832348175984,
     "max_depth": 8,
@@ -33,8 +33,13 @@ OPTIMAL_XGB_PARAMS: Final = {
     "gamma": 7.512488389092191e-08,
 }
 
+OPTIMAL_XGB_FIT_PARAMS: Final = {
+    "eval_metric": "auc",
+}
+
 # tuned by optuna: check https://github.com/optuna/optuna-examples
 OPTIMAL_LGB_PARAMS: Final = {
+    "boosting_type": "gbdt",
     "reg_alpha": 1.4944893050555439e-06,
     "reg_lambda": 0.010495719629428569,
     "num_leaves": 19,
@@ -42,6 +47,10 @@ OPTIMAL_LGB_PARAMS: Final = {
     "bagging_fraction": 0.851602064274477,
     "bagging_freq": 4,
     "min_child_samples": 82,
+}
+
+OPTIMAL_LGB_FIT_PARAMS: Final = {
+    "eval_metric": "auc",
 }
 
 
@@ -78,7 +87,10 @@ def train_model(
         import xgboost as xgb
 
         clf = xgb.XGBClassifier(
-            objective="binary:logistic", random_state=random_seed, **model_params
+            use_label_encoder=False,
+            objective="binary:logistic",
+            random_state=random_seed,
+            **model_params,
         )
     elif model_type == "lgb":
         import lightgbm as lgb
@@ -144,6 +156,7 @@ def load_full_dataset(
     random_seed: int = 0,
     # load
     text_features: Union[None, bool, dict] = False,
+    drop_insignificant_features: bool = True,
 ):
     """
     Load closed issues for all repos.
@@ -165,6 +178,7 @@ def load_full_dataset(
         random_seed=random_seed,
         text_features=text_features,
         drop_open_issues=True,  # don't need open issues
+        drop_insignificant_features=drop_insignificant_features,
     )
     _df = _loader.load_dataset(
         queries=_queries,
@@ -182,6 +196,7 @@ def train_all(
     cache_dataset: bool = False,
     random_seed: int = 0,
     text_features: Union[None, bool, dict] = False,
+    drop_insignificant_features: bool = True,
     # split
     split_by: Literal["random", "closed_at", "created_at"] = "created_at",
     # train
@@ -191,6 +206,7 @@ def train_all(
     fit_params: Optional[Dict[str, Any]] = None,
     # # update database
     # update_db_with_workers: bool = False,
+    dry_run: bool = False,
 ):
     """
     Train all models from full dataset and save to disk.
@@ -199,11 +215,13 @@ def train_all(
     :param cache_dataset: Whether to cache the dataset. (default: False)
     :param random_seed: Random seed. (default: 0)
     :param text_features: Whether to use text features. (default: False)
+    :param drop_insignificant_features: Whether to drop insignificant features. (default: True)
     :param split_by: Split train and test by [random, closed_at, created_at] (default: created_at).
     :param model_type: Model type [xgb, lgb] (default: xgb).
     :param model_names: List of model names. (default: None)
     :param model_params: Model parameters. (default: None)
     :param fit_params: Fit parameters. (default: None)
+    :param dry_run: if True, do not write to database. (default: False)
     """
     if not newcomer_thresholds:
         newcomer_thresholds = [1, 2, 3, 4, 5]
@@ -216,7 +234,7 @@ def train_all(
         # load df
         cache_path = get_full_path(
             GFIBOT_CACHE_PATH,
-            f'{model_type}_{newcomer_thres}{"" if text_features is False else "_text"}.csv',
+            f'dataset_{newcomer_thres}{"" if text_features is False else "_text"}{"_lite" if drop_insignificant_features else ""}.csv',
         )
         if cache_dataset and os.path.exists(cache_path):
             logging.info("Found dataset in cache %s", cache_path)
@@ -226,6 +244,7 @@ def train_all(
                 newcomer_thres=newcomer_thres,
                 random_seed=random_seed,
                 text_features=text_features,
+                drop_insignificant_features=drop_insignificant_features,
             )
             _df.to_csv(cache_path, index=False)
         # groupby
@@ -233,12 +252,15 @@ def train_all(
 
         for test_size in test_sizes:
             if not model_names:
-                model_name = f'{model_type}_{newcomer_thres}_{"" if text_features is False else "text_"}{split_by}_{test_size}'
+                model_name = (
+                    f'{model_type}_{newcomer_thres}{"" if text_features is False else "_text"}_{split_by}'
+                    f'_{test_size}_{"default" if not model_params else "custom"}{"_lite" if drop_insignificant_features else ""}'
+                )
             else:
                 model_name = model_names[_counter]
 
             logging.info(
-                "(%d/%d) Model %s training started: newcomer_thres=%d split_by=%s test_size=%f model_type=%s model_params=%s",
+                "(%d/%d) Model %s training started: newcomer_thres=%d split_by=%s test_size=%f model_type=%s model_params=%s fit_params=%s",
                 _counter,
                 _total,
                 model_name,
@@ -247,6 +269,7 @@ def train_all(
                 test_size,
                 model_type,
                 model_params,
+                fit_params,
             )
 
             _model = train_model(
@@ -260,6 +283,11 @@ def train_all(
                 fit_params=fit_params,
                 save_model=True,
             )
+
+            _counter += 1
+
+            if dry_run:
+                continue
 
             if 0 < test_size < 1:
                 logging.info(
@@ -292,12 +320,22 @@ def train_all(
                 logging.info(
                     "Full model (test_size=%f) detected, saving prediction", test_size
                 )
+
                 for _, df in _groupby:
                     update_repo_prediction(
                         newcomer_thres=newcomer_thres, df=df, model=_model
                     )
 
-            _counter += 1
+            # _x, _y = get_x_y(_df)
+            # _predicted = _model.predict(_x)
+            # _x["prediction"] = _predicted
+            # _x["is_gfi"] = _y
+            # _path = get_full_path(
+            #     GFIBOT_CACHE_PATH,
+            #     f'{model_name}.prediction.csv',
+            # )
+            # _x.to_csv(_path, index=False)
+            # logging.info("Prediction saved to %s", _path)
 
 
 if __name__ == "__main__":
@@ -307,42 +345,108 @@ if __name__ == "__main__":
         "Train all models from full dataset and save to disk."
     )
     parser.add_argument(
-        "--newcomer_thresholds", type=int, nargs="+", default=[1, 2, 3, 4, 5]
+        "--newcomer-thresholds",
+        type=int,
+        nargs="+",
+        default=[1, 2, 3, 4, 5],
+        help="iteration newcomer thresholds. (default: [1, 2, 3, 4, 5])",
     )
-    parser.add_argument("--test_sizes", type=float, nargs="+", default=[0.1, 0])
-    parser.add_argument("--cache_dataset", action="store_true")
-    parser.add_argument("--random_seed", type=int, default=0)
-    parser.add_argument("--text_features", action="store_true")
     parser.add_argument(
-        "--split_by",
+        "--test-sizes",
+        type=float,
+        nargs="+",
+        default=[0.1, 0],
+        help="iteration test sizes. (default: [0.1, 0])",
+    )
+    parser.add_argument(
+        "--cache-dataset",
+        action="store_true",
+        help="Cache dataset to disk for faster loading.",
+    )
+    parser.add_argument("--random-seed", type=int, default=0)
+    parser.add_argument(
+        "--text-features", action="store_true", help="Whether to include text features."
+    )
+    parser.add_argument(
+        "--all-features",
+        action="store_true",
+        help="Whether to include insignificant features.",
+    )
+    parser.add_argument(
+        "--split-by",
         type=str,
         default="created_at",
         choices=["random", "closed_at", "created_at"],
+        help="Split train and test by [random, closed_at, created_at] (default: created_at).",
     )
-    parser.add_argument("--model_type", type=str, default="xgb", choices=["xgb", "lgb"])
-    parser.add_argument("--optimal_params", action="store_true")
     parser.add_argument(
-        "--log_level", type=str, default="INFO", choices=["INFO", "DEBUG", "WARN"]
+        "--model-type",
+        type=str,
+        default=["xgb"],
+        nargs="+",
+        choices=["xgb", "lgb"],
+        help="boosters to use (default: xgb)",
+    )
+    parser.add_argument(
+        "--optimal-params", action="store_true", help="Use pre-tuned optimal parameters"
+    )
+    parser.add_argument(
+        "--log-level", type=str, default="INFO", choices=["INFO", "DEBUG", "WARN"]
+    )
+    parser.add_argument(
+        "--repeat-hours",
+        type=int,
+        default=24,
+        help="Repeat every N hours, 0 to disable (default: 24)",
+    )
+    parser.add_argument("--run-once", action="store_true", help="Run once and exit")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="if True, do not write to database"
     )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.getLevelName(args.log_level))
 
-    _params = None
-    if args.optimal_params:
-        if args.model_type == "xgb":
-            _params = OPTIMAL_XGB_PARAMS
-        else:
-            _params = OPTIMAL_LGB_PARAMS
+    def train_worker(args):
+        for _type in args.model_type:
+            _params = None
+            _fit_params = None
+            if args.optimal_params:
+                if _type == "xgb":
+                    _params = OPTIMAL_XGB_PARAMS
+                    _fit_params = OPTIMAL_XGB_FIT_PARAMS
+                else:
+                    _params = OPTIMAL_LGB_PARAMS
+                    _fit_params = OPTIMAL_LGB_FIT_PARAMS
 
-    reconnect_mongoengine()
-    train_all(
-        newcomer_thresholds=args.newcomer_thresholds,
-        test_sizes=args.test_sizes,
-        cache_dataset=args.cache_dataset,
-        random_seed=args.random_seed,
-        text_features=args.text_features,
-        split_by=args.split_by,
-        model_type=args.model_type,
-        model_params=_params,
-    )
+            reconnect_mongoengine()
+            train_all(
+                newcomer_thresholds=args.newcomer_thresholds,
+                test_sizes=args.test_sizes,
+                cache_dataset=args.cache_dataset,
+                random_seed=args.random_seed,
+                text_features=args.text_features,
+                split_by=args.split_by,
+                model_type=_type,
+                model_params=_params,
+                fit_params=_fit_params,
+                drop_insignificant_features=not args.all_features,
+                dry_run=args.dry_run,
+            )
+
+    if args.repeat_hours > 0 and not args.run_once:
+        logging.info("Repeating training every %d hours", args.repeat_hours)
+        from apscheduler.schedulers.background import BackgroundScheduler
+
+        scheduler = BackgroundScheduler()
+        scheduler.start()
+        scheduler.add_job(
+            train_worker,
+            "interval",
+            hours=args.repeat_hours,
+            args=[args],
+            next_run_time=datetime.now(),
+        )
+
+    else:
+        train_worker(args)

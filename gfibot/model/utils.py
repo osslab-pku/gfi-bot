@@ -106,7 +106,7 @@ def get_binary_classifier_metrics(
 
 
 @runtime_checkable
-class SklearnRFCompatibleClassifier(Protocol):
+class SklearnCompatibleClassifier(Protocol):
     """
     Classifiers that expose the same APIs as RandomForestClassifier.
     """
@@ -117,7 +117,7 @@ class SklearnRFCompatibleClassifier(Protocol):
     def fit(self, X, y, *args, **kwargs):
         ...
 
-    def predict(self, X, *args, **kwargs) -> np.ndarray:
+    def predict_proba(self, X, *args, **kwargs) -> np.ndarray:
         ...
 
     def score(self, X, y, *args, **kwargs) -> float:

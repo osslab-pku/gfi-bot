@@ -42,7 +42,12 @@ def _update_training_summary_in_db(name: str, owner: str, threshold: int, **kwar
     for k, v in kwargs.items():
         setattr(q, k, v)
     q.last_updated = datetime.now()
-    q.save()
+    try:
+        q.save()
+    except Exception as e:
+        logging.error("Updating training summary for %s/%s: %s", owner, name, kwargs)
+        logging.error("Failed to save training summary: %s", e)
+        raise e
 
 
 def update_repo_training_summary(
@@ -73,11 +78,11 @@ def update_repo_training_summary(
         name = df_head["name"]
 
     _issue_close_time, _n_stars, _n_resolved_issues = (
-        df_head["issue_close_time"]
+        float(df_head["issue_close_time"])
         if df_head["issue_close_time"] is not None
         else float(np.nan),
-        df_head["n_stars"] if df_head["n_stars"] is not None else float(np.nan),
-        df_head["n_closed_issues"]
+        int(df_head["n_stars"]) if df_head["n_stars"] is not None else float(np.nan),
+        int(df_head["n_closed_issues"])
         if df_head["n_closed_issues"] is not None
         else float(np.nan),
     )
@@ -152,17 +157,29 @@ def _update_prediction_in_db(
     logging.debug(
         "Updating training summary for %s/%s@%d: %s", owner, name, number, kwargs
     )
-    Prediction.objects(
-        name=name, owner=owner, number=number, threshold=threshold
-    ).upsert_one(
-        name=name, owner=owner, number=number, last_updated=datetime.now(), **kwargs
-    )
+    try:
+        Prediction.objects(
+            name=name, owner=owner, number=number, threshold=threshold
+        ).upsert_one(
+            name=name, owner=owner, number=number, last_updated=datetime.now(), **kwargs
+        )
+    except Exception as e:
+        logging.error(
+            "Updating prediction for %s/%s/%d@%d: %s",
+            owner,
+            name,
+            number,
+            threshold,
+            kwargs,
+        )
+        logging.error("Exception: %s", e, exc_info=True)
+        raise e
 
 
 def update_repo_prediction(
-    newcomer_thres: int,
     df: pd.DataFrame,
     model: GFIModel,
+    newcomer_thres: int,
     name: Optional[str] = None,
     owner: Optional[str] = None,
 ):
@@ -193,5 +210,5 @@ def update_repo_prediction(
             owner=owner,
             threshold=newcomer_thres,
             number=row["number"],
-            probability=y_pred[i],
+            probability=float(y_pred[i]),
         )

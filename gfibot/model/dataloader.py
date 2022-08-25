@@ -22,6 +22,53 @@ DEFAULT_VECTORIZER_PARAMS: Final = {
     "alternate_sign": False,
 }
 
+# features with f-score=0
+INSIGNIFICANT_FEATURES = {
+    "eventer_max_stars_pull": 0.0,
+    "eventer_max_stars_review": 0.0,
+    "eventer_max_stars_issue": 0.0,
+    "n_imgs": 0.0,
+    "owner_repo_num": 0.0,
+    "commenter_n_repos": 0.0,
+    "commenter_n_commits_all": 0.0,
+    "commenter_n_issues_all": 0.0,
+    "commenter_n_pulls_all": 0.0,
+    "commenter_n_reviews_all": 0.0,
+    "eventer_n_reviews_all": 0.0,
+    "eventer_commits_num": 0.0,
+    "eventer_issues_num": 0.0,
+    "eventer_pulls_num": 0.0,
+    "eventer_repo_num": 0.0,
+    "eventer_commits_num_all": 0.0,
+    "eventer_issues_num_all": 0.0,
+    "eventer_pulls_num_all": 0.0,
+    "eventer_max_stars_commit": 0.0,
+    "commenter_max_stars_review": 0.0,
+    "eventer_n_pulls_all": 0.0,
+    "commenter_pulls_num": 0.0,
+    "owner_issues_num_all": 0.0,
+    "owner_pulls_num_all": 0.0,
+    "owner_reviews_num_all": 0.0,
+    "owner_max_stars_commit": 0.0,
+    "owner_max_stars_issue": 0.0,
+    "owner_max_stars_pull": 0.0,
+    "owner_max_stars_review": 0.0,
+    "commenter_commits_num": 0.0,
+    "commenter_issues_num": 0.0,
+    "commenter_repo_num": 0.0,
+    "eventer_n_issues_all": 0.0,
+    "commenter_commits_num_all": 0.0,
+    "commenter_issues_num_all": 0.0,
+    "commenter_pulls_num_all": 0.0,
+    "commenter_review_num_all": 0.0,
+    "commenter_max_stars_commit": 0.0,
+    "commenter_max_stars_issue": 0.0,
+    "commenter_max_stars_pull": 0.0,
+    "eventer_n_repos": 0.0,
+    "eventer_n_commits_all": 0.0,
+    "eventer_review_num_all": 0.0,
+}
+
 
 class GFIDataLoader(object):
     def __init__(
@@ -33,6 +80,7 @@ class GFIDataLoader(object):
         balance_samples: bool = False,
         just_latest_record: bool = True,
         drop_open_issues: bool = False,
+        drop_insignificant_features: bool = True,
     ):
         """
         Load training data from MongoDB.
@@ -43,6 +91,7 @@ class GFIDataLoader(object):
         :param log_level: logger log level (default: INFO)
         :param just_latest_record: Whether to only use the latest record for each issue. (default: True)
         :param drop_open_issues: Whether to drop open issues. (default: False)
+        :param drop_insignificant_features: Whether to drop insignificant features. (default: True)
         """
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(log_level)
@@ -53,6 +102,7 @@ class GFIDataLoader(object):
         self._downcast_df = downcast_df
         self._just_latest_record = just_latest_record
         self._drop_open_issues = drop_open_issues
+        self._drop_insignificant_features = drop_insignificant_features
 
         if text_features not in (False, None):
             self._use_text_features = True
@@ -297,6 +347,12 @@ class GFIDataLoader(object):
         if len(df_data) == 0:
             self._logger.warning("empty dataframe: query=%s", queries)
             return pd.DataFrame()
+
+        # drop insignificant columns
+        if self._drop_insignificant_features:
+            df_data = df_data.drop(
+                columns=df_data.filter(INSIGNIFICANT_FEATURES.keys())
+            )
 
         # drop open issues
         if self._drop_open_issues:
