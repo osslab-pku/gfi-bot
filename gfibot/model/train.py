@@ -205,8 +205,8 @@ def train_all(
     model_params: Optional[Dict[str, Union[str, float, int]]] = None,
     fit_params: Optional[Dict[str, Any]] = None,
     # # update database
-    # update_db_with_workers: bool = False,
-    update_database: bool = False,
+    update_training_summary: bool = True,
+    update_predictions: bool = False,
 ):
     """
     Train all models from full dataset and save to disk.
@@ -221,7 +221,8 @@ def train_all(
     :param model_names: List of model names. (default: None)
     :param model_params: Model parameters. (default: None)
     :param fit_params: Fit parameters. (default: None)
-    :param dry_run: if True, do not write to database. (default: False)
+    :param update_training_summary: Whether to update global training summary. (default: True)
+    :param update_predictions: Whether to update repo predictions. (default: False)
     """
     if not newcomer_thresholds:
         newcomer_thresholds = [1, 2, 3, 4, 5]
@@ -247,8 +248,9 @@ def train_all(
                 drop_insignificant_features=drop_insignificant_features,
             )
             _df.to_csv(cache_path, index=False)
-        # groupby
-        _groupby = _df.groupby(["name", "owner"])
+
+        if update_predictions:
+            _groupby = _df.groupby(["name", "owner"])
 
         for test_size in test_sizes:
             if not model_names:
@@ -286,36 +288,32 @@ def train_all(
 
             _counter += 1
 
-            if not update_database:
+            if not update_predictions:
                 continue
 
             if 0 < test_size < 1:
-                logging.info(
-                    "Eval model (test_size=%f) detected, saving training summary",
-                    test_size,
-                )
-                # update global training summary
-                update_global_training_summary(
-                    df=_df,
-                    model=_model,
-                    newcomer_thres=newcomer_thres,
-                )
-
-                # update repo training summary
-                # df_l = [x[1] for x in _groupby]
-                # if update_db_with_workers:
-                #     def update_summary_wrapper(df: pd.DataFrame) -> None:
-                #         update_repo_training_summary(
-                #             newcomer_thres=newcomer_thres, df=df, model=_model
-                #         )
-                #
-                #     parallel(update_summary_wrapper, df_l)
-                # else:
-                for _, df in _groupby:
-                    update_repo_training_summary(
-                        newcomer_thres=newcomer_thres, df=df, model=_model
+                if update_training_summary:
+                    logging.info(
+                        "Eval model (test_size=%f) detected, saving global training summary",
+                        test_size,
                     )
-            else:
+                    # update global training summary
+                    update_global_training_summary(
+                        df=_df,
+                        model=_model,
+                        newcomer_thres=newcomer_thres,
+                    )
+                if update_predictions:
+                    logging.info(
+                        "Eval model (test_size=%f) detected, saving repo training summary",
+                        test_size,
+                    )
+                    # update repo training summary
+                    for _, df in _groupby:
+                        update_repo_training_summary(
+                            newcomer_thres=newcomer_thres, df=df, model=_model
+                        )
+            elif update_predictions:
                 # update issue prediction
                 logging.info(
                     "Full model (test_size=%f) detected, saving prediction", test_size
@@ -325,17 +323,6 @@ def train_all(
                     update_repo_prediction(
                         newcomer_thres=newcomer_thres, df=df, model=_model
                     )
-
-            # _x, _y = get_x_y(_df)
-            # _predicted = _model.predict(_x)
-            # _x["prediction"] = _predicted
-            # _x["is_gfi"] = _y
-            # _path = get_full_path(
-            #     GFIBOT_CACHE_PATH,
-            #     f'{model_name}.prediction.csv',
-            # )
-            # _x.to_csv(_path, index=False)
-            # logging.info("Prediction saved to %s", _path)
 
 
 if __name__ == "__main__":
@@ -396,14 +383,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--repeat-hours",
         type=int,
-        default=24,
+        default=0,
         help="Repeat every N hours, 0 to disable (default: 24)",
     )
     parser.add_argument("--run-once", action="store_true", help="Run once and exit")
     parser.add_argument(
-        "--update-database",
+        "--update-predictions",
         action="store_true",
-        help="if True, write predictions to database",
+        help="if True, write repo predictions to database",
+    )
+    parser.add_argument(
+        "--no-update-training-summary",
+        action="store_true",
+        help="if True, don't write global training summary to database",
     )
     args = parser.parse_args()
 
@@ -433,7 +425,8 @@ if __name__ == "__main__":
                 model_params=_params,
                 fit_params=_fit_params,
                 drop_insignificant_features=not args.all_features,
-                update_database=args.update_database,
+                update_predictions=args.update_predictions,
+                update_training_summary=not args.no_update_training_summary,
             )
 
     if args.repeat_hours > 0 and not args.run_once:
