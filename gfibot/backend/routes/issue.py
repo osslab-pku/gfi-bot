@@ -54,6 +54,7 @@ def get_gfi_brief(
             & Q(owner=owner)
             & Q(probability__gte=gfi_thres)
             & Q(threshold=newcomer_thres)
+            & Q(state="open")
         )
         .only("name", "owner", "number", "threshold", "probability", "last_updated")
         .order_by(
@@ -91,7 +92,7 @@ def get_gfi_num(
     if name is None or owner is None:
         return GFIResponse(
             result=Prediction.objects(
-                Q(probability__gte=0.5, threshold=newcomer_thres)
+                Q(probability__gte=0.5, threshold=newcomer_thres, state="open")
             ).count()
         )
 
@@ -102,5 +103,6 @@ def get_gfi_num(
             & Q(owner=owner)
             & Q(probability__gte=gfi_thres)
             & Q(threshold=newcomer_thres)
+            & Q(state="open")
         ).count()
     )

@@ -216,5 +216,6 @@ def update_repo_prediction(
             owner=owner,
             threshold=newcomer_thres,
             number=row["number"],
+            state="open" if not row["closed_at"] else "closed",
             probability=float(y_pred[i]),
         )
