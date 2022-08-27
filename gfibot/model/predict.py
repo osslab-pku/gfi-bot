@@ -78,3 +78,88 @@ def predict_repo(owner: str, name: str, newcomer_thres: int) -> None:
     update_repo_training_summary(
         df=_df_closed, newcomer_thres=newcomer_thres, model=_model_eval
     )
+
+
+if __name__ == "__main__":
+    import logging
+    from argparse import ArgumentParser
+    from tqdm.auto import tqdm
+    from .update_database import update_global_training_summary
+    from .train import load_full_dataset
+    from .utils import split_train_test, reconnect_mongoengine
+
+    DEFAULT_MODEL_ARGS = {"text_features": False, "drop_insignificant_features": True}
+    DEFAULT_SPLIT_ARGS = {"test_size": 0.1, "by": "created_at"}
+
+    parser = ArgumentParser("Manually update prediction and training summary")
+    parser.add_argument(
+        "--newcomer-thresholds",
+        type=int,
+        nargs="+",
+        default=[1, 2, 3, 4, 5],
+        help="iteration newcomer thresholds. (default: [1, 2, 3, 4, 5])",
+    )
+    parser.add_argument(
+        "--use-cache",
+        action="store_true",
+        help="Cache dataset to disk for faster loading.",
+    )
+    args = parser.parse_args()
+
+    reconnect_mongoengine()
+
+    for newcomer_thres in args.newcomer_thresholds:
+        text_features = DEFAULT_MODEL_ARGS["text_features"]
+        drop_insignificant_features = DEFAULT_MODEL_ARGS["drop_insignificant_features"]
+        cache_path = get_full_path(
+            GFIBOT_CACHE_PATH,
+            f'dataset_{newcomer_thres}{"" if text_features is False else "_text"}{"_lite" if drop_insignificant_features else ""}.csv',
+        )
+
+        if args.use_cache and os.path.exists(cache_path):
+            _df = pd.read_csv(cache_path, low_memory=False)
+        else:
+            _df = load_full_dataset(
+                newcomer_thres=newcomer_thres,
+                **DEFAULT_MODEL_ARGS,
+            )
+
+        logging.info("Loaded dataset with %d issues", len(_df))
+
+        _groupby = _df.groupby(["owner", "name"])
+
+        _model_pred = GFIModelLoader.load_model(MODEL_NAME_PREDICTION(newcomer_thres))
+        # update issue prediction
+        logging.info(
+            "Full model %s, saving prediction", MODEL_NAME_PREDICTION(newcomer_thres)
+        )
+        for _, df in tqdm(_groupby):
+            update_repo_prediction(
+                newcomer_thres=newcomer_thres, df=df, model=_model_pred
+            )
+
+        _df = _df.dropna(subset=["closed_at"])  # exclude open issues
+        logging.info("Loaded dataset with %d closed issues", len(_df))
+
+        train_x, test_x, train_y, test_y = split_train_test(_df, **DEFAULT_SPLIT_ARGS)
+        _model_eval = GFIModelLoader.load_model(MODEL_NAME_EVALUATION(newcomer_thres))
+        _model_eval.load_dataset(train_x, test_x, train_y, test_y)
+        logging.info(
+            "Eval model %s, saving global training summary",
+            MODEL_NAME_EVALUATION(newcomer_thres),
+        )
+        # update global training summary
+        update_global_training_summary(
+            df=_df,
+            model=_model_eval,
+            newcomer_thres=newcomer_thres,
+        )
+        logging.info(
+            "Eval model %s, saving repo training summary",
+            MODEL_NAME_EVALUATION(newcomer_thres),
+        )
+        # update repo training summary
+        for _, df in tqdm(_groupby):
+            update_repo_training_summary(
+                newcomer_thres=newcomer_thres, df=df, model=_model_eval
+            )

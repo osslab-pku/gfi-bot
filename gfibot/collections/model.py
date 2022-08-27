@@ -24,7 +24,7 @@ class Prediction(Document):
     probability: float = FloatField(required=True)
     last_updated: datetime = DateTimeField(required=True)
 
-    state: str = StringField(required=True, choices=["open", "closed"], default="open")
+    state: str = StringField(choices=["open", "closed"], default="open")
 
     tagged: bool = BooleanField(default=False)
     commented: bool = BooleanField(default=False)

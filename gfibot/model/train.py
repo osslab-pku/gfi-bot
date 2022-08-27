@@ -159,7 +159,7 @@ def load_full_dataset(
     drop_insignificant_features: bool = True,
 ):
     """
-    Load closed issues for all repos.
+    Load all (open&closed) issues for all repos.
     """
     # get repo list
     _repos: List[Repo] = Repo.objects().only("name", "owner")
@@ -177,7 +177,7 @@ def load_full_dataset(
         log_level=_level,
         random_seed=random_seed,
         text_features=text_features,
-        drop_open_issues=True,  # don't need open issues
+        drop_open_issues=False,
         drop_insignificant_features=drop_insignificant_features,
     )
     _df = _loader.load_dataset(
@@ -193,7 +193,7 @@ def train_all(
     newcomer_thresholds: Optional[List[int]] = None,
     test_sizes: Optional[List[float]] = None,
     # load
-    cache_dataset: bool = False,
+    use_cache: bool = False,
     random_seed: int = 0,
     text_features: Union[None, bool, dict] = False,
     drop_insignificant_features: bool = True,
@@ -212,7 +212,7 @@ def train_all(
     Train all models from full dataset and save to disk.
     :param newcomer_thresholds: List of newcomer thresholds. (default: [1, 2, 3, 4, 5])
     :param test_sizes: List of test sizes. (default: [0.1, 0])
-    :param cache_dataset: Whether to cache the dataset. (default: False)
+    :param use_cache: Whether to use cache the dataset. (default: False)
     :param random_seed: Random seed. (default: 0)
     :param text_features: Whether to use text features. (default: False)
     :param drop_insignificant_features: Whether to drop insignificant features. (default: True)
@@ -237,17 +237,22 @@ def train_all(
             GFIBOT_CACHE_PATH,
             f'dataset_{newcomer_thres}{"" if text_features is False else "_text"}{"_lite" if drop_insignificant_features else ""}.csv',
         )
-        if cache_dataset and os.path.exists(cache_path):
+        if use_cache and os.path.exists(cache_path):
             logging.info("Found dataset in cache %s", cache_path)
-            _df = pd.read_csv(cache_path, low_memory=False)
+            _df_all = pd.read_csv(cache_path, low_memory=False)
         else:
-            _df = load_full_dataset(
+            _df_all = load_full_dataset(
                 newcomer_thres=newcomer_thres,
                 random_seed=random_seed,
                 text_features=text_features,
-                drop_insignificant_features=drop_insignificant_features,
             )
-            _df.to_csv(cache_path, index=False)
+            _df_all.to_csv(cache_path, index=False)
+
+            logging.info("Dataset saved to %s", cache_path)
+
+        _df = _df_all.dropna(subset=["closed_at"])
+
+        logging.info("%d/%d open issues loaded", len(_df), len(_df_all))
 
         if update_predictions:
             _groupby = _df.groupby(["name", "owner"])
@@ -346,7 +351,7 @@ if __name__ == "__main__":
         help="iteration test sizes. (default: [0.1, 0])",
     )
     parser.add_argument(
-        "--cache-dataset",
+        "--use-cache",
         action="store_true",
         help="Cache dataset to disk for faster loading.",
     )
@@ -417,7 +422,7 @@ if __name__ == "__main__":
             train_all(
                 newcomer_thresholds=args.newcomer_thresholds,
                 test_sizes=args.test_sizes,
-                cache_dataset=args.cache_dataset,
+                use_cache=args.use_cache,
                 random_seed=args.random_seed,
                 text_features=args.text_features,
                 split_by=args.split_by,
