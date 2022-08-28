@@ -71,7 +71,7 @@ def predict_repo(owner: str, name: str, newcomer_thres: int) -> None:
     _model_pred = GFIModelLoader.load_model(MODEL_NAME_PREDICTION(newcomer_thres))
     update_repo_prediction(df=_df, newcomer_thres=newcomer_thres, model=_model_pred)
     # update training summary
-    _df_closed = _df.dropna(subset=_df.filter(["closed_at"]))  # exclude open issues
+    _df_closed = _df.dropna(subset=["closed_at"])  # exclude open issues
     if _df_closed.empty:
         return
     _model_eval = GFIModelLoader.load_model(MODEL_NAME_EVALUATION(newcomer_thres))
@@ -118,11 +118,13 @@ if __name__ == "__main__":
 
         if args.use_cache and os.path.exists(cache_path):
             _df = pd.read_csv(cache_path, low_memory=False)
+            _df["created_at"] = pd.to_datetime(_df["created_at"])
         else:
             _df = load_full_dataset(
                 newcomer_thres=newcomer_thres,
                 **DEFAULT_MODEL_ARGS,
             )
+            _df.to_csv(cache_path, index=False)
 
         logging.info("Loaded dataset with %d issues", len(_df))
 
@@ -139,6 +141,7 @@ if __name__ == "__main__":
             )
 
         _df = _df.dropna(subset=["closed_at"])  # exclude open issues
+        _groupby = _df.groupby(["owner", "name"])
         logging.info("Loaded dataset with %d closed issues", len(_df))
 
         train_x, test_x, train_y, test_y = split_train_test(_df, **DEFAULT_SPLIT_ARGS)

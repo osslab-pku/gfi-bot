@@ -70,7 +70,7 @@ def downcast_df(df: pd.DataFrame) -> pd.DataFrame:
             else:
                 df[cols[i]] = df[cols[i]].astype(np.float64)
         elif t == object:
-            if "date" in cols[i] or "time" in cols[i]:
+            if "date" in cols[i] or "time" in cols[i] or "at" in cols[i]:
                 df[cols[i]] = pd.to_datetime(df[cols[i]])
             elif "timedelta" in cols[i]:
                 df[cols[i]] = pd.to_timedelta(df[cols[i]])

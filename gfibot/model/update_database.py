@@ -210,12 +210,17 @@ def update_repo_prediction(
     X, y = get_x_y(df)
     y_pred = model.predict(X)
 
+    len_open = sum(df["closed_at"].isna())
+    if len_open == 0:
+        logging.warning("No open issues: %s/%s", owner, name)
+
     for i, (idx, row) in enumerate(df.iterrows()):
+        _is_open = not row["closed_at"] or pd.isna(row["closed_at"])
         _update_prediction_in_db(
             name=name,
             owner=owner,
             threshold=newcomer_thres,
             number=row["number"],
-            state="open" if not row["closed_at"] else "closed",
+            state="open" if _is_open else "closed",
             probability=float(y_pred[i]),
         )
