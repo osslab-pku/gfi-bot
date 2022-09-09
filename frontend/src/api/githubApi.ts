@@ -1,4 +1,4 @@
-import { asyncRequest, RequestParams } from './query';
+import { requestGFI, asyncRequest, RequestParams } from './query';
 import { userInfo } from '../storage';
 import {
   GitHubIssueResponse,
@@ -24,7 +24,7 @@ export const requestGitHub = async <T>(params: RequestParams) => {
 
 /** redirect to gh oauth login */
 const gitHubOAuthLogin = async () => {
-  return await asyncRequest<string>({
+  return await requestGFI<string>({
     url: '/api/user/github/login',
   });
 };
