@@ -1,4 +1,6 @@
 import axios, { AxiosError } from 'axios';
+import { userInfo } from "../storage";
+import { GFIResponse } from "../model/api";
 
 type HTTPMethods = 'GET' | 'POST' | 'DELETE' | 'PATCH' | 'PUT';
 type ErrorFunc = null | ((error: Error | AxiosError) => any);
@@ -34,6 +36,23 @@ export const getBaseURL = () => {
   const baseURL = import.meta.env.REACT_APP_BASE_URL || '';
   localStorage.setItem(URL_KEY, baseURL);
   return baseURL;
+};
+
+/** wrapper for request data **/
+export const requestGFI = async <T>(params: RequestParams) => {
+  // if token exists, add token to headers
+  const { githubToken } = userInfo();
+  if (githubToken) params.headers = { Authorization: `token ${githubToken}` };
+  const res = await asyncRequest<GFIResponse<T>>(params);
+  if (!res) return undefined;
+  if (200 <= res.code && res.code < 300 && res.result) {
+    return res.result;
+  } else if (typeof params.onError === 'function') {
+    // normally when an error occurs, status code != 200
+    // but in this case, we want to keep the compatibility
+    params.onError(new Error(String(res.result)));
+  }
+  return undefined;
 };
 
 /** request wrapper */
