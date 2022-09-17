@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 import requests
 
+from gfibot import CONFIG
 from gfibot.collections import *
 from gfibot.backend.models import (
     GFIResponse,
@@ -19,7 +20,10 @@ from gfibot.backend.background_tasks import (
     has_write_access,
     schedule_repo_update_now,
 )
-from gfibot.backend.routes.issue import get_repo_gfi_threshold
+from gfibot.backend.routes.issue import (
+    get_repo_gfi_threshold,
+    get_repo_newcomer_threshold,
+)
 
 api = APIRouter()
 logger = logging.getLogger(__name__)
@@ -71,7 +75,9 @@ def get_paged_repo_detail(
     """
     Get detailed info of repository (paged)
     """
-    RANK_THRESHOLD = 3  # newcomer_thres used for ranking repos
+    RANK_THRESHOLD = get_repo_newcomer_threshold(
+        "", ""
+    )  # newcomer_thres used for ranking repos
 
     q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(
         owner__ne=""
@@ -142,10 +148,20 @@ def get_paged_repo_brief(
     """
     Get brief info of repository (paged)
     """
-    q = Repo.objects()
+    RANK_THRESHOLD = get_repo_newcomer_threshold(
+        "", ""
+    )  # newcomer_thres used for ranking repos
+
+    q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(
+        owner__ne=""
+    )  # "": global perf metrics
 
     if lang:
-        q = q.filter(language=lang)
+        # TODO: add language field to TrainingSummary (current code might be slow)
+        lang_repos = list(Repo.objects().filter(language=lang).only("name", "owner"))
+        lang_names = [repo.name for repo in lang_repos]
+        lang_owners = [repo.owner for repo in lang_repos]
+        q = q.filter(name__in=lang_names, owner__in=lang_owners)
 
     if filter:
         if filter == RepoSort.GFIS:
@@ -164,10 +180,25 @@ def get_paged_repo_brief(
     else:
         q = q.order_by("name")
 
-    repos_list = [
-        r.to_mongo() for r in q.skip(start).limit(length).only(*RepoBrief.__fields__)
-    ]
-    return GFIResponse(result=repos_list)
+    repos_list = list(q.skip(start).limit(length).only(*RepoQuery.__fields__))
+    repos_brief = []
+
+    for repo in repos_list:
+        repo_detail = (
+            Repo.objects(Q(name=repo.name) & Q(owner=repo.owner))
+            .only(*RepoBrief.__fields__)
+            .first()
+        )
+        if not repo_detail:
+            logger.error(
+                "Repo {}/{} is present in TrainingSummary but not in Repo".format(
+                    repo.name, repo.owner
+                )
+            )
+        else:
+            repos_brief.append(RepoBrief(**repo_detail.to_mongo()))
+
+    return GFIResponse(result=repos_brief)
 
 
 @api.get("/info/search", response_model=GFIResponse[List[RepoDetail]])
@@ -340,8 +371,12 @@ def get_badge(name: str, owner: str):
     Get README badge for a repository
     """
     prob_thres = get_repo_gfi_threshold(name, owner)
+    newcomer_thres = get_repo_newcomer_threshold(name, owner)
     n_gfis = Prediction.objects(
-        Q(name=name) & Q(owner=owner) & Q(probability__gte=prob_thres)
+        Q(name=name)
+        & Q(owner=owner)
+        & Q(probability__gte=prob_thres)
+        & Q(threshold=newcomer_thres)
     ).count()
     img_src = "https://img.shields.io/badge/{}-{}".format(
         f"recommended good first issues - {n_gfis}", "success"

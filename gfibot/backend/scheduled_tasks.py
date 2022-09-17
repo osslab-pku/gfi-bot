@@ -25,11 +25,13 @@ from gfibot.data.update import update_repo
 from gfibot.collections import *
 from gfibot.check_tokens import check_tokens
 from gfibot.data.dataset import get_dataset_for_repo, get_dataset_all
-from gfibot.model.predictor import (
-    update_training_summary,
-    update_prediction,
-    update_repo_prediction,
-)
+
+# from gfibot.model._predictor import (
+#     update_training_summary,
+#     update_prediction,
+#     update_repo_prediction,
+# )
+from gfibot.model.predict import predict_repo
 
 executor = ThreadPoolExecutor(max_workers=10)
 
@@ -201,11 +203,9 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
     get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
 
     # 3. update training summary
-    # TODO: update training summary for a repo
-    # update_training_summary(owner=owner, name=name)
-
     # 4. update gfi prediction
-    update_repo_prediction(owner, name)
+    for newcomer_thres in [1, 2, 3, 4, 5]:
+        predict_repo(owner=owner, name=name, newcomer_thres=newcomer_thres)
 
     # 5. tag, comment and email (if needed)
     user_github_login = None
@@ -284,7 +284,7 @@ def daemon(init=False):
             repo_query = GfiQueries.objects(
                 Q(name=repo.name) & Q(owner=repo.owner)
             ).first()
-            if repo_query and not repo_query.update_config:
+            if not repo_query or not repo_query.update_config:
                 logger.info(
                     "Fetching repo data from github: %s/%s", repo.owner, repo.name
                 )
@@ -294,10 +294,18 @@ def daemon(init=False):
     get_dataset_all(datetime(2008, 1, 1))
 
     for threshold in [1, 2, 3, 4, 5]:
-        update_training_summary(threshold)
-        logger.info("Training summary updated for threshold %d", threshold)
-        update_prediction(threshold)
-        logger.info("Prediction updated for threshold %d", threshold)
+        for i, repo in enumerate(Repo.objects()):
+            repo_query = GfiQueries.objects(
+                Q(name=repo.name) & Q(owner=repo.owner)
+            ).first()
+            if not repo_query or not repo_query.update_config:
+                logger.info(
+                    "Updating training summary and prediction: %s/%s@%d",
+                    repo.owner,
+                    repo.name,
+                    threshold,
+                )
+                predict_repo(repo.owner, repo.name, newcomer_thres=threshold)
 
     logger.info("Daemon finished at " + str(datetime.now()))
 
@@ -338,18 +346,18 @@ def update_repo_mp(token: str, owner: str, name: str):
     tz_aware=True,
     uuidRepresentation="standard",
 )
-def update_training_summary_mp(threshold: int):
-    update_training_summary(threshold)
+def update_training_summary_and_prediction_mp(owner: str, name: str, threshold: int):
+    predict_repo(owner, name, newcomer_thres=threshold)
 
 
-@mongoengine_fork_safe_wrapper(
-    db=CONFIG["mongodb"]["db"],
-    host=CONFIG["mongodb"]["url"],
-    tz_aware=True,
-    uuidRepresentation="standard",
-)
-def update_prediction_mp(threshold: int):
-    update_prediction(threshold)
+# @mongoengine_fork_safe_wrapper(
+#     db=CONFIG["mongodb"]["db"],
+#     host=CONFIG["mongodb"]["url"],
+#     tz_aware=True,
+#     uuidRepresentation="standard",
+# )
+# def update_prediction_mp(threshold: int):
+#     update_prediction(threshold)
 
 
 def daemon_mp(init=False, n_workers: Optional[int] = None):
@@ -401,23 +409,21 @@ def daemon_mp(init=False, n_workers: Optional[int] = None):
     get_dataset_all(datetime(2008, 1, 1), n_process=n_workers)
 
     # 3. update training summary
-    if n_workers is not None:
-        with ProcessPoolExecutor(max_workers=n_workers):
-            for threshold in [1, 2, 3, 4, 5]:
-                executor.submit(update_training_summary_mp, threshold)
-    else:
-        for threshold in [1, 2, 3, 4, 5]:
-            update_training_summary(threshold)
-            logger.info("Training summary updated for threshold %d", threshold)
-
     # 4. update prediction
     if n_workers is not None:
         with ProcessPoolExecutor(max_workers=n_workers):
             for threshold in [1, 2, 3, 4, 5]:
-                executor.submit(update_prediction_mp, threshold)
+                for i, (owner, name) in enumerate(repos_to_update):
+                    executor.submit(
+                        update_training_summary_and_prediction_mp,
+                        owner,
+                        name,
+                        threshold,
+                    )
     else:
         for threshold in [1, 2, 3, 4, 5]:
-            update_prediction(threshold)
+            for i, (owner, name) in enumerate(repos_to_update):
+                predict_repo(owner, name, newcomer_thres=threshold)
             logger.info("Prediction updated for threshold %d", threshold)
 
     logger.info("Daemon finished at " + str(datetime.now()))

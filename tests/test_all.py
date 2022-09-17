@@ -3,10 +3,13 @@ import gfibot
 import gfibot.data.update as update
 import gfibot.data.rest as rest
 import gfibot.data.dataset as dataset
-import gfibot.model.predictor as predictor
+import gfibot.model._predictor as predictor
 
 from gfibot.collections import *
 from gfibot.data.dataset import *
+
+from gfibot.model.train import *
+from gfibot.model.predict import *
 
 
 def test_all(real_mongodb):
@@ -56,3 +59,6 @@ def test_all(real_mongodb):
 
     predictor.update(cleanup=True)
     predictor.update()
+
+    # Test the new training API
+    train_all()

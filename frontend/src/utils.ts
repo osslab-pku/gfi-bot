@@ -60,11 +60,14 @@ const nameToFilter = Object.fromEntries(
 
 /** convert semantic filter names -> backend args */
 export const convertFilter = (s: string): RepoSort | undefined => {
-  if (s in Object.keys(filterNames)) {
+  if (Object.keys(filterNames).includes(s)) {
     return s as RepoSort;
-  } else if (s in Object.keys(nameToFilter)) {
+  } else if (Object.keys(nameToFilter).includes(s)) {
     return nameToFilter[s] as RepoSort;
-  } else return undefined;
+  } else {
+    console.error('invalid filter name', s, nameToFilter, filterNames);
+    return undefined;
+  }
 };
 
 export const checkIsValidUrl = (url: string) => {

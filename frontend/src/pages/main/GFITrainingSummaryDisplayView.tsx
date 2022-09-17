@@ -68,6 +68,7 @@ export const GFITrainingSummaryDisplayView = forwardRef(
   (props, ref: ForwardedRef<HTMLDivElement>) => {
     const [originTrainingSummary, setOriginTrainingSummary] =
       useState<GFITrainingSummary[]>();
+    const [modelTrainingSummary, setModelTrainingSummary] = useState<GFITrainingSummary>();
     const fullChartDefaultHeight = 75;
     const fullChartDefaultHorizontalMargin = 8;
     const [fullChartHeight, setFullChartHeight] = useState(
@@ -104,6 +105,11 @@ export const GFITrainingSummaryDisplayView = forwardRef(
           setGfiNum(res);
         }
       });
+      getTrainingSummary("","").then((res) => {
+        if (res && res.length > 0) {
+          setModelTrainingSummary(res[0]);
+        }
+      });
     }, []);
 
     useEffect(() => {
@@ -135,8 +141,8 @@ export const GFITrainingSummaryDisplayView = forwardRef(
           issueNumTest,
           issueNumTrain,
           repoNum,
-          avgAcc: totalAcc / issueNumTrain,
-          avgAuc: totalAuc / issueNumTrain,
+          avgAcc: modelTrainingSummary ? modelTrainingSummary.accuracy : totalAcc / issueNumTrain,
+          avgAuc: modelTrainingSummary ? modelTrainingSummary.auc : totalAuc / issueNumTrain,
           issueResolved: resolved,
           issueResolvedByNewcomers: resolvedByNewcomers,
         });

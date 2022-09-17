@@ -14,6 +14,7 @@ class Prediction(Document):
         probability: the modeled probability that the issue is a GFI.
         last_updated: the last time this prediction result was updated,
             necessary for incremental update.
+        state: the state of the issue, can be open or closed.
     """
 
     owner: str = StringField(required=True)
@@ -22,6 +23,8 @@ class Prediction(Document):
     threshold: int = IntField(required=True, min_value=1, max_value=5)
     probability: float = FloatField(required=True)
     last_updated: datetime = DateTimeField(required=True)
+
+    state: str = StringField(choices=["open", "closed"], default="open")
 
     tagged: bool = BooleanField(default=False)
     commented: bool = BooleanField(default=False)

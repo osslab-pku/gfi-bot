@@ -11,9 +11,16 @@ from typing import Tuple, Optional
 from datetime import datetime
 from dateutil.parser import parse as parse_date
 from gfibot import CONFIG
-from gfibot.model import utils
+from gfibot.model import _utils
 from gfibot.collections import *
 from sklearn.metrics import accuracy_score
+
+import warnings
+
+warnings.warn(
+    "This model interface is deprecated. Please use model.predict instead.",
+    DeprecationWarning,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -141,13 +148,13 @@ def update_basic_training_summary(
 def update_models(
     update_set: list, train_90_add: list, batch_size: int, threshold: int
 ) -> xgb.core.Booster:
-    model_90 = utils.update_model(
+    model_90 = _utils.update_model(
         model_90_path(threshold) if os.path.exists(model_90_path(threshold)) else None,
         threshold,
         train_90_add,
         batch_size,
     )
-    model_full = utils.update_model(
+    model_full = _utils.update_model(
         model_full_path(threshold)
         if os.path.exists(model_full_path(threshold))
         else None,
@@ -176,7 +183,9 @@ def update_peformance_training_summary(
         test_set = [[i.name, i.owner, iss] for iss in i.issues_test]
         test_set_all.extend(test_set)
 
-        y_test, y_prob = utils.predict_issues(test_set, threshold, batch_size, model_90)
+        y_test, y_prob = _utils.predict_issues(
+            test_set, threshold, batch_size, model_90
+        )
         y_pred = [int(i > prob_thres) for i in y_prob]
 
         if all(y == 1 for y in y_pred) or all(y == 0 for y in y_pred):
@@ -187,7 +196,7 @@ def update_peformance_training_summary(
             )
             i.accuracy = i.auc = i.precision = i.recall = i.f1 = float("nan")
         else:
-            i.auc, i.precision, i.recall, i.f1 = utils.get_all_metrics(
+            i.auc, i.precision, i.recall, i.f1 = _utils.get_all_metrics(
                 y_test, y_pred, y_prob
             )
             i.accuracy = accuracy_score(y_test, y_pred)
@@ -218,7 +227,9 @@ def update_peformance_training_summary(
     summ.n_resolved_issues = n_resolved_issues_all
     summ.n_newcomer_resolved = n_newcomer_resolved_all
 
-    y_test, y_prob = utils.predict_issues(test_set_all, threshold, batch_size, model_90)
+    y_test, y_prob = _utils.predict_issues(
+        test_set_all, threshold, batch_size, model_90
+    )
     y_pred = [int(i > prob_thres) for i in y_prob]
 
     if all(y == 1 for y in y_pred) or all(y == 0 for y in y_pred):
@@ -227,7 +238,7 @@ def update_peformance_training_summary(
         )
         summ.accuracy = summ.auc = summ.precision = summ.recall = summ.f1 = float("nan")
     else:
-        summ.auc, summ.precision, summ.recall, summ.f1 = utils.get_all_metrics(
+        summ.auc, summ.precision, summ.recall, summ.f1 = _utils.get_all_metrics(
             y_test, y_pred, y_prob
         )
         summ.accuracy = accuracy_score(y_test, y_pred)
@@ -262,7 +273,9 @@ def update_patch_performance(
         test_set = [[i.name, i.owner, iss] for iss in i.issues_test]
         test_set_all.extend(test_set)
 
-        y_test, y_prob = utils.predict_issues(test_set, threshold, batch_size, model_90)
+        y_test, y_prob = _utils.predict_issues(
+            test_set, threshold, batch_size, model_90
+        )
         y_pred = [int(i > prob_thres) for i in y_prob]
 
         if all(y == 1 for y in y_pred) or all(y == 0 for y in y_pred):
@@ -274,7 +287,7 @@ def update_patch_performance(
             )
             accuracy = auc = precision = recall = f1 = float("nan")
         else:
-            auc, precision, recall, f1 = utils.get_all_metrics(y_test, y_pred, y_prob)
+            auc, precision, recall, f1 = _utils.get_all_metrics(y_test, y_pred, y_prob)
             accuracy = accuracy_score(y_test, y_pred)
 
         batch_accuracy_list = i.batch_accuracy
@@ -353,7 +366,7 @@ def update_prediction_for_issue(issue: Dataset, newcomer_thres: int):
     threshold = newcomer_thres
     model_full = xgb.Booster()
     model_full.load_model(model_full_path(threshold))
-    issue_df = pd.DataFrame(utils.get_issue_data(issue, threshold), index=[0])
+    issue_df = pd.DataFrame(_utils.get_issue_data(issue, threshold), index=[0])
     y_test = issue_df["is_gfi"]
     X_test = issue_df.drop(["is_gfi", "owner", "name", "number"], axis=1)
     xg_test = xgb.DMatrix(X_test, label=y_test)

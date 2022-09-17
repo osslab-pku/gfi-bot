@@ -102,6 +102,10 @@ projects = [ # This list of 100 projects comes from RecGFI paper
     "badges/shields",
 ]
 github_graphql_schema_path = "gfibot/data/github_graphql_schema.graphql"
+model_path="models/"
+cache_path=".cache/"
+default_gfi_threshold = 0.5  # default min confidence level for an issue to be considered GFI
+default_newcomer_threshold = 5  # default max # of commits for newcomers
 
 [mongodb]
 url = "mongodb://localhost:27020"
@@ -130,6 +134,7 @@ toml = "^0.10.2"
 tqdm = "^4.62.3"
 python-dateutil = "^2.8.2"
 dateutils = "^0.6.12"
+multiprocess = "^0.70.13"
 # MongoDB
 pymongo = {version = "^3.12.3", extras = ["srv"]}
 mongoengine = "^0.24.1"
@@ -147,6 +152,7 @@ pandas = "~1.3.5"
 numpy = "^1.21.5"
 textstat = "^0.7.2"
 xgboost = "~1.5.1"
+lightgbm = "~3.3.2"
 sklearn = "^0.0"
 sentistrength = "^0.0.9"
 nltk = "^3.7"

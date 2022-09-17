@@ -6,6 +6,7 @@ from datetime import datetime
 
 from gfibot.collections import *
 from gfibot.backend.models import GFIResponse, GFIBrief
+from gfibot import CONFIG
 
 
 api = APIRouter()
@@ -26,7 +27,22 @@ def get_repo_gfi_threshold(name: str, owner: str) -> float:
     )
     if repo:
         return repo.repo_config.gfi_threshold
-    return 0.5
+    try:
+        return CONFIG["gfibot"]["default_gfi_threshold"]
+    except KeyError:
+        return 0.5
+
+
+def get_repo_newcomer_threshold(name: str, owner: str) -> float:
+    repo: GfiQueries = (
+        GfiQueries.objects(Q(name=name) & Q(owner=owner)).only("repo_config").first()
+    )
+    if repo:
+        return repo.repo_config.newcomer_threshold
+    try:
+        return CONFIG["gfibot"]["default_newcomer_threshold"]
+    except KeyError:
+        return 5
 
 
 @api.get("/gfi", response_model=GFIResponse[List[GFIBrief]])
@@ -36,11 +52,16 @@ def get_gfi_brief(
     """
     Get brief info of issue
     """
-    threshold = get_repo_gfi_threshold(name=repo, owner=owner)
+    gfi_thres = get_repo_gfi_threshold(name=repo, owner=owner)
+    newcomer_thres = get_repo_newcomer_threshold(name=repo, owner=owner)
 
     gfi_list: List[Prediction] = (
         Prediction.objects(
-            Q(name=repo) & Q(owner=owner) & Q(probability__gte=threshold)
+            Q(name=repo)
+            & Q(owner=owner)
+            & Q(probability__gte=gfi_thres)
+            & Q(threshold=newcomer_thres)
+            & Q(state="open")
         )
         .only("name", "owner", "number", "threshold", "probability", "last_updated")
         .order_by(
@@ -66,16 +87,29 @@ def get_gfi_brief(
 
 
 @api.get("/gfi/num", response_model=GFIResponse[int])
-def get_gfi_num(name: Optional[str] = None, owner: Optional[str] = None):
+def get_gfi_num(
+    name: Optional[str] = None,
+    owner: Optional[str] = None,
+):
     """
     Get number of issues
     """
+    newcomer_thres = get_repo_newcomer_threshold(name=name, owner=owner)
+    gfi_thres = get_repo_gfi_threshold(name=name, owner=owner)
     if name is None or owner is None:
-        return GFIResponse(result=Prediction.objects(Q(probability__gte=0.5)).count())
+        return GFIResponse(
+            result=Prediction.objects(
+                Q(probability__gte=0.5, threshold=newcomer_thres, state="open")
+            ).count()
+        )
 
-    threshold = get_repo_gfi_threshold(name, owner)
+    gfi_thres = get_repo_gfi_threshold(name, owner)
     return GFIResponse(
         result=Prediction.objects(
-            Q(name=name) & Q(owner=owner) & Q(probability__gte=threshold)
+            Q(name=name)
+            & Q(owner=owner)
+            & Q(probability__gte=gfi_thres)
+            & Q(threshold=newcomer_thres)
+            & Q(state="open")
         ).count()
     )
