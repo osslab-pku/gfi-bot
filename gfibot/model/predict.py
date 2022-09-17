@@ -8,13 +8,10 @@ import pandas as pd
 
 from gfibot.collections import *
 from .utils import split_train_test, reconnect_mongoengine, get_full_path
-from .base import GFIModel
+from .base import GFIModel, GFIBOT_MODEL_PATH, GFIBOT_CACHE_PATH
 from .dataloader import GFIDataLoader
 from .update_database import update_repo_training_summary, update_repo_prediction
 
-# where to find models
-GFIBOT_MODEL_PATH = "./models"
-GFIBOT_CACHE_PATH = "./.cache"
 # which model to load
 MODEL_NAME_EVALUATION = (
     lambda newcomer_thres: f"xgb_{newcomer_thres}_created_at_0.1_default_lite"

@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 import requests
 
+from gfibot import CONFIG
 from gfibot.collections import *
 from gfibot.backend.models import (
     GFIResponse,
@@ -74,7 +75,9 @@ def get_paged_repo_detail(
     """
     Get detailed info of repository (paged)
     """
-    RANK_THRESHOLD = 3  # newcomer_thres used for ranking repos
+    RANK_THRESHOLD = get_repo_newcomer_threshold(
+        "", ""
+    )  # newcomer_thres used for ranking repos
 
     q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(
         owner__ne=""
@@ -145,7 +148,9 @@ def get_paged_repo_brief(
     """
     Get brief info of repository (paged)
     """
-    RANK_THRESHOLD = 3  # newcomer_thres used for ranking repos
+    RANK_THRESHOLD = get_repo_newcomer_threshold(
+        "", ""
+    )  # newcomer_thres used for ranking repos
 
     q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(
         owner__ne=""

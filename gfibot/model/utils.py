@@ -189,7 +189,3 @@ def get_full_path(*args: str):
     ):
         os.makedirs(os.path.dirname(_path))
     return _path
-
-
-def get_model_path(model_name: str) -> str:
-    return get_full_path(f"models", f"{model_name}.pkl")

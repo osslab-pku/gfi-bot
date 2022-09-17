@@ -9,7 +9,7 @@ import pandas as pd
 
 from gfibot.collections import *
 from .utils import split_train_test, reconnect_mongoengine, get_full_path, get_x_y
-from .base import GFIModel
+from .base import GFIModel, GFIBOT_MODEL_PATH, GFIBOT_CACHE_PATH
 from .dataloader import GFIDataLoader
 from .update_database import (
     update_repo_training_summary,
@@ -17,10 +17,6 @@ from .update_database import (
     update_repo_prediction,
 )
 from .parallel import parallel
-
-
-GFIBOT_MODEL_PATH = "./models"
-GFIBOT_CACHE_PATH = "./.cache"
 
 
 # tuned by optuna: check https://github.com/optuna/optuna-examples

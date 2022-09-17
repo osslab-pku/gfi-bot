@@ -8,6 +8,9 @@ import gfibot.model._predictor as predictor
 from gfibot.collections import *
 from gfibot.data.dataset import *
 
+from gfibot.model.train import *
+from gfibot.model.predict import *
+
 
 def test_all(real_mongodb):
     update.logger.setLevel(logging.DEBUG)
@@ -56,3 +59,6 @@ def test_all(real_mongodb):
 
     predictor.update(cleanup=True)
     predictor.update()
+
+    # Test the new training API
+    train_all()

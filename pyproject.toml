@@ -102,6 +102,10 @@ projects = [ # This list of 100 projects comes from RecGFI paper
     "badges/shields",
 ]
 github_graphql_schema_path = "gfibot/data/github_graphql_schema.graphql"
+model_path="models/"
+cache_path=".cache/"
+default_gfi_threshold = 0.5  # default min confidence level for an issue to be considered GFI
+default_newcomer_threshold = 5  # default max # of commits for newcomers
 
 [mongodb]
 url = "mongodb://localhost:27020"

@@ -4,6 +4,7 @@ import mongoengine
 import mongoengine.context_managers
 from gfibot.backend.routes.user import github_login
 import gfibot.model._predictor
+import gfibot.model.base
 
 from datetime import datetime, timezone
 from gfibot import CONFIG, TOKENS
@@ -20,7 +21,8 @@ def execute_before_any_test():
     CONFIG["mongodb"]["db"] = "gfibot-test"
     mongoengine.disconnect_all()
 
-    gfibot.model.predictor.MODEL_ROOT_DIRECTORY = "models-test"
+    gfibot.model._predictor.MODEL_ROOT_DIRECTORY = "models-test"
+    gfibot.model.base.GFIBOT_MODEL_PATH = "models-test"
     os.makedirs("models-test", exist_ok=True)
 
     # don't start scheduler in tests
@@ -507,8 +509,8 @@ def mock_mongodb():
                 begin_time=datetime(1970, 1, 1, tzinfo=timezone.utc),
             ),
             repo_config=GfiQueries.GfiRepoConfig(
-                newcomer_threshold=5,
-                gfi_threshold=0.5,
+                newcomer_threshold=CONFIG["gfibot"]["default_newcomer_threshold"],
+                gfi_threshold=CONFIG["gfibot"]["default_gfi_threshold"],
                 need_comment=True,
                 issue_tag="good first issue",
             ),
@@ -524,7 +526,7 @@ def mock_mongodb():
         TrainingSummary(
             owner="owner",
             name="name",
-            threshold=3,
+            threshold=CONFIG["gfibot"]["default_newcomer_threshold"],
             issues_train=[["a1", "a2"], ["a3", "a4"]],
             issues_test=[["a1", "a2"], ["a3", "a4"]],
             n_resolved_issues=3,
@@ -538,7 +540,7 @@ def mock_mongodb():
         TrainingSummary(
             owner="owner2",
             name="name2",
-            threshold=3,
+            threshold=CONFIG["gfibot"]["default_newcomer_threshold"],
             issues_train=[["a1", "a2"], ["a3", "a4"]],
             issues_test=[["a1", "a2"], ["a3", "a4"]],
             n_resolved_issues=3,
@@ -556,7 +558,7 @@ def mock_mongodb():
             owner="owner",
             name="name",
             number=1,
-            threshold=3,
+            threshold=CONFIG["gfibot"]["default_newcomer_threshold"],
             probability=0.9,
             last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
         ),
@@ -564,7 +566,7 @@ def mock_mongodb():
             owner="owner",
             name="name",
             number=2,
-            threshold=3,
+            threshold=CONFIG["gfibot"]["default_newcomer_threshold"],
             probability=0.3,
             last_updated=datetime(1970, 1, 1, tzinfo=timezone.utc),
         ),

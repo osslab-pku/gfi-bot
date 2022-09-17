@@ -6,6 +6,7 @@ from datetime import datetime
 
 from gfibot.collections import *
 from gfibot.backend.models import GFIResponse, GFIBrief
+from gfibot import CONFIG
 
 
 api = APIRouter()
@@ -26,7 +27,10 @@ def get_repo_gfi_threshold(name: str, owner: str) -> float:
     )
     if repo:
         return repo.repo_config.gfi_threshold
-    return 0.5
+    try:
+        return CONFIG["gfibot"]["default_gfi_threshold"]
+    except KeyError:
+        return 0.5
 
 
 def get_repo_newcomer_threshold(name: str, owner: str) -> float:
@@ -35,7 +39,10 @@ def get_repo_newcomer_threshold(name: str, owner: str) -> float:
     )
     if repo:
         return repo.repo_config.newcomer_threshold
-    return 5
+    try:
+        return CONFIG["gfibot"]["default_newcomer_threshold"]
+    except KeyError:
+        return 5
 
 
 @api.get("/gfi", response_model=GFIResponse[List[GFIBrief]])

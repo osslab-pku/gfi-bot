@@ -5,7 +5,20 @@ import os
 import pandas as pd
 import numpy as np
 
+from gfibot import CONFIG
 from .utils import SklearnCompatibleClassifier, get_binary_classifier_metrics
+
+# where to find models
+try:
+    GFIBOT_MODEL_PATH = CONFIG["gfibot"]["model_path"]
+except KeyError:
+    GFIBOT_MODEL_PATH = "./models"
+
+# where to find cache
+try:
+    GFIBOT_CACHE_PATH = CONFIG["gfibot"]["cache_path"]
+except KeyError:
+    GFIBOT_CACHE_PATH = "./.cache"
 
 
 class GFIModel(object):
