@@ -36,8 +36,13 @@ try:
 except LookupError:
     nltk.download("omw-1.4")
 
+try:
+    nltk.data.find("corpora/stopwords.zip")
+except LookupError:
+    nltk.download("stopwords")
+
 # run in dev env
-is_dev_env = os.environ.get("GFI_ENV", "").lower()
+is_dev_env = os.environ.get("GFIBOT_ENV", "").lower()
 if is_dev_env in ["dev", "development"]:
     logging.info("Running in development environment")
     CONFIG["mongodb"] = CONFIG["mongodb_dev"]
