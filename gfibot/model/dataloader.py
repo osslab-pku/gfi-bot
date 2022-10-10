@@ -82,22 +82,21 @@ EMOJI_PATTERN = re.compile(
     flags=re.UNICODE,
 )
 
-EMOJI_ALT_PATTERN = re.compile(
-    r"(:\w+:)", flags=re.UNICODE
-)
+EMOJI_ALT_PATTERN = re.compile(r"(:\w+:)", flags=re.UNICODE)
 
 _emoticon_path = os.path.join(os.path.dirname(__file__), "emojicons.json")
 with open(_emoticon_path, "r") as f:
     _emoticon = json.load(f)
-EMOTICON_PATTERN = re.compile(u'(' + u'|'.join(_emoticon.keys()) + u')')
+EMOTICON_PATTERN = re.compile("(" + "|".join(_emoticon.keys()) + ")")
 
-URL_PATTERN = re.compile(r'https?://\S+|www\.\S+')
+URL_PATTERN = re.compile(r"https?://\S+|www\.\S+")
 
-HTML_PATTERN = re.compile(r'<.*?>')
+HTML_PATTERN = re.compile(r"<.*?>")
 
-MARKDOWN_PATTERN = re.compile(r'(\*|_|~|`|`{3}|#|\+|-|!|\[|\]|\(|\)|\{|\})')
+MARKDOWN_PATTERN = re.compile(r"(\*|_|~|`|`{3}|#|\+|-|!|\[|\]|\(|\)|\{|\})")
 
 STOPWORDS = set(stopwords.words("english"))
+
 
 class GFIDataLoader(object):
     def __init__(
@@ -207,9 +206,9 @@ class GFIDataLoader(object):
         # remove punctuation
         _text = re.sub(r"[^\w\s]", "", _text)
         # remove emojis
-        _text = EMOJI_PATTERN.sub(r'', _text)
-        _text = EMOJI_ALT_PATTERN.sub(r'', _text)
-        _text = EMOTICON_PATTERN.sub(r'', _text)
+        _text = EMOJI_PATTERN.sub(r"", _text)
+        _text = EMOJI_ALT_PATTERN.sub(r"", _text)
+        _text = EMOTICON_PATTERN.sub(r"", _text)
         # remove numbers
         _text = re.sub(r"\d+\.?\d*", "", _text)
         # stemming
@@ -353,12 +352,12 @@ class GFIDataLoader(object):
             _comments_features = self._get_text_features(comments)
             for i in range(len(_comments_features)):
                 issue_features["text_comments_" + str(i)] = _comments_features[i]
-            
+
             title = issue.title
             _title_features = self._get_text_features(title)
             for i in range(len(_title_features)):
                 issue_features["text_title_" + str(i)] = _title_features[i]
-            
+
             body = issue.body
             _body_features = self._get_text_features(body)
             for i in range(len(_body_features)):
@@ -505,15 +504,22 @@ class GFIDataLoader(object):
             if self._use_text_features:
                 # apply tf-idf
                 for _text_type in ("title", "body", "comments"):
-                    _cols = [col for col in df_dataset.columns if f"text_{_text_type}" in col]
+                    _cols = [
+                        col for col in df_dataset.columns if f"text_{_text_type}" in col
+                    ]
                     if len(_cols) > 0:
-                        self._logger.info("tf-idf: %d %s columns", len(_cols), _text_type)
-                        df_comments = df_dataset[_cols]
-                        df_comments = df_comments.fillna(0)
-                        _transformed = self._transformer.fit_transform(df_comments)
+                        self._logger.info(
+                            "tf-idf: %d %s columns", len(_cols), _text_type
+                        )
+                        _df = df_dataset[_cols]
+                        _df = _df.fillna(0)
+                        _transformed = self._transformer.fit_transform(_df)
                         df_dataset = df_dataset.drop(columns=_cols)
                         df_dataset = pd.concat(
-                            [df_dataset, pd.DataFrame(_transformed.toarray(), columns=_cols)],
+                            [
+                                df_dataset,
+                                pd.DataFrame(_transformed.toarray(), columns=_cols),
+                            ],
                             axis=1,
                         )
 
