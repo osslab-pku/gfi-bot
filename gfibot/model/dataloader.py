@@ -1,14 +1,17 @@
 import logging
 import time
+import re
+import os
+import json
 from typing import Final, List, Union, Any, Dict, Tuple, Literal, Optional
 
 import numpy as np
 import pandas as pd
 from pymongo import MongoClient
-import mongoengine
 from mongoengine import Q
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import HashingVectorizer, TfidfTransformer
+from nltk.stem.snowball import EnglishStemmer
+from nltk.corpus import stopwords
 
 from gfibot.collections import *
 from .parallel import parallel, agg_append_df, _get_default_n_workers
@@ -17,8 +20,8 @@ from .utils import downcast_df, reconnect_mongoengine
 
 DEFAULT_VECTORIZER_PARAMS: Final = {
     "decode_error": "ignore",
-    "n_features": 1024,
-    "stop_words": "english",
+    "n_features": 128,
+    "stop_words": None,
     "alternate_sign": False,
 }
 
@@ -69,6 +72,32 @@ INSIGNIFICANT_FEATURES = {
     "eventer_review_num_all": 0.0,
 }
 
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F680-\U0001F6FF"  # transport & map symbols
+    "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+    "]+",
+    flags=re.UNICODE,
+)
+
+EMOJI_ALT_PATTERN = re.compile(
+    r"(:\w+:)", flags=re.UNICODE
+)
+
+_emoticon_path = os.path.join(os.path.dirname(__file__), "emojicons.json")
+with open(_emoticon_path, "r") as f:
+    _emoticon = json.load(f)
+EMOTICON_PATTERN = re.compile(u'(' + u'|'.join(_emoticon.keys()) + u')')
+
+URL_PATTERN = re.compile(r'https?://\S+|www\.\S+')
+
+HTML_PATTERN = re.compile(r'<.*?>')
+
+MARKDOWN_PATTERN = re.compile(r'(\*|_|~|`|`{3}|#|\+|-|!|\[|\]|\(|\)|\{|\})')
+
+STOPWORDS = set(stopwords.words("english"))
 
 class GFIDataLoader(object):
     def __init__(
@@ -109,9 +138,13 @@ class GFIDataLoader(object):
             if not isinstance(text_features, dict):
                 text_features = DEFAULT_VECTORIZER_PARAMS
             self._vectorizer = HashingVectorizer(**text_features)
+            self._transformer = TfidfTransformer()
+            self._stemmer = EnglishStemmer()
         else:
             self._use_text_features = False
             self._vectorizer = None
+            self._transformer = None
+            self._stemmer = None
 
     @staticmethod
     def _is_user_newcomer(n_user_commits: int, newcomer_thres: int) -> Literal[0, 1]:
@@ -158,10 +191,39 @@ class GFIDataLoader(object):
         s_res["gfi_ratio"] = s_res["gfi_num"] / len(user_list)
         return s_res.to_dict()
 
-    def _get_text_features(self, text: str) -> np.ndarray:
+    def _preprocess_text(self, text: str) -> np.ndarray:
+        """
+        Preprocess text.
+        """
         if not self._use_text_features:
             raise ValueError("text_features is not enabled")
-        return self._vectorizer.transform([text]).toarray()
+        _text = text.lower()
+        # remove markdown tags
+        _text = MARKDOWN_PATTERN.sub("", _text)
+        # remove urls
+        _text = URL_PATTERN.sub("", _text)
+        # remove html tags
+        _text = HTML_PATTERN.sub("", _text)
+        # remove punctuation
+        _text = re.sub(r"[^\w\s]", "", _text)
+        # remove emojis
+        _text = EMOJI_PATTERN.sub(r'', _text)
+        _text = EMOJI_ALT_PATTERN.sub(r'', _text)
+        _text = EMOTICON_PATTERN.sub(r'', _text)
+        # remove numbers
+        _text = re.sub(r"\d+\.?\d*", "", _text)
+        # stemming
+        _text = " ".join([self._stemmer.stem(w) for w in _text.split()])
+        # remove stop words
+        _text = " ".join([w for w in _text.split() if w not in STOPWORDS])
+        return _text
+
+    def _get_text_features(self, text: str) -> np.ndarray:
+        """
+        Preprocess and vectorized text.
+        """
+        _text = self._preprocess_text(text)
+        return self._vectorizer.transform([_text]).toarray()[0]
 
     def _get_issue_features(
         self, issue: Dataset, newcomer_thres: int
@@ -288,16 +350,19 @@ class GFIDataLoader(object):
         # ---------- Text Features ----------
         if self._use_text_features:
             comments = " ".join(issue.comments)
-            title = self._get_text_features(issue.title)[0]
-            body = self._get_text_features(issue.body)[0]
-            comment_text = self._get_text_features(comments)[0]
-            for i in range(len(title)):
-                issue_features["title" + str(i)] = title[i]
-            for i in range(len(body)):
-                issue_features["body" + str(i)] = body[i]
-            for i in range(len(comment_text)):
-                issue_features["comment_text" + str(i)] = comment_text[i]
-
+            _comments_features = self._get_text_features(comments)
+            for i in range(len(_comments_features)):
+                issue_features["text_comments_" + str(i)] = _comments_features[i]
+            
+            title = issue.title
+            _title_features = self._get_text_features(title)
+            for i in range(len(_title_features)):
+                issue_features["text_title_" + str(i)] = _title_features[i]
+            
+            body = issue.body
+            _body_features = self._get_text_features(body)
+            for i in range(len(_body_features)):
+                issue_features["text_body_" + str(i)] = _body_features[i]
         return issue_features
 
     def _load_from_db(
@@ -436,6 +501,21 @@ class GFIDataLoader(object):
                 agg_func=agg_append_df,
                 n_workers=with_workers,
             )
+
+            if self._use_text_features:
+                # apply tf-idf
+                for _text_type in ("title", "body", "comments"):
+                    _cols = [col for col in df_dataset.columns if f"text_{_text_type}" in col]
+                    if len(_cols) > 0:
+                        self._logger.info("tf-idf: %d %s columns", len(_cols), _text_type)
+                        df_comments = df_dataset[_cols]
+                        df_comments = df_comments.fillna(0)
+                        _transformed = self._transformer.fit_transform(df_comments)
+                        df_dataset = df_dataset.drop(columns=_cols)
+                        df_dataset = pd.concat(
+                            [df_dataset, pd.DataFrame(_transformed.toarray(), columns=_cols)],
+                            axis=1,
+                        )
 
         self._logger.info(f"{len(df_dataset)} issues loaded")
 
