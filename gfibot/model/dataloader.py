@@ -501,6 +501,9 @@ class GFIDataLoader(object):
                 n_workers=with_workers,
             )
 
+            # reindex df_dataset
+            df_dataset = df_dataset.reset_index(drop=True)
+
             if self._use_text_features:
                 # apply tf-idf
                 for _text_type in ("title", "body", "comments"):
