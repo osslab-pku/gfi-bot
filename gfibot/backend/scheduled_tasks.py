@@ -280,7 +280,7 @@ def daemon(init=False):
             owner, name = project.split("/")
             update_repo(valid_tokens[i % len(valid_tokens)], owner, name)
     else:
-        for i, repo in enumerate(Repo.objects()):
+        for i, repo in enumerate(list(Repo.objects().only("owner", "name"))):
             repo_query = GfiQueries.objects(
                 Q(name=repo.name) & Q(owner=repo.owner)
             ).first()
@@ -294,7 +294,7 @@ def daemon(init=False):
     get_dataset_all(datetime(2008, 1, 1))
 
     for threshold in [1, 2, 3, 4, 5]:
-        for i, repo in enumerate(Repo.objects()):
+        for i, repo in enumerate(list(Repo.objects().only("owner", "name"))):
             repo_query = GfiQueries.objects(
                 Q(name=repo.name) & Q(owner=repo.owner)
             ).first()
@@ -439,4 +439,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    daemon_mp(args.init, args.n_workers)
+    # daemon_mp(args.init, args.n_workers)
+    mongoengine.connect(
+        CONFIG["mongodb"]["db"],
+        host=CONFIG["mongodb"]["url"],
+        tz_aware=True,
+        uuidRepresentation="standard",
+        connect=False,
+    )
+    daemon(args.init)
