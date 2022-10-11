@@ -14,11 +14,12 @@ from .update_database import update_repo_training_summary, update_repo_predictio
 
 # which model to load
 MODEL_NAME_EVALUATION = (
-    lambda newcomer_thres: f"xgb_{newcomer_thres}_created_at_0.1_default_lite"
+    lambda newcomer_thres: f"xgb_{newcomer_thres}_text_created_at_0.1_default_lite"
 )
 MODEL_NAME_PREDICTION = (
-    lambda newcomer_thres: f"xgb_{newcomer_thres}_created_at_0_default_lite"
+    lambda newcomer_thres: f"xgb_{newcomer_thres}_text_created_at_0_default_lite"
 )
+DATASET_NAME = lambda newcomer_thres: f"dataset_{newcomer_thres}_text_lite"
 
 
 class GFIModelLoader(object):
@@ -85,9 +86,6 @@ if __name__ == "__main__":
     from .train import load_full_dataset
     from .utils import split_train_test, reconnect_mongoengine
 
-    DEFAULT_MODEL_ARGS = {"text_features": False, "drop_insignificant_features": True}
-    DEFAULT_SPLIT_ARGS = {"test_size": 0.1, "by": "created_at"}
-
     parser = ArgumentParser("Manually update prediction and training summary")
     parser.add_argument(
         "--newcomer-thresholds",
@@ -110,7 +108,7 @@ if __name__ == "__main__":
         drop_insignificant_features = DEFAULT_MODEL_ARGS["drop_insignificant_features"]
         cache_path = get_full_path(
             GFIBOT_CACHE_PATH,
-            f'dataset_{newcomer_thres}{"" if text_features is False else "_text"}{"_lite" if drop_insignificant_features else ""}.csv',
+            f"{DATASET_NAME(newcomer_thres)}.csv",
         )
 
         if args.use_cache and os.path.exists(cache_path):

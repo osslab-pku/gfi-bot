@@ -23,54 +23,13 @@ DEFAULT_VECTORIZER_PARAMS: Final = {
     "n_features": 128,
     "stop_words": None,
     "alternate_sign": False,
+    "norm": None
 }
 
-# features with f-score=0
-INSIGNIFICANT_FEATURES = {
-    "eventer_max_stars_pull": 0.0,
-    "eventer_max_stars_review": 0.0,
-    "eventer_max_stars_issue": 0.0,
-    "n_imgs": 0.0,
-    "owner_repo_num": 0.0,
-    "commenter_n_repos": 0.0,
-    "commenter_n_commits_all": 0.0,
-    "commenter_n_issues_all": 0.0,
-    "commenter_n_pulls_all": 0.0,
-    "commenter_n_reviews_all": 0.0,
-    "eventer_n_reviews_all": 0.0,
-    "eventer_commits_num": 0.0,
-    "eventer_issues_num": 0.0,
-    "eventer_pulls_num": 0.0,
-    "eventer_repo_num": 0.0,
-    "eventer_commits_num_all": 0.0,
-    "eventer_issues_num_all": 0.0,
-    "eventer_pulls_num_all": 0.0,
-    "eventer_max_stars_commit": 0.0,
-    "commenter_max_stars_review": 0.0,
-    "eventer_n_pulls_all": 0.0,
-    "commenter_pulls_num": 0.0,
-    "owner_issues_num_all": 0.0,
-    "owner_pulls_num_all": 0.0,
-    "owner_reviews_num_all": 0.0,
-    "owner_max_stars_commit": 0.0,
-    "owner_max_stars_issue": 0.0,
-    "owner_max_stars_pull": 0.0,
-    "owner_max_stars_review": 0.0,
-    "commenter_commits_num": 0.0,
-    "commenter_issues_num": 0.0,
-    "commenter_repo_num": 0.0,
-    "eventer_n_issues_all": 0.0,
-    "commenter_commits_num_all": 0.0,
-    "commenter_issues_num_all": 0.0,
-    "commenter_pulls_num_all": 0.0,
-    "commenter_review_num_all": 0.0,
-    "commenter_max_stars_commit": 0.0,
-    "commenter_max_stars_issue": 0.0,
-    "commenter_max_stars_pull": 0.0,
-    "eventer_n_repos": 0.0,
-    "eventer_n_commits_all": 0.0,
-    "eventer_review_num_all": 0.0,
-}
+# features with f-score < 0.002
+_ins_path = os.path.join(os.path.dirname(__file__), "insignificant_features.json")
+with open(_ins_path, 'r') as f:
+    INSIGNIFICANT_FEATURES = json.load(f)
 
 EMOJI_PATTERN = re.compile(
     "["
