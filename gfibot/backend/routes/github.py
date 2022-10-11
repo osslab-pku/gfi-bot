@@ -141,9 +141,9 @@ GITHUB_USER_API_URL: Final = "https://api.github.com/user"
 @api.get("/login", response_model=GFIResponse[HttpUrl])
 def get_oauth_app_login_url():
     """
-    Get oauth url of the github app
+    Login via GitHub OAuth
     """
-    oauth_record: GithubTokens = GithubTokens.objects().first()
+    oauth_record: GithubTokens = GithubTokens.objects(app_name="gfibot-webapp").first()
     if not oauth_record:
         raise HTTPException(
             status_code=404, detail="oauth record not found in database"
@@ -155,9 +155,11 @@ def get_oauth_app_login_url():
 @api.get("/app/installation", response_class=RedirectResponse)
 def redirect_from_github(code: str, redirect_from: str = "github_app_login"):
     """
-    Redirect from github webapp
+    Installing from GitHub App
     """
-    oauth_record: GithubTokens = GithubTokens.objects().first()
+    oauth_record: GithubTokens = GithubTokens.objects(
+        app_name="gfibot-githubapp"
+    ).first()
     if not oauth_record:
         raise HTTPException(
             status_code=500, detail="oauth record not found in database"

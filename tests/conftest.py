@@ -449,9 +449,14 @@ def mock_mongodb():
     ]
     github_tokens: List[GithubTokens] = [
         GithubTokens(
-            app_name="app_name",
-            client_id="this_is_not_a_client_id",
-            client_secret="this_is_not_a_client_secret",
+            app_name="gfibot-webapp",
+            client_id="this_is_not_a_client_id_1",
+            client_secret="this_is_not_a_client_secret_1",
+        ),
+        GithubTokens(
+            app_name="gfibot-githubapp",
+            client_id="this_is_not_a_client_id_2",
+            client_secret="this_is_not_a_client_secret_2",
         ),
     ]
     gfi_users: List[GfiUsers] = [

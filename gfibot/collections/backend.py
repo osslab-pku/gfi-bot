@@ -6,7 +6,9 @@ from mongoengine import *
 class GithubTokens(Document):
     """GitHub tokens for GitHub App"""
 
-    app_name: str = StringField(required=True)
+    app_name: str = StringField(
+        required=True, choices=["gfibot-githubapp", "gfibot-webapp"]
+    )
     client_id: str = StringField(required=True)
     client_secret: str = StringField(required=True)
 

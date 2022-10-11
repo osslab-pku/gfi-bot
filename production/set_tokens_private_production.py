@@ -46,12 +46,14 @@ if __name__ == "__main__":
             web_client_id = web_client_secrets["id"]
             web_client_secret = web_client_secrets["secret"]
             if web_client_id != None and web_client_secret != None:
-                tokens_collection.insert_one(
+                tokens_collection.replace_one(
+                    {"app_name": "gfibot-webapp"},
                     {
                         "app_name": "gfibot-webapp",
                         "client_id": web_client_id,
                         "client_secret": web_client_secret,
-                    }
+                    },
+                    upsert=True,
                 )
             else:
                 logging.error("no web client secrets found")
@@ -60,12 +62,14 @@ if __name__ == "__main__":
             git_app_id = git_app_secrets["id"]
             git_app_secret = git_app_secrets["secret"]
             if git_app_id != None and git_app_secret != None:
-                tokens_collection.insert_one(
+                tokens_collection.replace_one(
+                    {"app_name": "gfibot-githubapp"},
                     {
                         "app_name": "gfibot-githubapp",
                         "client_id": git_app_id,
                         "client_secret": git_app_secret,
-                    }
+                    },
+                    upsert=True,
                 )
             else:
                 logging.error("no git app secrets found")
