@@ -338,7 +338,7 @@ export function MainPage() {
                       setSelectedTag(undefined);
                       dispatch(
                         createMainPageLangTagSelectedAction({
-                          tagSelected: 'None',
+                          tagSelected: 'All',
                         })
                       );
                     }

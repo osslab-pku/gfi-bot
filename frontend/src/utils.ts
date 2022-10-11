@@ -40,23 +40,17 @@ export const checkHasUndefinedProperty = (obj: any) => {
   return false;
 };
 
-const repoFilters = [
-  'popularity',
-  'median_issue_resolve_time',
-  'newcomer_friendly',
-  'gfis',
-];
-
 const filterNames = {
-  popularity: 'Popularity',
-  median_issue_resolve_time: 'Median Issue Resolve Time',
-  newcomer_friendly: 'Newcomer Friendliness',
-  gfis: 'GFIs',
+  'popularity': 'Number of Stars',
+  'median_issue_resolve_time': 'Issue Resolution Time',
+  'newcomer_friendly': '% of Issues Resolved by New Contributors',
+  'gfis': '# of Predicted Good First Issues',
 };
 
-const nameToFilter = Object.fromEntries(
-  Object.entries(filterNames).map(([k, v]) => [v, k])
-);
+const nameToFilter = Object.keys(filterNames).reduce((acc, cur) => {
+  acc[filterNames[cur]] = cur;
+  return acc;
+}, {} as { [key: string]: string });
 
 /** convert semantic filter names -> backend args */
 export const convertFilter = (s: string): RepoSort | undefined => {

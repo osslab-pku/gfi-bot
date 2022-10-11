@@ -358,13 +358,13 @@ function AddProjectComponent() {
   const [showPopover, setShowPopover] = useState(false);
 
   type FilterType = GFIRepoSearchingFilterType;
-  const [filterSelected, setFilterSelected] = useState<FilterType>('None');
+  const [filterSelected, setFilterSelected] = useState<FilterType>('Alphabetical');
   const filters: FilterType[] = [
-    'None',
-    'Popularity',
-    'GFIs',
-    'Median Issue Resolve Time',
-    'Newcomer Friendliness',
+    'Alphabetical',
+    'Number of Stars',
+    'Issue Resolution Time',
+    '% of Issues Resolved by New Contributors',
+    '# of Predicted Good First Issues',
   ];
 
   const onRepoHistoryClicked = (repoInfo: RepoBrief) => {
