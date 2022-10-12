@@ -1,50 +1,73 @@
-### GFI-Bot Development Setup
+### GFI-Bot Production Build
 
-> **The dev setup is pretty alpha-stage, it's only tested on the production machine (Ubuntu 20.04) with one user.**
+> **Notice: Do not make the docker image public after building.**
 
-#### Development Setup Explained
 
-`gfidev.sh` starts a MongoDB instance `gfidev_xxx_mongo`, a caddy webserver (the CORS walkaround), and 2 screen sessions:
+#### Production Setup Explained
 
-**gfidev_xxx_vite** runs a vite dev server (with hmr, the dev frontend refreshes within 1 sec on code changes)
+we're using docker-compose to build a production instance of GFI-Bot, which consists of the following containers:
 
-**gfidev_xxx_backend** runs a FastAPI backend (automatically reloads on backend code changes; to avoid wasting rate limits, the background scheduler is disabled by default)
+**mongo**: the database container, which stores all the data for GFI-Bot.
 
-#### Building the dataset
+**frontend**: the frontend container, which builds and serves the frontend of GFI-Bot.
 
-The most effortless way to build the dev dataset is to copy it from the production server. (stop the production database before copying)
+**gfi-bot**: the main container, which runs the fastAPI backend alongside the data retriever.
 
-```bash
-cp -r <path-to-gfi-data> <path-to-gfi-data-alt>
+**gfi-trainer**: the training container, which trains the RecGFI model, updates predictions and performance metrics, and updates the database.
+
+
+#### Initial Setup
+
+You should initially create a `production_secrets.json` file in this directory in order to register your GitHub APP id and secrets, as well as information of a g-mail account (if you want to send emails to users). The file should be laid out as below:
+
+```json
+{
+    "web_client": {
+        "id": "$web_client_id",
+        "secret": "$web_client_secret"
+    },
+    "git_app": {
+        "id": "$github_app_id",
+        "secret": "$github_app_secret"
+    },
+    "mail": {
+        "email": "$gmail_address",
+        "password": "$gmail_service_password"
+    }
+}
 ```
 
-Alternatively, you may build the dataset from scratch. (this will take a while)
-
-```bash
-GFIBOT_ENV=dev python3 -m gfibot.backend.scheduled_tasks --init
-```
-
-#### Starting the dev setup
-
-First, rename `example.env` to `.env` and set deployment configurations:
-
-**Note each GFI-Bot instance needs unique ports and a unique GFIBOT_DATA_DIR to avoid conflicts.**
+Then, rename `example.env` to `.env` and set deployment configurations:
 
 ```ini
 # MongoDB port (exposed to the host machine)
-# NEVER expose the production database to internet
-GFIBOT_MONGO_PORT=127.0.0.1:27021  # <- check pyproject.toml
+# NEVER expose MongoDB to the public internet
+GFIBOT_MONGO_PORT=127.0.0.1:27020
 # Backend port
-GFIBOT_BACKEND_PORT=127.0.0.1:8123
+GFIBOT_BACKEND_PORT=127.0.0.1:5000
 # Frontend https / http port
-GFIBOT_HTTP_PORT=80
+GFIBOT_HTTPS_PORT=80
 GFIBOT_HTTPS_PORT=443
-GFIBOT_DATA_DIR=<path-to-gfi-data-alt>
+GFIBOT_DATA_DIR=<path-to-gfi-data>
 ```
 
-Then, run the dev setup:
+Finally, try executing
 
 ```bash
 cd production/
-./gfidev.sh up
+./gfibot.sh up
+```
+
+to start your GFI-Bot service.
+
+The current docker setup is battery-included, the caddy server serves the gfi-bot website and automatically renews the SSL certificate via [letsencrypt](https://letsencrypt.org/). You can also use your own SSL certificate by replacing the certificates in `certs/` with your own certificate files.
+
+
+#### Updating GFI-Bot
+
+To update GFI-Bot, you can simply run
+
+```bash
+cd production/
+./gfibot.sh up
 ```
