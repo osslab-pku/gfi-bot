@@ -43,7 +43,7 @@ services:
       - ${GFIBOT_DATA_DIR}/cache:/.cache
       - ${GFIBOT_DATA_DIR}/models:/models
       - ${GFIBOT_DATA_DIR}/nltk_data:/root/nltk_data
-    command: python3 -m gfibot.model.train --repeat-hours 24
+    command: python3 -m gfibot.model.train --text-features --repeat-hours 24
     mem_limit: "10g"
     cpu_count: 3
     restart: always

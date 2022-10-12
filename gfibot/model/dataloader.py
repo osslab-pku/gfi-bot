@@ -23,12 +23,12 @@ DEFAULT_VECTORIZER_PARAMS: Final = {
     "n_features": 128,
     "stop_words": None,
     "alternate_sign": False,
-    "norm": None
+    "norm": None,
 }
 
 # features with f-score < 0.002
 _ins_path = os.path.join(os.path.dirname(__file__), "insignificant_features.json")
-with open(_ins_path, 'r') as f:
+with open(_ins_path, "r") as f:
     INSIGNIFICANT_FEATURES = json.load(f)
 
 EMOJI_PATTERN = re.compile(

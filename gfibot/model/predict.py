@@ -12,6 +12,16 @@ from .base import GFIModel, GFIBOT_MODEL_PATH, GFIBOT_CACHE_PATH
 from .dataloader import GFIDataLoader
 from .update_database import update_repo_training_summary, update_repo_prediction
 
+DEFAULT_MODEL_ARGS: Final = {
+    "text_features": True,
+    "drop_insignificant_features": True,
+}
+
+DEFAULT_SPLIT_ARGS: Final = {
+    "test_size": 0.1,
+    "by": "created_at",
+}
+
 # which model to load
 MODEL_NAME_EVALUATION = (
     lambda newcomer_thres: f"xgb_{newcomer_thres}_text_created_at_0.1_default_lite"
