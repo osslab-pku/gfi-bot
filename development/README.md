@@ -4,13 +4,15 @@
 
 #### Development Setup Explained
 
-`gfidev.sh` starts a MongoDB instance `gfidev_xxx_mongo`, a caddy webserver (the CORS walkaround), and 2 screen sessions:
+`gfidev.sh` starts a MongoDB instance `gfidev_xxx_mongo`, a caddy webserver, and 2 screen sessions:
 
 **gfidev_xxx_vite** runs a vite dev server (with hmr, the dev frontend refreshes within 1 sec on code changes)
 
 **gfidev_xxx_backend** runs a FastAPI backend (automatically reloads on backend code changes; to avoid wasting rate limits, the background scheduler is disabled by default)
 
-#### Building the dataset
+#### Initial Setup
+
+##### Building the dataset
 
 The most effortless way to build the dev dataset is to copy it from the production server. (stop the production database before copying)
 
@@ -24,7 +26,7 @@ Alternatively, you may build the dataset from scratch. (this will take a while)
 GFIBOT_ENV=dev python3 -m gfibot.backend.scheduled_tasks --init
 ```
 
-#### Starting the dev setup
+##### Starting the dev setup
 
 First, rename `example.env` to `.env` and set deployment configurations:
 
@@ -32,12 +34,11 @@ First, rename `example.env` to `.env` and set deployment configurations:
 
 ```ini
 # MongoDB port (exposed to the host machine)
-# NEVER expose the production database to internet
 GFIBOT_MONGO_PORT=127.0.0.1:27021  # <- check pyproject.toml
 # Backend port
 GFIBOT_BACKEND_PORT=127.0.0.1:8123
 # Frontend https / http port
-GFIBOT_HTTP_PORT=80
+GFIBOT_HTTPS_PORT=80
 GFIBOT_HTTPS_PORT=443
 GFIBOT_DATA_DIR=<path-to-gfi-data-alt>
 ```
@@ -45,6 +46,6 @@ GFIBOT_DATA_DIR=<path-to-gfi-data-alt>
 Then, run the dev setup:
 
 ```bash
-cd production/
+cd development/
 ./gfidev.sh up
 ```
