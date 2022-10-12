@@ -16,7 +16,8 @@ The underlying ML approach is introduced in the following paper:
 
 * Wenxin Xiao, Hao He, Weiwei Xu, Xin Tan, Jinhao Dong, and Minghui Zhou. 2022. Recommending Good First Issues in GitHub OSS Projects. In Proceedings of the 44th International Conference on Software Engineering, ICSE 2022, Pittsburgh, PA, USA, May 21–29, 2022. ACM. https://hehao98.github.io/files/2022-recgfi.pdf
 
-We provide a good first issue recommendation dataset at [Zenodo](https://doi.org/10.5281/zenodo.6665931).
+See [CITATIONS.bib](CITATIONS.bib) for the BibTeX citations. We also provide an offline good first issue recommendation dataset at [Zenodo](https://doi.org/10.5281/zenodo.6665931).
+
 
 ## Get Started
 
