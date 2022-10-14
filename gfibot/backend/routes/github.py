@@ -148,7 +148,7 @@ def get_oauth_app_login_url():
         raise HTTPException(
             status_code=404, detail="oauth record not found in database"
         )
-    oauth_client_id = GithubTokens.objects().first().client_id
+    oauth_client_id = oauth_record.client_id
     return GFIResponse(result=f"{GITHUB_LOGIN_URL}?client_id={oauth_client_id}")
 
 
@@ -159,6 +159,8 @@ def redirect_from_github(code: str, redirect_from: str = "github_app_login"):
     """
     oauth_record: GithubTokens = GithubTokens.objects(
         app_name="gfibot-githubapp"
+        if redirect_from == "github_app_login"
+        else "gfibot-webapp"
     ).first()
     if not oauth_record:
         raise HTTPException(
