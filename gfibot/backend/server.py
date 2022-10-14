@@ -55,7 +55,6 @@ def startup_event():
         get_scheduler()
     else:
         logger.info("Skipping scheduler")
-        app.scheduler = None
 
 
 if __name__ == "__main__":

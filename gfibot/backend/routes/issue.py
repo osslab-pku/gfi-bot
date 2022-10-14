@@ -59,7 +59,7 @@ def get_gfi_brief(
         Prediction.objects(
             Q(name=repo)
             & Q(owner=owner)
-            & Q(probability__gte=gfi_thres)
+            # & Q(probability__gte=gfi_thres)
             & Q(threshold=newcomer_thres)
             & Q(state="open")
         )

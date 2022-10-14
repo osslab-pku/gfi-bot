@@ -11,7 +11,11 @@ import requests
 from fastapi import HTTPException
 
 from gfibot.collections import *
-from gfibot.backend.scheduled_tasks import update_gfi_info, get_valid_tokens
+from gfibot.backend.scheduled_tasks import (
+    update_gfi_info,
+    get_valid_tokens,
+    update_gfi_tags_and_comments,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +99,9 @@ def add_repo_to_gfibot(owner: str, name: str, user: str) -> None:
         )
         user_record.save()
     # add to repo_queries
-    q: Optional[GfiQueries] = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    q: Optional[GfiQueries] = GfiQueries.objects(name=name, owner=owner).first()
     if not q:
+        logger.info("Adding repo %s/%s to GFI-Bot", owner, name)
         q = GfiQueries(
             name=name,
             owner=owner,
@@ -120,6 +125,7 @@ def add_repo_to_gfibot(owner: str, name: str, user: str) -> None:
             task_id=f"{owner}-{name}-update",
             interval=24 * 3600,
         )
+
     q.save()
 
     token = (
@@ -172,6 +178,28 @@ def schedule_repo_update_now(
 
     # run once
     scheduler.add_job(update_gfi_info, id=job_id, args=[token, owner, name, send_email])
+
+
+def schedule_tag_task_now(owner: str, name: str, send_email: bool = False):
+    """
+    Run a temporary tag and comment job once
+    owner: Repo owner
+    name: Repo name
+    token: if None, random choice a token from the token pool
+    send_email: if True, send email to user after update
+    """
+    from .server import get_scheduler
+
+    scheduler = get_scheduler()
+
+    job_id = f"{owner}-{name}-manual-tag"
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+
+    # run once
+    scheduler.add_job(
+        update_gfi_tags_and_comments, id=job_id, args=[owner, name, send_email]
+    )
 
 
 def remove_repo_from_gfibot(owner: str, name: str, user: str) -> None:

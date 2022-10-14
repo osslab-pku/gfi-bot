@@ -9,6 +9,7 @@ import {
   getRepoConfig,
   updateRepoConfig,
   updateRepoInfo,
+  updateTags,
 } from '../../api/api';
 import type { RepoGFIConfig } from '../../model/api';
 import { checkIsNumber } from '../../utils';
@@ -112,6 +113,12 @@ export function RepoSetting(props: RepoSettingPops) {
 
   const updateGFIInfo = () => {
     updateRepoInfo(repoInfo.name, repoInfo.owner).then((res) => {
+      setShowUpdateBanner(true);
+    });
+  };
+
+  const updateGFITags = () => {
+    updateTags(repoInfo.name, repoInfo.owner).then((res) => {
       setShowUpdateBanner(true);
     });
   };
@@ -226,10 +233,19 @@ export function RepoSetting(props: RepoSettingPops) {
           variant="outline-success"
           size="sm"
           onClick={() => {
+            updateGFITags();
+          }}
+        >
+          Tag GFIs
+        </Button>
+        <Button
+          variant="outline-warning"
+          size="sm"
+          onClick={() => {
             updateGFIInfo();
           }}
         >
-          Update GFI Info
+          Force Update GFIs
         </Button>
         <Button
           variant="outline-danger"
