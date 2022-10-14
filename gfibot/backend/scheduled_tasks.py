@@ -184,53 +184,55 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
             return
         q.update(is_updating=True, is_finished=False)
 
-    # 1. fetch repo data
     try:
-        update_repo(token, owner, name)
-    except (BadCredentialsException, RateLimitExceededException) as e:
-        # second try with a new token
-        logger.error(e)
-        valid_tokens = get_valid_tokens()
-        if not valid_tokens:
-            logger.error("No valid tokens found.")
-            return
-        random.seed(datetime.now())
-        token = random.choice(valid_tokens)
-        update_repo(token, owner, name)
+        # 1. fetch repo data
+        try:
+            update_repo(token, owner, name)
+        except (BadCredentialsException, RateLimitExceededException) as e:
+            # second try with a new token
+            logger.error(e)
+            valid_tokens = get_valid_tokens()
+            if not valid_tokens:
+                logger.error("No valid tokens found.")
+                return
+            random.seed(datetime.now())
+            token = random.choice(valid_tokens)
+            update_repo(token, owner, name)
 
-    # 2. rebuild repo dataset
-    begin_datetime = datetime(2008, 1, 1)
-    get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
+        # 2. rebuild repo dataset
+        begin_datetime = datetime(2008, 1, 1)
+        get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
 
-    # 3. update training summary
-    # 4. update gfi prediction
-    for newcomer_thres in [1, 2, 3, 4, 5]:
-        predict_repo(owner=owner, name=name, newcomer_thres=newcomer_thres)
+        # 3. update training summary
+        # 4. update gfi prediction
+        for newcomer_thres in [1, 2, 3, 4, 5]:
+            predict_repo(owner=owner, name=name, newcomer_thres=newcomer_thres)
 
-    # 5. tag, comment and email (if needed)
-    user_github_login = None
-    query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
-    if query.is_github_app_repo and query.app_user_github_login:
-        user_github_login = query.app_user_github_login
-    if user_github_login:
-        # submit and wait for the job to finish
-        _tag_job = executor.submit(_tag_and_comment, user_github_login, owner, name)
-        _tag_job.result()
-    if user_github_login and send_email:
-        _email_job = executor.submit(
-            _send_email,
-            user_github_login,
-            "GFI-Bot: Update done for {}/{}".format(owner, name),
-            "GFI-Bot: Update done for {}/{}".format(owner, name),
+        # 5. tag, comment and email (if needed)
+        user_github_login = None
+        query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+        if query.is_github_app_repo and query.app_user_github_login:
+            user_github_login = query.app_user_github_login
+        if user_github_login:
+            # submit and wait for the job to finish
+            _tag_job = executor.submit(_tag_and_comment, user_github_login, owner, name)
+            _tag_job.result()
+        if user_github_login and send_email:
+            _email_job = executor.submit(
+                _send_email,
+                user_github_login,
+                "GFI-Bot: Update done for {}/{}".format(owner, name),
+                "GFI-Bot: Update done for {}/{}".format(owner, name),
+            )
+            _email_job.result()
+        logger.info(
+            "Update done for " + owner + "/" + name + " at {}.".format(datetime.now())
         )
-        _email_job.result()
-    logger.info(
-        "Update done for " + owner + "/" + name + " at {}.".format(datetime.now())
-    )
 
     # 6. set state
-    if q:
-        q.update(is_updating=False, is_finished=True, is_pending=False)
+    finally:
+        if q:
+            q.update(is_updating=False, is_finished=True, is_pending=False)
 
 
 def start_scheduler() -> BackgroundScheduler:

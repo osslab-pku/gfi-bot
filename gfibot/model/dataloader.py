@@ -61,7 +61,7 @@ class GFIDataLoader(object):
     def __init__(
         self,
         log_level: int = logging.INFO,
-        text_features: Union[None, bool, dict] = False,
+        text_features: Union[None, bool, dict] = True,
         random_seed: int = 0,
         downcast_df: bool = True,
         balance_samples: bool = False,
@@ -124,30 +124,34 @@ class GFIDataLoader(object):
     def _get_user_feature_avg(
         user_list: List[Dataset.UserFeature], newcomer_thres: int
     ) -> Dict[str, float]:
+        DEFAULT_USER_FEATURES = {
+            "n_commits": 0.0,
+            "n_issues": 0.0,
+            "n_pulls": 0.0,
+            "n_repos": 0.0,
+            "n_commits_all": 0.0,
+            "n_issues_all": 0.0,
+            "n_pulls_all": 0.0,
+            "n_reviews_all": 0.0,
+            "max_stars_commit": 0.0,
+            "max_stars_issue": 0.0,
+            "max_stars_pull": 0.0,
+            "max_stars_review": 0.0,
+            "gfi_ratio": 0.0,
+            "gfi_num": 0.0,
+        }
         if not user_list:
-            return {
-                "commits_num": 0.0,
-                "issues_num": 0.0,
-                "pulls_num": 0.0,
-                "repo_num": 0.0,
-                "commits_num_all": 0.0,
-                "issues_num_all": 0.0,
-                "pulls_num_all": 0.0,
-                "review_num_all": 0.0,
-                "max_stars_commit": 0.0,
-                "max_stars_issue": 0.0,
-                "max_stars_pull": 0.0,
-                "max_stars_review": 0.0,
-                "gfi_ratio": 0.0,
-                "gfi_num": 0.0,
-            }
+            return DEFAULT_USER_FEATURES
         uf_df = pd.DataFrame([u.to_mongo() for u in user_list])
         s_res = uf_df.mean(numeric_only=True)
         s_res["gfi_num"] = np.sum(
             [np.sum(np.array(x) < newcomer_thres) for x in uf_df["resolver_commits"]]
         )
         s_res["gfi_ratio"] = s_res["gfi_num"] / len(user_list)
-        return s_res.to_dict()
+        _dict = DEFAULT_USER_FEATURES.copy()
+        _dict.update(s_res.to_dict())
+        _dict = {k: v for k, v in _dict.items() if k in DEFAULT_USER_FEATURES}
+        return _dict
 
     def _preprocess_text(self, text: str) -> np.ndarray:
         """

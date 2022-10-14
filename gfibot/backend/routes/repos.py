@@ -331,10 +331,6 @@ def force_repo_update(data: UpdateModel):
     repo_q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not found")
-    repo_q.update(
-        is_updating=True,
-        is_finished=False,
-    )
     update_config = repo_q.update_config
     if update_config != None:
         task_id = update_config.task_id
