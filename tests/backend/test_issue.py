@@ -22,7 +22,7 @@ def test_get_repo_gfis(mock_mongodb):
     assert res.result[0].name == "name"
 
     response = client.get(
-        "/api/issue/gfi/num", params={"repo": "name", "owner": "owner"}
+        "/api/issue/gfi/num", params={"name": "name", "owner": "owner"}
     )
     logging.info(response.json())
     assert response.status_code == 200
