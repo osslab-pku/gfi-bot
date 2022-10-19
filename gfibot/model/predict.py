@@ -75,6 +75,7 @@ def predict_repo(owner: str, name: str, newcomer_thres: int) -> None:
     _df = loader.load_dataset(
         [Q(name=name, owner=owner)], newcomer_thres=newcomer_thres, with_workers=False
     )
+    # _df.to_csv(f".cache/{owner}_{name}.csv", index=False)
     # update repo prediction
     _model_pred = GFIModelLoader.load_model(MODEL_NAME_PREDICTION(newcomer_thres))
     update_repo_prediction(df=_df, newcomer_thres=newcomer_thres, model=_model_pred)

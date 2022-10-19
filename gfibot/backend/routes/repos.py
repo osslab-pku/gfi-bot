@@ -19,6 +19,7 @@ from gfibot.backend.background_tasks import (
     add_repo_to_gfibot,
     has_write_access,
     schedule_repo_update_now,
+    schedule_tag_task_now,
 )
 from gfibot.backend.routes.issue import (
     get_repo_gfi_threshold,
@@ -318,6 +319,29 @@ class UpdateModel(BaseModel):
     github_login: str
 
 
+@api.put("/update/tags", response_model=GFIResponse[str])
+def update_tags_and_comments(data: UpdateModel):
+    """
+    Tag and comment on GitHub
+    """
+    owner, name, github_login = data.owner, data.name, data.github_login
+    if not has_write_access(owner=owner, name=name, user=github_login):
+        raise HTTPException(
+            status_code=403, detail="You don't have write access to this repository"
+        )
+    repo_q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    if not repo_q:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    user_q: GfiUsers = GfiUsers.objects(github_login=github_login).first()
+    if user_q:
+        schedule_tag_task_now(name=name, owner=owner)
+    else:
+        raise HTTPException(status_code=400, detail="User not registered")
+
+    return GFIResponse(result="Tag and comment scheduled")
+
+
 @api.put("/update/", response_model=GFIResponse[str])
 def force_repo_update(data: UpdateModel):
     """
@@ -331,10 +355,6 @@ def force_repo_update(data: UpdateModel):
     repo_q = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
     if not repo_q:
         raise HTTPException(status_code=404, detail="Repository not found")
-    repo_q.update(
-        is_updating=True,
-        is_finished=False,
-    )
     update_config = repo_q.update_config
     if update_config != None:
         task_id = update_config.task_id

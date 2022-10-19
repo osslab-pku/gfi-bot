@@ -48,15 +48,24 @@ def _add_comment_to_github_issue(
     """
     user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
     if user_token:
-        headers = {
-            "Authorization": "token {}".format(user_token),
-            "Content-Type": "application/json",
-        }
-        url = "https://api.github.com/repos/{}/{}/issues/{}/comments".format(
-            repo_owner, repo_name, issue_number
-        )
-        r = requests.post(url, headers=headers, data=json.dumps({"body": comment}))
-        return r.status_code
+        try:
+            headers = {
+                "Authorization": "token {}".format(user_token),
+                "Content-Type": "application/json",
+            }
+            url = "https://api.github.com/repos/{}/{}/issues/{}/comments".format(
+                repo_owner, repo_name, issue_number
+            )
+            r = requests.post(url, headers=headers, data=json.dumps({"body": comment}))
+            r.raise_for_status()
+        except Exception as e:
+            logger.warning(
+                "Error adding comment: %s, token: %s",
+                e,
+                "*" * (len(user_token) - 5) + user_token[-5:],
+            )
+        finally:
+            return r.status_code
     else:
         return 403
 
@@ -69,12 +78,21 @@ def _add_gfi_label_to_github_issue(
     """
     user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
     if user_token:
-        headers = {"Authorization": "token {}".format(user_token)}
-        url = "https://api.github.com/repos/{}/{}/issues/{}/labels".format(
-            repo_owner, repo_name, issue_number
-        )
-        r = requests.post(url, headers=headers, json=["{}".format(label_name)])
-        return r.status_code
+        try:
+            headers = {"Authorization": "token {}".format(user_token)}
+            url = "https://api.github.com/repos/{}/{}/issues/{}/labels".format(
+                repo_owner, repo_name, issue_number
+            )
+            r = requests.post(url, headers=headers, json=["{}".format(label_name)])
+            r.raise_for_status()
+        except Exception as e:
+            logger.warning(
+                "Error adding label: %s, token: %s",
+                e,
+                "*" * (len(user_token) - 5) + user_token[-5:],
+            )
+        finally:
+            return r.status_code
     else:
         return 403
 
@@ -119,6 +137,11 @@ def _tag_and_comment(github_login, owner, name):
             & Q(probability__gte=threshold)
             & Q(threshold=newcomer_threshold)
         )
+        logger.info(
+            "Found {} good first issues for repo {} with threshold {}".format(
+                len(predicts), name, threshold
+            )
+        )
         should_comment = repo_query.repo_config.need_comment
         for predict in predicts:
             if predict.tagged != True:
@@ -134,6 +157,12 @@ def _tag_and_comment(github_login, owner, name):
                 ):
                     predict.tagged = True
                     predict.save()
+                else:
+                    logger.warning(
+                        "Failed to add label to issue {} in repo {}".format(
+                            predict.number, predict.name
+                        )
+                    )
             if predict.commented != True and should_comment:
                 comment = "[GFI-Bot] Predicted as Good First Issue with probability {}%.".format(
                     round((predict.probability) * 100, 2)
@@ -150,6 +179,12 @@ def _tag_and_comment(github_login, owner, name):
                 ):
                     predict.commented = True
                     predict.save()
+                else:
+                    logger.warning(
+                        "Failed to add comment to issue {} in repo {}".format(
+                            predict.number, predict.name
+                        )
+                    )
 
 
 def get_valid_tokens() -> List[str]:
@@ -162,6 +197,35 @@ def get_valid_tokens() -> List[str]:
         if user.github_access_token is not None
     ] + TOKENS
     return list(set(tokens) - check_tokens(tokens))
+
+
+def update_gfi_tags_and_comments(owner: str, name: str, send_email: bool = False):
+    """
+    Tags and comments GFIs for repository owner/name (blocks until done)
+    owner: GitHub repository owner
+    name: GitHub repository name
+    send_email: if True, send email to user
+    """
+    # 5. tag, comment and email (if needed)
+    user_github_login = None
+    query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
+    if query.is_github_app_repo and query.app_user_github_login:
+        user_github_login = query.app_user_github_login
+    if user_github_login:
+        # submit and wait for the job to finish
+        _tag_job = executor.submit(_tag_and_comment, user_github_login, owner, name)
+        _tag_job.result()
+    if user_github_login and send_email:
+        _email_job = executor.submit(
+            _send_email,
+            user_github_login,
+            "GFI-Bot: Update done for {}/{}".format(owner, name),
+            "GFI-Bot: Update done for {}/{}".format(owner, name),
+        )
+        _email_job.result()
+    logger.info(
+        "Tagged and commented " + owner + "/" + name + " at {}.".format(datetime.now())
+    )
 
 
 def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False):
@@ -184,53 +248,38 @@ def update_gfi_info(token: str, owner: str, name: str, send_email: bool = False)
             return
         q.update(is_updating=True, is_finished=False)
 
-    # 1. fetch repo data
     try:
-        update_repo(token, owner, name)
-    except (BadCredentialsException, RateLimitExceededException) as e:
-        # second try with a new token
-        logger.error(e)
-        valid_tokens = get_valid_tokens()
-        if not valid_tokens:
-            logger.error("No valid tokens found.")
-            return
-        random.seed(datetime.now())
-        token = random.choice(valid_tokens)
-        update_repo(token, owner, name)
+        # 1. fetch repo data
+        try:
+            update_repo(token, owner, name)
+        except (BadCredentialsException, RateLimitExceededException) as e:
+            # second try with a new token
+            logger.error(e)
+            valid_tokens = get_valid_tokens()
+            if not valid_tokens:
+                logger.error("No valid tokens found.")
+                return
+            random.seed(datetime.now())
+            token = random.choice(valid_tokens)
+            update_repo(token, owner, name)
 
-    # 2. rebuild repo dataset
-    begin_datetime = datetime(2008, 1, 1)
-    get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
+        # 2. rebuild repo dataset
+        begin_datetime = datetime(2008, 1, 1)
+        get_dataset_for_repo(owner=owner, name=name, since=begin_datetime)
 
-    # 3. update training summary
-    # 4. update gfi prediction
-    for newcomer_thres in [1, 2, 3, 4, 5]:
-        predict_repo(owner=owner, name=name, newcomer_thres=newcomer_thres)
+        # 3. update training summary
+        # 4. update gfi prediction
+        for newcomer_thres in [1, 2, 3, 4, 5]:
+            predict_repo(owner=owner, name=name, newcomer_thres=newcomer_thres)
 
-    # 5. tag, comment and email (if needed)
-    user_github_login = None
-    query = GfiQueries.objects(Q(name=name) & Q(owner=owner)).first()
-    if query.is_github_app_repo and query.app_user_github_login:
-        user_github_login = query.app_user_github_login
-    if user_github_login:
-        # submit and wait for the job to finish
-        _tag_job = executor.submit(_tag_and_comment, user_github_login, owner, name)
-        _tag_job.result()
-    if user_github_login and send_email:
-        _email_job = executor.submit(
-            _send_email,
-            user_github_login,
-            "GFI-Bot: Update done for {}/{}".format(owner, name),
-            "GFI-Bot: Update done for {}/{}".format(owner, name),
+        logger.info(
+            "Update done for " + owner + "/" + name + " at {}.".format(datetime.now())
         )
-        _email_job.result()
-    logger.info(
-        "Update done for " + owner + "/" + name + " at {}.".format(datetime.now())
-    )
 
     # 6. set state
-    if q:
-        q.update(is_updating=False, is_finished=True, is_pending=False)
+    finally:
+        if q:
+            q.update(is_updating=False, is_finished=True, is_pending=False)
 
 
 def start_scheduler() -> BackgroundScheduler:

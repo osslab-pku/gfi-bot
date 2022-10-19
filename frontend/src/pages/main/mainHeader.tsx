@@ -15,12 +15,13 @@ import { GFIRootReducers } from '../../storage/configureStorage';
 import { MainPageLangTagSelectedState } from '../../storage/reducers';
 
 export type GFIRepoSearchingFilterType =
-  | 'None'
-  | 'Popularity'
-  | 'Median Issue Resolve Time'
-  | 'Newcomer Friendliness'
-  | 'GFIs';
-export const GFI_REPO_FILTER_NONE: GFIRepoSearchingFilterType & string = 'None';
+  | 'Alphabetical'
+  | 'Number of Stars'
+  | 'Issue Resolution Time'
+  | '% of Issues Resolved by New Contributors'
+  | '# of Predicted Good First Issues';
+
+export const GFI_REPO_FILTER_NONE: GFIRepoSearchingFilterType & string = 'Alphabetical';
 
 export interface GFIMainPageHeader {
   onSearch?: (s: string) => void;
@@ -33,14 +34,14 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
 
   const [search, setSearch] = useState<string | undefined>();
   const [filterSelected, setFilterSelected] =
-    useState<GFIRepoSearchingFilterType>('None');
+    useState<GFIRepoSearchingFilterType>('Alphabetical');
 
   const sortedBy: GFIRepoSearchingFilterType[] = [
-    'None',
-    'Popularity',
-    'GFIs',
-    'Median Issue Resolve Time',
-    'Newcomer Friendliness',
+    'Alphabetical',
+    'Number of Stars',
+    'Issue Resolution Time',
+    '% of Issues Resolved by New Contributors',
+    '# of Predicted Good First Issues',
   ];
 
   const renderDropDownItem = (
@@ -71,12 +72,12 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
     });
   };
 
-  const [tagArray, setTagArray] = useState<string[]>(['None']);
-  const [tagSelected, setTagSelected] = useState('None');
+  const [tagArray, setTagArray] = useState<string[]>(['All']);
+  const [tagSelected, setTagSelected] = useState('All');
   useEffect(() => {
     getLanguageTags().then((res) => {
       if (res) {
-        setTagArray(['None', ...res]);
+        setTagArray(['All', ...res]);
       }
     });
   }, []);
@@ -154,7 +155,7 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
               }}
             >
               <div className="flex-row align-center">
-                <div className="main-dropdown-tags">Sorted By</div>
+                <div className="main-dropdown-tags">Sort by</div>
                 <Dropdown
                   style={{
                     marginRight: '1rem',
@@ -178,7 +179,7 @@ export const GFIMainPageHeader = forwardRef((props: GFIMainPageHeader, ref) => {
               </div>
 
               <div className="flex-row align-center">
-                <div className="main-dropdown-tags">Tags</div>
+                <div className="main-dropdown-tags">Language</div>
                 <Dropdown>
                   <Dropdown.Toggle
                     variant="light"

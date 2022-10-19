@@ -199,6 +199,20 @@ export const updateRepoInfo = async (name: string, owner: string) => {
   });
 };
 
+export const updateTags = async (name: string, owner: string) => {
+  const { githubLogin } = userInfo();
+  return await requestGFI<string>({
+    method: 'PUT',
+    url: '/api/repos/update/tags',
+    data: {
+      github_login: githubLogin,
+      name,
+      owner,
+    },
+    baseURL: getBaseURL(),
+  });
+};
+
 export const getRepoConfig = async (name: string, owner: string) => {
   const { githubLogin } = userInfo();
   return await requestGFI<RepoGFIConfig>({

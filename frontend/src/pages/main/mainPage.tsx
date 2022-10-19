@@ -147,7 +147,8 @@ export function MainPage() {
 
   useEffect(() => {
     if (selectedTag || selectedFilter) {
-      fetchRepoInfoList(1, selectedTag, convertFilter(selectedFilter));
+      let _tag = selectedTag === "All" ? undefined : selectedTag;
+      fetchRepoInfoList(1, _tag, convertFilter(selectedFilter));
       setPageIdx(1);
       dispatch(
         createMainPageLangTagSelectedAction({
@@ -338,7 +339,7 @@ export function MainPage() {
                       setSelectedTag(undefined);
                       dispatch(
                         createMainPageLangTagSelectedAction({
-                          tagSelected: 'None',
+                          tagSelected: 'All',
                         })
                       );
                     }
