@@ -1,11 +1,8 @@
 import pymongo
 import numpy as np
 import pandas as pd
-from collections import Counter
-from datetime import datetime, timedelta, timezone
 import logging
 import multiprocessing as mp
-import resource
 import traceback
 from typing import *
 import json
@@ -14,11 +11,8 @@ import time
 import gc
 import os
 import argparse
-import numpy as np
-
 from collections import defaultdict
 from datetime import datetime, timedelta
-
 from gfibot import CONFIG, TOKENS
 from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
