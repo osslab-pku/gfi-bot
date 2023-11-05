@@ -18,9 +18,6 @@ from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
 
 
-logger = logging.getLogger(__name__)
-
-
 def remove_and_match(lst1, lst2, value):
     index_to_remove = next((i for i, x in enumerate(lst1) if x == value), None)
     if index_to_remove is not None:
@@ -164,13 +161,10 @@ def get_userdata(closer, issuet, nameWithOwner):
     }
 
 
-
-
-    
     watching {
       totalCount
     }
-    
+
     repositories(first: 100) {
     nodes {
       createdAt
@@ -449,31 +443,22 @@ def get_userdata(closer, issuet, nameWithOwner):
         prproname = []
         for i in prs:
             prproname.append(i["pullRequest"]["repository"]["nameWithOwner"])
-            if (
-                datetime.strptime(
-                    i["pullRequest"]["createdAt"].replace("T", " ").rstrip("Z"),
-                    "%Y-%m-%d %H:%M:%S",
-                )
-                > issuet - timedelta(days=30)
-            ):
+            if datetime.strptime(
+                i["pullRequest"]["createdAt"].replace("T", " ").rstrip("Z"),
+                "%Y-%m-%d %H:%M:%S",
+            ) > issuet - timedelta(days=30):
                 onemonth_pr += 1
                 onemonth_cmt += i["pullRequest"]["commits"]["totalCount"]
-            if (
-                datetime.strptime(
-                    i["pullRequest"]["createdAt"].replace("T", " ").rstrip("Z"),
-                    "%Y-%m-%d %H:%M:%S",
-                )
-                > issuet - timedelta(days=61)
-            ):
+            if datetime.strptime(
+                i["pullRequest"]["createdAt"].replace("T", " ").rstrip("Z"),
+                "%Y-%m-%d %H:%M:%S",
+            ) > issuet - timedelta(days=61):
                 twomonth_pr += 1
                 twomonth_cmt += i["pullRequest"]["commits"]["totalCount"]
-            if (
-                datetime.strptime(
-                    i["pullRequest"]["createdAt"].replace("T", " ").rstrip("Z"),
-                    "%Y-%m-%d %H:%M:%S",
-                )
-                > issuet - timedelta(days=91)
-            ):
+            if datetime.strptime(
+                i["pullRequest"]["createdAt"].replace("T", " ").rstrip("Z"),
+                "%Y-%m-%d %H:%M:%S",
+            ) > issuet - timedelta(days=91):
                 threemonth_pr += 1
                 threemonth_cmt += i["pullRequest"]["commits"]["totalCount"]
 
@@ -844,6 +829,7 @@ def get_issues(x):
 
 def main():
     global prodesdict, valid_tokens, sleep_token
+    logger = logging.getLogger(__name__)
     sleep_token = []
     prodesdict = {}
     parser = argparse.ArgumentParser()

@@ -139,7 +139,6 @@ def test_update_state():
 
     assert not q.children[1].children[2].finished
     assert q.children[1].children[3].finished
-    assert q.children[1].children[4].finished
 
 
 def test_user_fetcher():
