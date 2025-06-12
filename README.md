@@ -109,6 +109,6 @@ mongodump --uri=mongodb://localhost:27020 --db=gfibot --collection=dataset --que
 mongodump --uri=mongodb://localhost:27020 --db=gfibot --collection=resolved_issue --query="{\"resolver_commit_num\":{\"\$ne\":-1}}" --gzip
 
 ### My Name
-My name is John Doe. This is my first contribution on GitHub!
+My name is Sheraz Akram. This is my first contribution on GitHub!
 
 ```
