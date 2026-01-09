@@ -15,22 +15,13 @@ from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
 from gfibot.data.graphql import UserFetcher
 from gfibot.data.rest import RepoFetcher, logger as rest_logger
+from gfibot.data.features.temporal import count_by_month
+
 
 
 logger = logging.getLogger(__name__)
 
 
-def _count_by_month(dates: List[datetime]) -> List[Repo.MonthCount]:
-    counts = Counter(map(lambda d: (d.year, d.month), dates))
-    return sorted(
-        [
-            Repo.MonthCount(
-                month=datetime(year=y, month=m, day=1, tzinfo=timezone.utc), count=c
-            )
-            for (y, m), c in counts.items()
-        ],
-        key=lambda k: k["month"],
-    )
 
 
 def _match_issue_numbers(text: str) -> List[int]:
@@ -118,16 +109,16 @@ def _update_repo_stats(repo: Repo):
     repo.median_issue_close_time = np.median(closed_t) if len(closed_t) > 0 else None
 
     # Monthly data
-    repo.monthly_stars = _count_by_month(
+    repo.monthly_stars = count_by_month(
         RepoStar.objects(owner=owner, name=name).scalar("starred_at")
     )
-    repo.monthly_commits = _count_by_month(
+    repo.monthly_commits = count_by_month(
         RepoCommit.objects(owner=owner, name=name).scalar("committed_at")
     )
-    repo.monthly_issues = _count_by_month(
+    repo.monthly_issues = count_by_month(
         [i.created_at for i in all_issues if not i.is_pull]
     )
-    repo.monthly_pulls = _count_by_month(
+    repo.monthly_pulls = count_by_month(
         [i.created_at for i in all_issues if i.is_pull]
     )
 
