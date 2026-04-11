@@ -23,7 +23,7 @@ See [CITATIONS.bib](CITATIONS.bib) for the BibTeX citations. We also provide an 
 
 GFI-Bot is available at https://gfibot.io, where you can browse through existing good first issue recommendations or register your own repository for recommendation. GFI-Bot can be installed in GitHub repositories from [the GitHub App page](https://github.com/apps/GFI-Bot).
 
-**NOTE: GFI-Bot is currently in pre-alpha stage. It is undergoing rapid development and still highly unstable. We cannot guanrantee the preseveration of registered users and repositories in the next release and it may have unexpected behaviors on GitHub. We will change this note after GFI-Bot reaches a certain level of maturity**
+**NOTE: GFI-Bot is currently in pre-alpha stage. It is undergoing rapid development and still highly unstable. We cannot guarantee the preservation of registered users and repositories in the next release and it may have unexpected behaviors on GitHub. We will change this note after GFI-Bot reaches a certain level of maturity**
 
 ## Roadmap
 
@@ -44,7 +44,7 @@ GFI-Bot is organized into four main modules:
 3. [`gfibot.backend`](gfibot/backend): Modules to provide RESTful APIs for interaction with [`frontend`](frontend) and the GitHub App.
 4. [`frontend`](frontend): A standalone JavaScript (or TypeScript?) project as our website. This website will be used both as the main portal of GFI-Bot and as a control panel for users to find recommended good first issues or track bot status for their projects.
 
-All modules interact with a MongoDB instance for both reading and writing data (except [`frontend`](frontend), which interact with backend using RESTful APIs). The MongoDB instance serves as a "single source of truth" and the main way to decouple different modules. It will be used to store and continiously update issue statistics, training progress and performance, recommendation results, etc.
+All modules interact with a MongoDB instance for both reading and writing data (except [`frontend`](frontend), which interact with backend using RESTful APIs). The MongoDB instance serves as a "single source of truth" and the main way to decouple different modules. It will be used to store and continuously update issue statistics, training progress and performance, recommendation results, etc.
 
 ### Environment Setup
 
