@@ -21,6 +21,13 @@ logger = logging.getLogger(__name__)
 
 
 def _count_by_month(dates: List[datetime]) -> List[Repo.MonthCount]:
+     """
+    Groups datetime values by year and month and returns monthly counts
+    as Repo.MonthCount objects, sorted chronologically.
+
+    Each month is represented by the first day of that month in UTC to
+    provide a consistent time reference for downstream analysis.
+    """
     counts = Counter(map(lambda d: (d.year, d.month), dates))
     return sorted(
         [
@@ -46,6 +53,9 @@ def _match_issue_numbers(text: str) -> List[int]:
 
 
 def _update_repo_info(fetcher: RepoFetcher) -> Repo:
+    """
+    Create or update repository metadata using statistics fetched from GitHub.
+    """
     logger.info("Updating repo: %s/%s", fetcher.owner, fetcher.name)
     repo = Repo.objects(owner=fetcher.owner, name=fetcher.name)
     if repo.count() == 0:
@@ -60,6 +70,7 @@ def _update_repo_info(fetcher: RepoFetcher) -> Repo:
         repo = repo.first()
 
     for k, v in fetcher.get_stats().items():
+        # Convert language statistics into domain objects
         if k == "languages":
             v = [Repo.LanguageCount(language=k2, count=v2) for k2, v2 in v.items()]
         setattr(repo, k, v)
