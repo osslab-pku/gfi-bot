@@ -15,22 +15,16 @@ from gfibot.check_tokens import check_tokens
 from gfibot.collections import *
 from gfibot.data.graphql import UserFetcher
 from gfibot.data.rest import RepoFetcher, logger as rest_logger
+from gfibot.data.features.temporal import count_by_month
+from gfibot.data.features.repo_features import (
+    compute_issue_close_time_median,
+    detect_issue_resolutions,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-def _count_by_month(dates: List[datetime]) -> List[Repo.MonthCount]:
-    counts = Counter(map(lambda d: (d.year, d.month), dates))
-    return sorted(
-        [
-            Repo.MonthCount(
-                month=datetime(year=y, month=m, day=1, tzinfo=timezone.utc), count=c
-            )
-            for (y, m), c in counts.items()
-        ],
-        key=lambda k: k["month"],
-    )
 
 
 def _match_issue_numbers(text: str) -> List[int]:
@@ -108,26 +102,19 @@ def _update_issues(fetcher: RepoFetcher, since: datetime) -> List[Dict[str, Any]
 def _update_repo_stats(repo: Repo):
     owner, name = repo.owner, repo.name
     all_issues: List[RepoIssue] = list(RepoIssue.objects(owner=owner, name=name))
+    all_stars = list(RepoStar.objects(owner=owner, name=name).scalar("starred_at"))
+    all_commits = list(RepoCommit.objects(owner=owner, name=name).scalar("committed_at"))
 
-    # Median issue close time
-    closed_t = [
-        (i.closed_at - i.created_at).total_seconds()
-        for i in all_issues
-        if i.state == "closed" and not i.is_pull and i.closed_at is not None
-    ]
-    repo.median_issue_close_time = np.median(closed_t) if len(closed_t) > 0 else None
+    # Compute median issue close time using extracted pure function
+    repo.median_issue_close_time = compute_issue_close_time_median(all_issues)
 
     # Monthly data
-    repo.monthly_stars = _count_by_month(
-        RepoStar.objects(owner=owner, name=name).scalar("starred_at")
-    )
-    repo.monthly_commits = _count_by_month(
-        RepoCommit.objects(owner=owner, name=name).scalar("committed_at")
-    )
-    repo.monthly_issues = _count_by_month(
+    repo.monthly_stars = count_by_month(all_stars)
+    repo.monthly_commits = count_by_month(all_commits)
+    repo.monthly_issues = count_by_month(
         [i.created_at for i in all_issues if not i.is_pull]
     )
-    repo.monthly_pulls = _count_by_month(
+    repo.monthly_pulls = count_by_month(
         [i.created_at for i in all_issues if i.is_pull]
     )
 
@@ -135,65 +122,23 @@ def _update_repo_stats(repo: Repo):
 def _locate_resolved_issues(
     fetcher: RepoFetcher, since: datetime
 ) -> List[Dict[str, Any]]:
-    all_issues: Dict[int, RepoIssue] = {
+    """Locate resolved issues by fetching data and detecting resolutions."""
+    # STEP 1: Fetch issues and commits from database
+    all_issues_db: Dict[int, RepoIssue] = {
         i.number: i
         for i in RepoIssue.objects(
             owner=fetcher.owner, name=fetcher.name, is_pull=False, closed_at__gte=since
         )
     }
-    all_commits: List[RepoCommit] = sorted(
+    all_commits_db: List[RepoCommit] = sorted(
         RepoCommit.objects(owner=fetcher.owner, name=fetcher.name),
         key=lambda c: c.authored_at,
     )
-    closed_nums = set(map(lambda i: i.number, all_issues.values()))
-    logger.info("%d newly closed issues since %s", len(all_issues), since)
+    logger.info("%d newly closed issues since %s", len(all_issues_db), since)
 
-    resolved = defaultdict(
-        lambda: {
-            "owner": fetcher.owner,
-            "name": fetcher.name,
-            "number": None,
-            "created_at": None,
-            "resolved_at": None,
-            "resolver": None,
-            "resolved_in": None,
-            "resolver_commit_num": None,
-            "events": [],
-        }
-    )
-
-    # Note that, we first get possible issue resolver *using commits*,
-    #   then we get possible resolver using PRs.
-    # In this way, resolver obtained through PRs has higher priority.
-    # Also, all commits and issues are sorted by date, so resolver from later commits
-    #   and later PRs have higher priority.
-    author2commits = defaultdict(list)
-    for c in all_commits:
-        author2commits[c.author].append(c)
-    for c in all_commits:
-        if c.author is None:
-            continue
-        commits_before = set()
-        for c2 in author2commits[c.author]:
-            if c2.authored_at < c.authored_at:
-                commits_before.add(c2.sha)
-        for num in _match_issue_numbers(c.message):
-            if num not in closed_nums:
-                continue
-            logger.debug(
-                "Issue #%d resolved in %s by %s (%d prior commits)",
-                num,
-                c.sha,
-                c.author,
-                len(commits_before),
-            )
-            resolved[num]["number"] = num
-            resolved[num]["resolver"] = c.author
-            resolved[num]["resolved_in"] = c.sha
-            resolved[num]["resolver_commit_num"] = len(commits_before)
-    logger.info("%d issues found to be resolved by commits", len(resolved))
-
-    for issue in all_issues.values():
+    # STEP 2: Fetch PR details from API
+    prs_dict = {}
+    for issue in all_issues_db.values():
         t1 = issue.closed_at - timedelta(minutes=1)
         t2 = issue.closed_at + timedelta(minutes=1)
         prs: List[RepoIssue] = list(
@@ -214,33 +159,24 @@ def _locate_resolved_issues(
             )
         for pr in prs:
             pr_details = fetcher.get_pull_detail(pr.number)
-            text = [pr.title, pr.body, *pr_details["comments"]]
-            text = "\n".join([t for t in text if t is not None])
-            commits_before = set()
-            for c in author2commits[pr.user]:
-                if (
-                    c.authored_at < pr.merged_at - timedelta(days=1)
-                    and c.sha not in pr_details["commits"]
-                ):
-                    commits_before.add(c.sha)
-            if issue.number in _match_issue_numbers(text):
-                logger.debug(
-                    "Issue #%d resolved in #%d by %s (%d prior commits)",
-                    issue.number,
-                    pr.number,
-                    pr.user,
-                    len(commits_before),
-                )
-                resolved[issue.number]["number"] = issue.number
-                resolved[issue.number]["resolver"] = pr.user
-                resolved[issue.number]["resolved_in"] = pr.number
-                resolved[issue.number]["resolver_commit_num"] = len(commits_before)
-    logger.info("%d issues found to be resolved by commits/PRs", len(resolved))
+            prs_dict[pr.number] = {
+                "user": pr.user,
+                "title": pr.title,
+                "body": pr.body,
+                "merged_at": pr.merged_at,
+                "comments": pr_details.get("comments", []),
+                "commits": pr_details.get("commits", []),
+            }
 
-    for num in resolved.keys():
-        resolved[num]["created_at"] = all_issues[num].created_at
-        resolved[num]["resolved_at"] = all_issues[num].closed_at
-    return list(resolved.values())
+    # STEP 3: Use pure function to detect resolutions
+    resolved_issues = detect_issue_resolutions(
+        issues_dict=all_issues_db,
+        commits_list=all_commits_db,
+        prs_dict=prs_dict if prs_dict else None,
+    )
+
+    logger.info("%d issues found to be resolved", len(resolved_issues))
+    return resolved_issues
 
 
 def _update_resolved_issues(
