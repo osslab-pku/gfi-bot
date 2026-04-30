@@ -1,0 +1,14 @@
+# Development Guide for GFI-Bot
+
+## 1. Project Structure
+Explain how the project is organized (backend, frontend, etc.)
+
+## 2. Database
+Describe the database and mention schemas.
+
+## 3. Testing
+Explain how to test new features.
+
+## 4. Deployment
+Explain how to run backend and frontend.
+Explain how to deploy on a new machine.
