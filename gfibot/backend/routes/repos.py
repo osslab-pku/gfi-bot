@@ -97,7 +97,7 @@ def get_paged_repo_detail(
         elif filter == RepoSort.ISSUE_CLOSE_TIME:
             q = q.order_by("issue_close_time")
         elif filter == RepoSort.NEWCOMER_RESOLVE_RATE:
-            q = q.order_by("-r_newcomer_resolve")
+            q = q.order_by("-r_newcomer_resolved")
         elif filter == RepoSort.STARS:
             q = q.order_by("-n_stars")
         else:
