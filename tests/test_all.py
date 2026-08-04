@@ -60,3 +60,4 @@ def test_all(real_mongodb, github_token):
 
     # Test the new training API
     train_all()
+    None
