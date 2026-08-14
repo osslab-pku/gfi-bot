@@ -8,7 +8,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import mongoengine
 
 from gfibot import CONFIG
-from gfibot.backend.routes import github, issue, repos, user, model
+from gfibot.backend.routes import github, issue, repos, user, model, chatbot
 from gfibot.backend.scheduled_tasks import start_scheduler
 
 app = FastAPI()
@@ -23,6 +23,8 @@ app.include_router(issue.api, prefix="/api/issue")
 app.include_router(github.api, prefix="/api/github")
 app.include_router(user.api, prefix="/api/user")
 app.include_router(model.api, prefix="/api/model")
+app.include_router(chatbot.api, prefix="/api/chatbot")
+
 
 
 def get_scheduler() -> BackgroundScheduler:

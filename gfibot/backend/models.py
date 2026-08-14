@@ -137,3 +137,43 @@ class GitHubUserInfo(BaseModel):
     email: Optional[str] = None
     url: Optional[str] = None
     twitter_username: Optional[str] = None
+
+
+### Chatbot Models ###
+
+
+class ChatMessageModel(BaseModel):
+    role: str
+    content: str
+    timestamp: Optional[datetime] = None
+
+
+class ChatbotSessionCreateRequest(BaseModel):
+    user_id: Optional[str] = None
+    expertise_level: str = "beginner"
+    repo_name: Optional[str] = None
+    owner: Optional[str] = None
+
+
+class ChatbotSessionResponse(BaseModel):
+    session_id: str
+    user_id: Optional[str] = None
+    expertise_level: str
+    repo_name: Optional[str] = None
+    owner: Optional[str] = None
+    messages: List[ChatMessageModel] = []
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatbotQueryRequest(BaseModel):
+    session_id: str
+    message: str
+
+
+class ChatbotQueryResponse(BaseModel):
+    session_id: str
+    reply: str
+    expertise_level: str
+    history: List[ChatMessageModel]
+
