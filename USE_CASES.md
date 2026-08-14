@@ -1,65 +1,252 @@
-# GFI-Bot's Use Cases
+# GFI-Bot Use Cases and System Specification
 
-For efficient design and implemetation of user visible features (in backend, frontend, and GitHub App), it is important for us to reach a consensus on how typical users use GFI-Bot, so that we can optimize user interfaces based on the typical use cases. To this purpose, this documentation aims to provide detailed descriptions on some use cases of OSS newcomers and project maintainers, along with the roles GFI-Bot should play in the use cases.
+For efficient design and implementation of user-visible features across the backend, frontend, and GitHub App, it is important for the project to maintain a consensual understanding of typical workflows. This document details the system overview, user personas, structured use cases, functional and non-functional requirements, and data specifications for GFI-Bot.
 
-The use cases can be described in a more formal manner (e.g., UML), but I still prefer natural language descriptions here because they are easier to create and maintain.
+---
 
-## Newcomer Use Cases
+## Table of Contents
 
-### Find Good First Issues to Onboard (No Specific Project in Mind)
+- [1. System Overview](#1-system-overview)
+- [2. User Personas](#2-user-personas)
+  - [Alice - CS Student / Newcomer (General Search)](#alice---cs-student--newcomer-general-search)
+  - [Bob - Software Engineer / Corporate Contributor (Targeted Onboarding)](#bob---software-engineer--corporate-contributor-targeted-onboarding)
+  - [Carol - Open Source Project Founder / Lead Maintainer](#carol---open-source-project-founder--lead-maintainer)
+- [3. Structured Use Cases](#3-structured-use-cases)
+  - [UC-01: Discover and Filter Good First Issues (General Exploration)](#uc-01-discover-and-filter-good-first-issues-general-exploration)
+  - [UC-02: Find Good First Issues for a Specific Project](#uc-02-find-good-first-issues-for-a-specific-project)
+  - [UC-03: Evaluate System Performance and Establish Trust](#uc-03-evaluate-system-performance-and-establish-trust)
+  - [UC-04: Register Repository for GFI Recommendation](#uc-04-register-repository-for-gfi-recommendation)
+  - [UC-05: Inspect RecGFI Effectiveness in Target Repository](#uc-05-inspect-recgfi-effectiveness-in-target-repository)
+  - [UC-06: Configure Automated GitHub App Integration](#uc-06-configure-automated-github-app-integration)
+- [4. Functional & Non-Functional Requirements](#4-functional--non-functional-requirements)
+  - [4.1 Functional Requirements](#41-functional-requirements)
+  - [4.2 Non-Functional Requirements](#42-non-functional-requirements)
+- [5. Repository Metrics & Data Requirements](#5-repository-metrics--data-requirements)
+  - [5.1 Repository Metrics & Relative Rankings](#51-repository-metrics--relative-rankings)
+  - [5.2 Project Metadata & Text Indexing](#52-project-metadata--text-indexing)
+  - [5.3 Repository Configuration Specification (`.github/gfibot.yaml`)](#53-repository-configuration-specification-githubgfibotyaml)
 
-Suppose Alice is a university student with computer science major. She has taken introductory programming and software engineering courses, but she still does not know enough about how real software is developed. Fascinated by the success stories of open source, she decides to check out GitHub and contribute to some good open-source projects, so that she can learn more.
+---
 
-However, she find that it is extremely difficult to select a project and find a task to work on. For project selection, although she can quickly determine whether a project is popular (stars), well-maintained (recent commits and issues), or fits her particiular interests (tags and README), she has no idea whether a project is newcomer-friendly. For task selection, although GitHub suggests the labeling of GFIs, many projects do not have GFI labels and for those with such labels, these issues are limited in numbers and quickly prompted by others. After browsing through many projects and issues, she gets frustruated and do not know where to start.
+## 1. System Overview
 
-Thankfully, she finds through search engine that there is a website for locating newcomer friendly projects and GFIs, which is (and should be) the web portal of GFI-Bot. This web portal helps her to:
-1. find candidate projects
-2. filter and order projects based on popularity, activity, domain of interest, and newcomer-friendliness
-3. have an idea of project relative ranking for each metric (e.g., issue response time is better than 90% of the collected repositories)
-4. for each project, find possible GFIs to work on, filter and order issues based on the likelihood of being GFI, the presence of manually added GFI labels, etc
+GFI-Bot is an ML-powered platform designed to lower the barrier for open-source software (OSS) newcomers while reducing the manual triage burden on project maintainers. The system consists of three core components:
 
-Then, using GFI-Bot web portal, she can start from the most popular and newcomer friendly projects that align within her personal interest and skills, inspect the best GFIs, and try to make her first contribution on GitHub!
+1. **Web Portal (Frontend)**: A web interface allowing newcomers to discover candidate projects and Good First Issues (GFIs), explore repository health metrics, and enable maintainers to register repositories, monitor bot performance, and generate repository badges.
+2. **Backend & Machine Learning Engine**: A scalable backend that collects GitHub repository statistics, indexes metadata for keyword search, trains machine learning models (RecGFI) using historical issue resolution data, evaluates model performance (AUC), and computes relative metrics.
+3. **GitHub App (Bot Integration)**: An automated GitHub bot that listens to repository webhook events, evaluates newly created or triaged issues using the trained model, and automatically applies GFI labels and comments according to project-specific configuration files (`.github/gfibot.yaml`).
 
-For this purpose, we need to collect the following metrics for each repository: stars, commits, issues, PRs, median issue close time, median issue response time, and number of issues resolved by newcomers. These metrics should be shown per repository on the web portal, along with their relative rankings. These metrics should also be used for ordering repositories.
+```mermaid
+flowchart TD
+    subgraph Web App
+        WP[Web Portal Frontend]
+    end
+    subgraph Backend & ML Engine
+        DC[Data Collector]
+        ML[RecGFI ML Predictor]
+        DB[(MongoDB)]
+    end
+    subgraph GitHub Integration
+        GA[GitHub App / Bot]
+        GH[GitHub Platform]
+    end
 
-We also need to collect project descriptions, READMEs, tags, and programming languages, so that users can fitler by their domain of interest. We should build text index over project names, descriptions, and READMEs so that users can search for projects by keywords.
+    GH -->|API / OAuth| DC
+    DC --> DB
+    DB --> ML
+    ML --> DB
+    DB --> WP
+    GH -->|Webhooks| GA
+    GA -->|Read Config / Post Labels & Comments| GH
+    GA -->|Fetch Models / Recommendations| DB
+```
 
-### Find Good First Issues to Onboard (With Specific Project in Mind)
+---
 
-Suppose Bob is a software engineer working for a company that uses an open-source project in its core product. For reducing business risks, the manager requests him to onboard that project and become a core maintainer. To learn about the project and earn trust of the community, he wants to find easy issues to start with, but inspecting all the open issues will waste too much time.
+## 2. User Personas
 
-If the project already uses GFI-Bot, there will be a bot labeling GFIs. Additionally, he can know from project README (e.g., the README has a badge that we provide) that there is a dedicated web portal showing GFIs in this project. Then, he can use existing labels or the web portal to find GFIs to start with, using the same features as described in the previous use case.
+### Alice - CS Student / Newcomer (General Search)
+- **Role**: Computer Science Student / OSS Beginner.
+- **Background**: Possesses basic programming knowledge from coursework but lacks experience with real-world software engineering practices. Interested in contributing to open source to gain practical experience.
+- **Goals**: Find beginner-friendly open-source projects and locate genuine Good First Issues without feeling overwhelmed.
+- **Pain Points**: Struggles to identify newcomer-friendly projects among millions of repositories; existing GFI labels are scarce, often mislabeled, or claimed rapidly.
 
-If the project is not using GFI-Bot, he can use the GFI-Bot web portal to register the project for GFI recommendation. Although only project maintainers can configure GFI-Bot for their project, anyone can register new repositories for recommendation, provided that they donate their GitHub token for our use (through GitHub login or sending tokens in form).
+### Bob - Software Engineer / Corporate Contributor (Targeted Onboarding)
+- **Role**: Professional Software Engineer.
+- **Background**: Works at a company relying heavily on a specific open-source library. Tasked by management to onboard to the repository and become an active contributor.
+- **Goals**: Quickly identify accessible entry-level issues within a designated target project to build familiarity and establish community trust.
+- **Pain Points**: Inspecting hundreds of open issues manually takes too much time; target project might not actively label GFIs.
 
-## Project Maintainer Use Case
+### Carol - Open Source Project Founder / Lead Maintainer
+- **Role**: Project Founder / Core Maintainer.
+- **Background**: Leads a popular open-source repository and wants to attract new contributors.
+- **Goals**: Automate the identification and labeling of GFIs to onboard newcomers efficiently without spending substantial manual triage time.
+- **Pain Points**: Extremely busy with core development and code reviews; lacks time to manually evaluate and label every incoming issue.
 
-Suppose Carol is the founder of an renowned open source project willing to attract more contributions from other people. To make life easier for newcomers, the project have adopted well-defined labeling conventions, and is labeling some issue with GFI-signaling labels. However, Carol is very busy with other maintenance tasks and does not have much time adding those labels. This is also the case for other project maintainers. Therefore, he is looking for some ways to ease the GFI labeling process. He has discovered GFI-Bot.
+---
 
-### Establish Confidence with GFI-Bot
+## 3. Structured Use Cases
 
-Before adopting GFI-Bot to his project, he needs to be convinced that GFI-Bot has been effective. To this purpose, GFI-Bot web portal summarizes in its front page: the scale of collected data, the current model performance over all data, and how GFI-Bot has helped project attract newcomers. After he sees the large amount of data, high AUC, and many real issues being labeled by GFI and resolved by a newcomer, he decides to try out GFI-Bot.
+### UC-01: Discover and Filter Good First Issues (General Exploration)
+- **Primary Actor**: Alice (Newcomer without a specific target project).
+- **Goal**: Discover newcomer-friendly projects and identify recommended Good First Issues matching personal skills and interests.
+- **Preconditions**: GFI-Bot web portal is accessible.
+- **Trigger**: Newcomer visits the GFI-Bot web portal.
+- **Main Flow**:
+  1. User navigates to the GFI-Bot web portal project search page.
+  2. User filters or searches projects by programming languages, domain tags, or text keywords (matching name, description, README).
+  3. User sorts candidate projects by popularity, activity, or newcomer-friendliness metrics.
+  4. User views repository health metrics and relative percentile rankings (e.g., issue response time faster than 90% of repos).
+  5. User selects a project to view its list of recommended GFIs, sorted by ML-predicted GFI likelihood score and existing manual labels.
+  6. User clicks an issue link to navigate to GitHub and begin contributing.
+- **Postconditions**: User successfully finds a candidate GFI aligned with their background.
 
-### Register Their GitHub Repository
+### UC-02: Find Good First Issues for a Specific Project
+- **Primary Actor**: Bob (Contributor with a specific project in mind).
+- **Goal**: Locate starter issues within a designated open-source repository.
+- **Preconditions**: Target repository is identified.
+- **Trigger**: User needs to onboard to a specific open-source codebase.
+- **Main Flow**:
+  1. User visits the target repository's GitHub README or issue tracker.
+  2. If the repository displays a GFI-Bot badge, user clicks the badge to open the project's dedicated GFI-Bot portal page.
+  3. If the repository does not use GFI-Bot, user navigates to the GFI-Bot web portal to register the repository.
+  4. User authenticates or provides a donated GitHub access token to submit the repository for GFI recommendation indexing.
+  5. User views the computed list of recommended GFIs for the target project via the portal.
+- **Postconditions**: Target repository is indexed (if unregistered), and recommended GFIs are presented to the contributor.
 
-The first thing he needs to do is to use the GFI-Bot web portal to register his project for GFI recommendation. He logins the web portal through GitHub and uses the web portal to submit a new form to register his project. GFI-Bot collects the repository name and his GitHub access token for updating issue data from his repository. During the collection process, the web portal shows the progress of data collection and how many API rate has been used. He further specifies how often the data should be updated (entirely manual or scheduled by an update interval).
+### UC-03: Evaluate System Performance and Establish Trust
+- **Primary Actor**: Carol (Project Maintainer).
+- **Goal**: Assess GFI-Bot's credibility and prediction effectiveness prior to adopting the bot.
+- **Preconditions**: GFI-Bot web portal homepage is accessible.
+- **Trigger**: Maintainer considers automating GFI triage for their repository.
+- **Main Flow**:
+  1. Maintainer visits the GFI-Bot homepage.
+  2. Maintainer reviews global system statistics: overall dataset scale, global model prediction performance (AUC), and total issues successfully resolved by newcomers via GFI-Bot.
+  3. Maintainer reviews real-world case studies demonstrating newcomer conversion.
+- **Postconditions**: Maintainer establishes confidence in GFI-Bot's recommendation accuracy.
 
-To make the adoption of GFI-Bot more visible on his repository, he wants to add a repository badge in README showing that his project has ML powered support for GFI recommendation. GFI-Bot web portal will automatically generate an HTML code snippet for this. When newcomers click on the badge, they will be directed to a page in GFI-Bot web portal specifically listing GFIs for this repository.
+### UC-04: Register Repository for GFI Recommendation
+- **Primary Actor**: Carol (Project Maintainer) / Bob (Community Contributor).
+- **Goal**: Register a GitHub repository with GFI-Bot for automated data collection and GFI recommendation.
+- **Preconditions**: User has a valid GitHub account / access token.
+- **Trigger**: User wants GFI recommendations for an unindexed repository.
+- **Main Flow**:
+  1. User logs into the GFI-Bot web portal via GitHub OAuth or submits a registration form with a GitHub access token.
+  2. User inputs the GitHub repository name (e.g., `owner/repo`).
+  3. GFI-Bot initiates background data ingestion, displaying real-time progress and GitHub API rate limit consumption.
+  4. User configures data update frequency (manual sync vs. scheduled recurring interval).
+  5. System generates an HTML/Markdown badge code snippet linking directly to the project's GFI portal page.
+  6. Maintainer embeds the badge into the repository `README.md`.
+- **Postconditions**: Repository data is synced, indexed, and accessible on the web portal with an active README badge.
 
-### Inspect RecGFI Effectiveness in Their Repository
+### UC-05: Inspect RecGFI Effectiveness in Target Repository
+- **Primary Actor**: Carol (Project Maintainer).
+- **Goal**: Monitor repository-specific ML model performance and evaluate newcomer conversion impact.
+- **Preconditions**: Repository data collection is complete.
+- **Trigger**: Historical issue data sync finishes or maintainer opens repository dashboard.
+- **Main Flow**:
+  1. System trains a repository-tuned RecGFI model using historical resolved issue data (differentiating newcomer vs. non-newcomer resolvers).
+  2. System predicts GFI probability scores for all open issues.
+  3. System evaluates local model performance metrics and presents optimization recommendations on the repository dashboard.
+  4. Portal highlights open issues predicted as GFIs that were subsequently resolved by newcomers, demonstrating impact.
+- **Postconditions**: Maintainer receives actionable insights into local model performance and newcomer engagement.
 
-After the data is collected, GFI-Bot automatically updates training data using resolved issues from the project, and predicts for each open issue its probability of being a GFI. If the project have sufficient historical resolved issues (both by newcomers and non-newcomers), GFI-Bot further evaluates the performance of current model in his project, and show recommendations for improving performance.
+### UC-06: Configure Automated GitHub App Integration
+- **Primary Actor**: Carol (Project Maintainer).
+- **Goal**: Automate real-time GFI labeling and commenting on newly submitted or triaged issues via GitHub App integration.
+- **Preconditions**: GFI-Bot GitHub App is installed on the target repository.
+- **Trigger**: Maintainer commits a configuration file `.github/gfibot.yaml` to the repository.
+- **Main Flow**:
+  1. Maintainer installs the GFI-Bot GitHub App on GitHub.
+  2. Maintainer creates and commits `.github/gfibot.yaml` with custom parameters (e.g., newcomer commit threshold, target triage labels, output GFI labels, probability threshold, comment toggle).
+  3. When a new issue is opened or updated on GitHub, GFI-Bot receives a webhook event.
+  4. GFI-Bot parses `.github/gfibot.yaml`, evaluates the issue with the corresponding ML model, and if the score meets the threshold, automatically applies GFI labels and posts an informative comment.
+- **Postconditions**: Incoming issues are automatically labeled and commented based on project-defined rules.
 
-After GFI-Bot has been used for some time, he needs to be convinced that GFI-Bot has real impact. If some open issues are predicted as GFI and later resolved by a newcomer, GFI-Bot pay special attention to these cases and show how GFI-Bot has been effective in attarcting newcomers in the web portal.
+---
 
-### Configure GFI-Bot to React on New Issues
+## 4. Functional & Non-Functional Requirements
 
-To go one step further, he wants GFI-Bot to automatically label GFIs in his repository. For this purpose, he adds GFI-Bot as a GitHub app and write a configuration file (e.g., `.github/gfibot.yaml`) in his repository to specify:
+### 4.1 Functional Requirements
 
-1. number of within-repository commits needed to disqualify a developer as a newcomer (default 3, can alter between 1-5, will choose the corresponding trained model for prediction)
-2. what kind of open issues should be considered for labeling (for example, only issues with a `confirmed` or `triaged` label), in order to follow project specific issue management conventions
-3. what labels to add (e.g., `good first issues`, `first timers`, etc)
-4. the probability threshold for adding a GFI label (e.g., 0.5, 0.7, etc)
-5. whether to leave comments on each open issue to show its predicted GFI fitness
+- **FR-1: Multi-Criteria Project Search & Filtering**: The web portal must enable users to search projects by keyword (name, description, README) and filter by programming language, topics/tags, popularity, activity, and newcomer-friendliness metrics.
+- **FR-2: Relative Metric Computation**: The system must compute percentile rankings for repository metrics (e.g., issue response time, close time) relative to all collected repositories.
+- **FR-3: ML-Powered GFI Recommendation**: The RecGFI engine must calculate GFI probability scores for open issues based on issue text, historical resolution patterns, and contributor activity.
+- **FR-4: Repository Registration & Token Donation**: The portal must support repository registration via GitHub OAuth or donated GitHub access tokens, providing real-time progress and API rate limit tracking.
+- **FR-5: Badge Generation**: The system must automatically generate embeddable HTML/Markdown badges linking users to repository-specific GFI recommendation pages.
+- **FR-6: GitHub App Webhook Integration**: The GitHub App must handle issue creation/update webhooks and trigger ML predictions in real time.
+- **FR-7: Declarative Configuration (`.github/gfibot.yaml`)**: The GitHub App must parse repository-level YAML config to control newcomer thresholds, target issue filters, applied labels, probability thresholds, and comment generation.
+- **FR-8: Performance Analytics Dashboard**: The portal must display overall system performance (scale, AUC, newcomer resolution count) and per-repository model evaluation stats.
 
-Then, GFI-Bot will comment and add labels for each qualified new issue, as configured by the repository configuration file.
+### 4.2 Non-Functional Requirements
+
+- **NFR-1: Performance & Scalability**: Background data collection must process large repositories without blocking the REST API or web portal. Full-text search over project descriptions and READMEs must return results in under 500ms.
+- **NFR-2: Rate Limit Management**: The data collector must manage multiple GitHub API tokens gracefully, distributing requests to prevent rate limit exhaustion.
+- **NFR-3: Usability & Accessibility**: The web portal must provide an intuitive visual hierarchy, clear data visualizations for metrics/rankings, and straightforward repository onboarding workflows.
+- **NFR-4: Reliability & Accuracy**: GFI prediction models should maintain high classification performance (AUC), and model retraining must execute periodically as new resolved issues accumulate.
+- **NFR-5: Security & Privacy**: User GitHub access tokens donated for repo indexing must be securely stored and used strictly for GitHub API data synchronization.
+
+---
+
+## 5. Repository Metrics & Data Requirements
+
+### 5.1 Repository Metrics & Relative Rankings
+
+To help newcomers evaluate candidate projects and find suitable GFIs, the system collects and displays key metrics alongside relative percentile rankings:
+
+| Metric Category | Data Field | Description | Relative Ranking Purpose |
+| :--- | :--- | :--- | :--- |
+| **Popularity** | `stars` | Total GitHub star count | Compare project popularity |
+| **Activity** | `commits` | Total commit count | Assess project development activity |
+| **Activity** | `issues` | Total issue count (open & closed) | Evaluate community engagement |
+| **Activity** | `prs` | Total pull request count | Assess contribution volume |
+| **Responsiveness**| `median_issue_response_time` | Median duration until first maintainer response | High responsiveness ranks in top percentiles |
+| **Resolution** | `median_issue_close_time` | Median duration to close/resolve an issue | Evaluate issue resolution speed |
+| **Newcomer Focus** | `resolved_by_newcomers` | Count of issues resolved by newcomer contributors | Highlight newcomer-friendly projects |
+
+### 5.2 Project Metadata & Text Indexing
+
+For project search and domain filtering, GFI-Bot collects and indexes the following metadata fields:
+
+- **Project Identifiers**: Repository owner, repository name, full name.
+- **Textual Content**: Project description, `README.md` text content (indexed for keyword search).
+- **Categorization**: Primary programming languages, repository topics/tags.
+
+### 5.3 Repository Configuration Specification (`.github/gfibot.yaml`)
+
+Maintainers can configure GFI-Bot behavior by placing a `.github/gfibot.yaml` file in their repository root:
+
+```yaml
+# .github/gfibot.yaml - GFI-Bot Configuration Specification
+
+# 1. Number of within-repository commits required to disqualify a developer as a newcomer.
+# Allowed range: 1 to 5 (Default: 3). Determines which trained model variant to select.
+newcomer_commit_threshold: 3
+
+# 2. Issue filtering: list of labels required on open issues before GFI-Bot evaluates them.
+# Empty list means evaluate all new open issues.
+target_issue_labels:
+  - "confirmed"
+  - "triaged"
+
+# 3. List of labels to automatically apply when an issue meets the GFI probability threshold.
+gfi_labels:
+  - "good first issue"
+  - "first-timers-only"
+
+# 4. Minimum ML probability threshold required to apply GFI labels (0.0 to 1.0).
+probability_threshold: 0.6
+
+# 5. Toggle whether GFI-Bot posts an explanatory comment on qualified open issues.
+comment_enabled: true
+```
+
+#### Parameter Breakdown
+
+| Parameter | Type | Default | Allowed Values | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `newcomer_commit_threshold` | Integer | `3` | `1` - `5` | Maximum commit count within the repository to classify a contributor as a newcomer. Controls model selection. |
+| `target_issue_labels` | List[String]| `[]` | Any label strings | Required existing labels on open issues before GFI-Bot evaluates them (e.g. triage filters). |
+| `gfi_labels` | List[String]| `["good first issue"]` | Any label strings | Labels to add when an issue is predicted as a GFI. |
+| `probability_threshold` | Float | `0.5` | `0.0` - `1.0` | Probability cutoff for automated GFI labeling. |
+| `comment_enabled` | Boolean | `true` | `true`, `false` | Whether to post a bot comment explaining GFI probability score on qualified issues. |

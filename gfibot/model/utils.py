@@ -129,14 +129,21 @@ class SklearnCompatibleClassifier(Protocol):
 
 
 def get_x_y(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
-    # drop only if exists
-    df_x = df.drop(
-        columns=df.filter(
-            ["owner", "name", "number", "is_gfi", "created_at", "closed_at"]
-        )
-    )
+    # drop non-feature identifier and metadata columns
+    drop_cols = [
+        "owner",
+        "name",
+        "number",
+        "is_gfi",
+        "created_at",
+        "closed_at",
+        "created_at_timestamp",
+        "closed_at_timestamp",
+    ]
+    df_x = df.drop(columns=df.filter(drop_cols))
     s_y = df["is_gfi"]
     return df_x, s_y
+
 
 
 def split_train_test(

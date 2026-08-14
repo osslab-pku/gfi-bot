@@ -183,7 +183,7 @@ def _get_user_data(
             owner=owner,
             name=name,
             number__in=[
-                i.number for i in usriss if i.state == "closed" and i.closed_at <= t
+                i.number for i in usriss if i.state == "closed" and i.closed_at and i.closed_at <= t
             ],
         )
     )
@@ -235,7 +235,7 @@ def _get_background_data(owner: str, name: str, t: datetime):
     )
     contributors, n_closed_issues, n_open_issues, issue_close_times = set(), 0, 0, []
     for i in all_issues:
-        if i.state == "closed" and i.closed_at <= t:
+        if i.state == "closed" and i.closed_at is not None and i.closed_at <= t:
             n_closed_issues += 1
             issue_close_times.append((i.closed_at - i.created_at).total_seconds())
         else:

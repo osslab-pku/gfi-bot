@@ -26,7 +26,11 @@ class RepoBrief(BaseModel):
     owner: str
     description: Optional[str]
     language: Optional[str]
-    topics: List[str]
+    topics: List[str] = []
+    stars: Optional[int] = 0
+    forks: Optional[int] = 0
+    contributors_count: Optional[int] = 0
+    n_gfis: Optional[int] = 0
 
 
 class MonthlyCount(BaseModel):
@@ -39,11 +43,15 @@ class RepoDetail(BaseModel):
     owner: str
     description: Optional[str]
     language: Optional[str]
-    topics: List[str]
-    monthly_stars: List[MonthlyCount]
-    monthly_commits: List[MonthlyCount]
-    monthly_issues: List[MonthlyCount]
-    monthly_pulls: List[MonthlyCount]
+    topics: List[str] = []
+    stars: Optional[int] = 0
+    forks: Optional[int] = 0
+    contributors_count: Optional[int] = 0
+    n_gfis: Optional[int] = 0
+    monthly_stars: List[MonthlyCount] = []
+    monthly_commits: List[MonthlyCount] = []
+    monthly_issues: List[MonthlyCount] = []
+    monthly_pulls: List[MonthlyCount] = []
 
 
 class RepoSort(Enum):
@@ -51,6 +59,13 @@ class RepoSort(Enum):
     GFIS = "gfis"
     ISSUE_CLOSE_TIME = "median_issue_resolve_time"
     NEWCOMER_RESOLVE_RATE = "newcomer_friendly"
+
+
+class IssueSort(Enum):
+    PROBABILITY_DESC = "probability_desc"
+    PROBABILITY_ASC = "probability_asc"
+    NEWEST = "newest"
+    OLDEST = "oldest"
 
 
 class UserSearchedRepo(BaseModel):
@@ -93,6 +108,13 @@ class GFIBrief(BaseModel):
     last_updated: datetime
     state: Optional[str] = None
     title: Optional[str] = None
+    body: Optional[str] = None
+    labels: List[str] = []
+    has_pending_pr: bool = False
+    created_at: Optional[datetime] = None
+    html_url: Optional[str] = None
+    gfi_probability_percentage: Optional[str] = None
+
 
 
 class TrainingResult(BaseModel):
@@ -137,3 +159,78 @@ class GitHubUserInfo(BaseModel):
     email: Optional[str] = None
     url: Optional[str] = None
     twitter_username: Optional[str] = None
+
+
+### Chatbot Models ###
+
+
+class ChatMessageModel(BaseModel):
+    role: str
+    content: str
+    timestamp: Optional[datetime] = None
+
+
+class ChatbotSessionCreateRequest(BaseModel):
+    user_id: Optional[str] = None
+    expertise_level: str = "beginner"
+    repo_name: Optional[str] = None
+    owner: Optional[str] = None
+
+
+class ChatbotSessionResponse(BaseModel):
+    session_id: str
+    user_id: Optional[str] = None
+    expertise_level: str
+    repo_name: Optional[str] = None
+    owner: Optional[str] = None
+    messages: List[ChatMessageModel] = []
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatbotQueryRequest(BaseModel):
+    session_id: str
+    message: str
+
+
+class ChatbotQueryResponse(BaseModel):
+    session_id: str
+    reply: str
+    expertise_level: str
+    history: List[ChatMessageModel]
+
+
+### Model Evaluation Models ###
+
+
+class ModelCompModel(BaseModel):
+    model_name: str
+    accuracy: Optional[float]
+    auc: Optional[float]
+    precision: Optional[float]
+    recall: Optional[float]
+    f1: Optional[float]
+    best_params: Dict[str, Any] = {}
+
+
+class AblationStudyModel(BaseModel):
+    feature_group: str
+    auc: Optional[float]
+    f1: Optional[float]
+
+
+class FeatureImportanceModel(BaseModel):
+    feature_name: str
+    importance: float
+
+
+class ModelEvaluationResponse(BaseModel):
+    owner: str
+    name: str
+    threshold: int
+    evaluation_time: datetime
+    model_comparisons: List[ModelCompModel] = []
+    ablation_studies: List[AblationStudyModel] = []
+    feature_importances: List[FeatureImportanceModel] = []
+
+

@@ -18,6 +18,12 @@ The underlying ML approach is introduced in the following paper:
 
 See [CITATIONS.bib](CITATIONS.bib) for the BibTeX citations. We also provide an offline good first issue recommendation dataset at [Zenodo](https://doi.org/10.5281/zenodo.6665931).
 
+## About the Logo
+
+The GFI-Bot logo and mascot (designed by Haonan Su) symbolizes the growth and onboarding of open-source software (OSS) newcomers:
+* **The Sprouting Plant 🌱**: Represents beginner developers planting their first contribution seed and growing into core open-source maintainers.
+* **The Helper Robot 🤖**: Represents GFI-Bot's automated Machine Learning recommendation engine (RecGFI), helping project maintainers effortlessly identify and label Good First Issues (GFIs).
+
 
 ## Get Started
 
@@ -33,36 +39,15 @@ Currently, we are focusing on the following tasks:
 1. Identifying an optimal training strategy
 2. Improving user experience
 
-## Development
+## Development & Deployment
 
-### Project Organization
-
-GFI-Bot is organized into four main modules:
-
-1. [`gfibot.data`](gfibot/data): Modules to periodically and incrementally collect latest issue statistics on registered GitHub projects.
-2. [`gfibot.model`](gfibot/data): Modules to periodically train GFI recommendation models based on issue statistics collected by [`gfibot.data`](gfibot/data).
-3. [`gfibot.backend`](gfibot/backend): Modules to provide RESTful APIs for interaction with [`frontend`](frontend) and the GitHub App.
-4. [`frontend`](frontend): A standalone JavaScript (or TypeScript?) project as our website. This website will be used both as the main portal of GFI-Bot and as a control panel for users to find recommended good first issues or track bot status for their projects.
-
-All modules interact with a MongoDB instance for both reading and writing data (except [`frontend`](frontend), which interact with backend using RESTful APIs). The MongoDB instance serves as a "single source of truth" and the main way to decouple different modules. It will be used to store and continiously update issue statistics, training progress and performance, recommendation results, etc.
-
-### Environment Setup
-
-GFI-Bot uses [poetry](https://python-poetry.org/) for dependency management. Run the following commands with poetry to setup a working environment.
-
-```shell script
-poetry shell       # activate a working virtual environment
-poetry install     # install all dependencies
-pre-commit install # install pre-commit hooks
-black .            # lint all Python code
-pytest             # run all tests to confirm this environment is working
-```
+For a detailed guide on project architecture, database schemas, running unit tests, lightweight local setup, and production deployment, please refer to our comprehensive **[DEVELOPMENT.md](DEVELOPMENT.md)** guide.
 
 Then, configure a MongoDB instance (4.2 or later) and specify its connection URL in [`pyproject.toml`](pyproject.toml).
 
 ### Database Schemas
 
-As mentioned before, the MongoDB instance serves as a "single source of truth" and decouples different modules. Therefore, before you start working with any part of GFI-Bot, it is important to know how the data look like in the MongoDB. For this purpose, we adopt [mongoengine](http://mongoengine.org/) as an ORM-alike layer to formally describe and enforce schemas for each MongoDB collection and all collections are defined as Python classes [here](gfibot/collections.py).
+As mentioned before, the MongoDB instance serves as a "single source of truth" and decouples different modules. Therefore, before you start working with any part of GFI-Bot, it is important to know how the data look like in the MongoDB. For this purpose, we adopt [mongoengine](http://mongoengine.org/) as an ORM-alike layer to formally describe and enforce schemas for each MongoDB collection and all collections are defined as Python classes [here](gfibot/collections).
 
 ### Development Guidelines
 

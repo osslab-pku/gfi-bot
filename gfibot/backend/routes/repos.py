@@ -31,13 +31,30 @@ logger = logging.getLogger(__name__)
 
 
 @api.get("/num", response_model=GFIResponse[int])
-def get_repo_num(language: Optional[str] = None):
+def get_repo_num(language: Optional[str] = None, lang: Optional[str] = None):
     """
-    Get number of repositories
+    Get number of repositories available for display/paging.
+    Supports both 'language' and 'lang' query parameter aliases.
     """
-    if language:
-        return GFIResponse(result=Repo.objects.filter(language=language).count())
-    return GFIResponse(result=Repo.objects.count())
+    selected_lang = language or lang
+    RANK_THRESHOLD = get_repo_newcomer_threshold("", "")
+    q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(owner__ne="")
+
+    if selected_lang:
+        lang_repos = list(Repo.objects().filter(language=selected_lang).only("name", "owner"))
+        lang_names = [repo.name for repo in lang_repos]
+        lang_owners = [repo.owner for repo in lang_repos]
+        q = q.filter(name__in=lang_names, owner__in=lang_owners)
+
+    count = q.count()
+    if count == 0:
+        if selected_lang:
+            count = Repo.objects.filter(language=selected_lang).count()
+        else:
+            count = Repo.objects.count()
+
+    return GFIResponse(result=count)
+
 
 
 @api.get("/info", response_model=GFIResponse[RepoBrief])
@@ -106,37 +123,32 @@ def get_paged_repo_detail(
                 detail="Invalid filter: expect one in {}".format(RepoSort.__members__),
             )
     else:
-        q = q.order_by("name")
+        # Default order to Popularity (Number of Stars) (#31)
+        q = q.order_by("-n_stars", "name")
 
     repos_list = list(q.skip(start).limit(length).only(*RepoQuery.__fields__))
     repos_detail = []
 
     for repo in repos_list:
-        repo_detail = (
+        repo_obj = (
             Repo.objects(Q(name=repo.name) & Q(owner=repo.owner))
-            .only(*RepoDetail.__fields__)
             .first()
         )
-        if not repo_detail:
+        if not repo_obj:
             logger.error(
                 "Repo {}/{} is present in TrainingSummary but not in Repo".format(
                     repo.name, repo.owner
                 )
             )
         else:
-            repos_detail.append(RepoDetail(**repo_detail.to_mongo()))
+            data = repo_obj.to_mongo().to_dict()
+            gfi_count = Prediction.objects(
+                Q(name=repo.name) & Q(owner=repo.owner) & Q(state="open") & Q(probability__gte=0.5)
+            ).count()
+            data["n_gfis"] = gfi_count
+            repos_detail.append(RepoDetail(**data))
 
     return GFIResponse(result=repos_detail)
-
-    # # fetch repo stats on-demand would be more elegant
-    # repos_brief = []
-    # for repo in repos_list:
-    #     repo_brief = Repo.objects(Q(name=repo.name) & Q(owner=repo.owner)).only(*RepoBrief.__fields__).first()
-    #     if not repo_brief:
-    #         logger.error("Repo {}/{} is present in TrainingSummary but not in Repo".format(repo.name, repo.owner))
-    #     else:
-    #         repos_brief.append(RepoBrief(**repo_brief.to_mongo()))
-    # return GFIResponse(result=repos_brief)
 
 
 @api.get("/info/paged", response_model=GFIResponse[List[RepoBrief]])
@@ -179,25 +191,30 @@ def get_paged_repo_brief(
                 detail="Invalid filter: expect one in {}".format(RepoSort.__members__),
             )
     else:
-        q = q.order_by("name")
+        # Default order to Popularity (Number of Stars) (#31)
+        q = q.order_by("-n_stars", "name")
 
     repos_list = list(q.skip(start).limit(length).only(*RepoQuery.__fields__))
     repos_brief = []
 
     for repo in repos_list:
-        repo_detail = (
+        repo_obj = (
             Repo.objects(Q(name=repo.name) & Q(owner=repo.owner))
-            .only(*RepoBrief.__fields__)
             .first()
         )
-        if not repo_detail:
+        if not repo_obj:
             logger.error(
                 "Repo {}/{} is present in TrainingSummary but not in Repo".format(
                     repo.name, repo.owner
                 )
             )
         else:
-            repos_brief.append(RepoBrief(**repo_detail.to_mongo()))
+            data = repo_obj.to_mongo().to_dict()
+            gfi_count = Prediction.objects(
+                Q(name=repo.name) & Q(owner=repo.owner) & Q(state="open") & Q(probability__gte=0.5)
+            ).count()
+            data["n_gfis"] = gfi_count
+            repos_brief.append(RepoBrief(**data))
 
     return GFIResponse(result=repos_brief)
 

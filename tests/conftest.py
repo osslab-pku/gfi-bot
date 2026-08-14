@@ -104,6 +104,8 @@ def mock_mongodb():
         GfiEmail,
         TrainingSummary,
         Prediction,
+        ChatbotSession,
+        ModelEvaluation,
     ]
     for cls in collections:
         cls.drop_collection()

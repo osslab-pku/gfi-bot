@@ -46,7 +46,8 @@ def _add_comment_to_github_issue(
     """
     Add comment to GitHub issue
     """
-    user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
+    user_rec = GfiUsers.objects(Q(github_login=github_login)).first()
+    user_token = user_rec.github_app_token if user_rec else None
     if user_token:
         try:
             headers = {
@@ -58,14 +59,14 @@ def _add_comment_to_github_issue(
             )
             r = requests.post(url, headers=headers, data=json.dumps({"body": comment}))
             r.raise_for_status()
+            return r.status_code
         except Exception as e:
             logger.warning(
                 "Error adding comment: %s, token: %s",
                 e,
-                "*" * (len(user_token) - 5) + user_token[-5:],
+                "*" * max(0, len(user_token) - 5) + user_token[-5:] if user_token else "",
             )
-        finally:
-            return r.status_code
+            return getattr(e.response, "status_code", 500) if hasattr(e, "response") and e.response is not None else 500
     else:
         return 403
 
@@ -76,7 +77,8 @@ def _add_gfi_label_to_github_issue(
     """
     Add label to Github issue
     """
-    user_token = GfiUsers.objects(Q(github_login=github_login)).first().github_app_token
+    user_rec = GfiUsers.objects(Q(github_login=github_login)).first()
+    user_token = user_rec.github_app_token if user_rec else None
     if user_token:
         try:
             headers = {"Authorization": "token {}".format(user_token)}
@@ -85,14 +87,14 @@ def _add_gfi_label_to_github_issue(
             )
             r = requests.post(url, headers=headers, json=["{}".format(label_name)])
             r.raise_for_status()
+            return r.status_code
         except Exception as e:
             logger.warning(
                 "Error adding label: %s, token: %s",
                 e,
-                "*" * (len(user_token) - 5) + user_token[-5:],
+                "*" * max(0, len(user_token) - 5) + user_token[-5:] if user_token else "",
             )
-        finally:
-            return r.status_code
+            return getattr(e.response, "status_code", 500) if hasattr(e, "response") and e.response is not None else 500
     else:
         return 403
 

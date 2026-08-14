@@ -110,3 +110,35 @@ class GfiEmail(Document):
             {"fields": ["email"], "unique": True},
         ]
     }
+
+
+class ChatMessage(EmbeddedDocument):
+    role: str = StringField(required=True, choices=["user", "assistant"])
+    content: str = StringField(required=True)
+    timestamp: datetime = DateTimeField(default=datetime.utcnow)
+
+
+class ChatbotSession(Document):
+    """Help Chatbot Sessions storing user expertise level and Q&A history"""
+
+    session_id: str = StringField(required=True, unique=True)
+    user_id: str = StringField(required=False)
+    expertise_level: str = StringField(
+        required=True,
+        default="beginner",
+        choices=["beginner", "intermediate", "advanced"],
+    )
+    repo_name: str = StringField(required=False)
+    owner: str = StringField(required=False)
+    messages: List[ChatMessage] = EmbeddedDocumentListField(ChatMessage, default=[])
+    created_at: datetime = DateTimeField(default=datetime.utcnow)
+    updated_at: datetime = DateTimeField(default=datetime.utcnow)
+
+    meta = {
+        "indexes": [
+            {"fields": ["session_id"], "unique": True},
+            {"fields": ["user_id"]},
+            {"fields": ["expertise_level"]},
+        ]
+    }
+

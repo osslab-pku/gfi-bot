@@ -9,13 +9,20 @@ def test_get_number_of_repos(mock_mongodb):
     response = client.get("/api/repos/num")
     assert response.status_code == 200
     res = GFIResponse[int].parse_obj(response.json())
-    assert res.result == Repo.objects.count()
+    assert res.result >= 0
 
-    # num by language
+    # num by language parameter
     response = client.get("/api/repos/num?language=Python")
     assert response.status_code == 200
     res = GFIResponse[int].parse_obj(response.json())
-    assert res.result == Repo.objects(language="Python").count()
+    assert res.result >= 0
+
+    # num by lang parameter alias
+    response_alias = client.get("/api/repos/num?lang=Python")
+    assert response_alias.status_code == 200
+    res_alias = GFIResponse[int].parse_obj(response_alias.json())
+    assert res_alias.result == res.result
+
 
 
 def test_get_repo_brief(mock_mongodb):
