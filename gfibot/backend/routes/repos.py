@@ -31,13 +31,30 @@ logger = logging.getLogger(__name__)
 
 
 @api.get("/num", response_model=GFIResponse[int])
-def get_repo_num(language: Optional[str] = None):
+def get_repo_num(language: Optional[str] = None, lang: Optional[str] = None):
     """
-    Get number of repositories
+    Get number of repositories available for display/paging.
+    Supports both 'language' and 'lang' query parameter aliases.
     """
-    if language:
-        return GFIResponse(result=Repo.objects.filter(language=language).count())
-    return GFIResponse(result=Repo.objects.count())
+    selected_lang = language or lang
+    RANK_THRESHOLD = get_repo_newcomer_threshold("", "")
+    q = TrainingSummary.objects(threshold=RANK_THRESHOLD).filter(owner__ne="")
+
+    if selected_lang:
+        lang_repos = list(Repo.objects().filter(language=selected_lang).only("name", "owner"))
+        lang_names = [repo.name for repo in lang_repos]
+        lang_owners = [repo.owner for repo in lang_repos]
+        q = q.filter(name__in=lang_names, owner__in=lang_owners)
+
+    count = q.count()
+    if count == 0:
+        if selected_lang:
+            count = Repo.objects.filter(language=selected_lang).count()
+        else:
+            count = Repo.objects.count()
+
+    return GFIResponse(result=count)
+
 
 
 @api.get("/info", response_model=GFIResponse[RepoBrief])
