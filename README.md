@@ -40,7 +40,7 @@ Currently, we are focusing on the following tasks:
 GFI-Bot is organized into four main modules:
 
 1. [`gfibot.data`](gfibot/data): Modules to periodically and incrementally collect latest issue statistics on registered GitHub projects.
-2. [`gfibot.model`](gfibot/data): Modules to periodically train GFI recommendation models based on issue statistics collected by [`gfibot.data`](gfibot/data).
+2. [`gfibot.model`](gfibot/model): Modules to periodically train GFI recommendation models based on issue statistics collected by [`gfibot.data`](gfibot/data).
 3. [`gfibot.backend`](gfibot/backend): Modules to provide RESTful APIs for interaction with [`frontend`](frontend) and the GitHub App.
 4. [`frontend`](frontend): A standalone JavaScript (or TypeScript?) project as our website. This website will be used both as the main portal of GFI-Bot and as a control panel for users to find recommended good first issues or track bot status for their projects.
 
@@ -62,7 +62,7 @@ Then, configure a MongoDB instance (4.2 or later) and specify its connection URL
 
 ### Database Schemas
 
-As mentioned before, the MongoDB instance serves as a "single source of truth" and decouples different modules. Therefore, before you start working with any part of GFI-Bot, it is important to know how the data look like in the MongoDB. For this purpose, we adopt [mongoengine](http://mongoengine.org/) as an ORM-alike layer to formally describe and enforce schemas for each MongoDB collection and all collections are defined as Python classes [here](gfibot/collections.py).
+As mentioned before, the MongoDB instance serves as a "single source of truth" and decouples different modules. Therefore, before you start working with any part of GFI-Bot, it is important to know how the data look like in the MongoDB. For this purpose, we adopt [mongoengine](http://mongoengine.org/) as an ORM-alike layer to formally describe and enforce schemas for each MongoDB collection and all collections are defined as Python classes [here](gfibot/collections).
 
 ### Development Guidelines
 
