@@ -183,7 +183,7 @@ def _get_user_data(
             owner=owner,
             name=name,
             number__in=[
-                i.number for i in usriss if i.state == "closed" and i.closed_at <= t
+                i.number for i in usriss if i.state == "closed" and i.closed_at and i.closed_at <= t
             ],
         )
     )
