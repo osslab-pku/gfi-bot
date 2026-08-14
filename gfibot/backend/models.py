@@ -26,7 +26,11 @@ class RepoBrief(BaseModel):
     owner: str
     description: Optional[str]
     language: Optional[str]
-    topics: List[str]
+    topics: List[str] = []
+    stars: Optional[int] = 0
+    forks: Optional[int] = 0
+    contributors_count: Optional[int] = 0
+    n_gfis: Optional[int] = 0
 
 
 class MonthlyCount(BaseModel):
@@ -39,11 +43,15 @@ class RepoDetail(BaseModel):
     owner: str
     description: Optional[str]
     language: Optional[str]
-    topics: List[str]
-    monthly_stars: List[MonthlyCount]
-    monthly_commits: List[MonthlyCount]
-    monthly_issues: List[MonthlyCount]
-    monthly_pulls: List[MonthlyCount]
+    topics: List[str] = []
+    stars: Optional[int] = 0
+    forks: Optional[int] = 0
+    contributors_count: Optional[int] = 0
+    n_gfis: Optional[int] = 0
+    monthly_stars: List[MonthlyCount] = []
+    monthly_commits: List[MonthlyCount] = []
+    monthly_issues: List[MonthlyCount] = []
+    monthly_pulls: List[MonthlyCount] = []
 
 
 class RepoSort(Enum):
@@ -51,6 +59,13 @@ class RepoSort(Enum):
     GFIS = "gfis"
     ISSUE_CLOSE_TIME = "median_issue_resolve_time"
     NEWCOMER_RESOLVE_RATE = "newcomer_friendly"
+
+
+class IssueSort(Enum):
+    PROBABILITY_DESC = "probability_desc"
+    PROBABILITY_ASC = "probability_asc"
+    NEWEST = "newest"
+    OLDEST = "oldest"
 
 
 class UserSearchedRepo(BaseModel):
@@ -93,6 +108,13 @@ class GFIBrief(BaseModel):
     last_updated: datetime
     state: Optional[str] = None
     title: Optional[str] = None
+    body: Optional[str] = None
+    labels: List[str] = []
+    has_pending_pr: bool = False
+    created_at: Optional[datetime] = None
+    html_url: Optional[str] = None
+    gfi_probability_percentage: Optional[str] = None
+
 
 
 class TrainingResult(BaseModel):
