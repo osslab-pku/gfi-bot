@@ -18,6 +18,12 @@ The underlying ML approach is introduced in the following paper:
 
 See [CITATIONS.bib](CITATIONS.bib) for the BibTeX citations. We also provide an offline good first issue recommendation dataset at [Zenodo](https://doi.org/10.5281/zenodo.6665931).
 
+## About the Logo
+
+The GFI-Bot logo and mascot (designed by Haonan Su) symbolizes the growth and onboarding of open-source software (OSS) newcomers:
+* **The Sprouting Plant 🌱**: Represents beginner developers planting their first contribution seed and growing into core open-source maintainers.
+* **The Helper Robot 🤖**: Represents GFI-Bot's automated Machine Learning recommendation engine (RecGFI), helping project maintainers effortlessly identify and label Good First Issues (GFIs).
+
 
 ## Get Started
 
