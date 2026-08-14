@@ -84,3 +84,54 @@ class TrainingSummary(Document):
             "issue_close_time",
         ]
     }
+
+
+class FeatureImportance(EmbeddedDocument):
+    feature_name: str = StringField(required=True)
+    importance: float = FloatField(required=True)
+
+
+class ModelEvaluationResult(EmbeddedDocument):
+    model_name: str = StringField(required=True)
+    accuracy: float = FloatField(null=True)
+    auc: float = FloatField(null=True)
+    precision: float = FloatField(null=True)
+    recall: float = FloatField(null=True)
+    f1: float = FloatField(null=True)
+    best_params: dict = DictField(default={})
+
+
+class AblationStudyResult(EmbeddedDocument):
+    feature_group: str = StringField(required=True)
+    auc: float = FloatField(null=True)
+    f1: float = FloatField(null=True)
+
+
+class ModelEvaluation(Document):
+    """
+    Systematic ML Evaluation results including alternative model comparisons,
+    ablation studies, feature importances, and hyperparameter tuning performance.
+    """
+
+    owner: str = StringField(required=True, default="")
+    name: str = StringField(required=True, default="")
+    threshold: int = IntField(required=True, default=3)
+    evaluation_time: datetime = DateTimeField(default=datetime.utcnow)
+
+    model_comparisons: List[ModelEvaluationResult] = EmbeddedDocumentListField(
+        ModelEvaluationResult, default=[]
+    )
+    ablation_studies: List[AblationStudyResult] = EmbeddedDocumentListField(
+        AblationStudyResult, default=[]
+    )
+    feature_importances: List[FeatureImportance] = EmbeddedDocumentListField(
+        FeatureImportance, default=[]
+    )
+
+    meta = {
+        "indexes": [
+            {"fields": ["owner", "name", "threshold"]},
+            {"fields": ["evaluation_time"]},
+        ]
+    }
+

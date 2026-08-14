@@ -177,3 +177,38 @@ class ChatbotQueryResponse(BaseModel):
     expertise_level: str
     history: List[ChatMessageModel]
 
+
+### Model Evaluation Models ###
+
+
+class ModelCompModel(BaseModel):
+    model_name: str
+    accuracy: Optional[float]
+    auc: Optional[float]
+    precision: Optional[float]
+    recall: Optional[float]
+    f1: Optional[float]
+    best_params: Dict[str, Any] = {}
+
+
+class AblationStudyModel(BaseModel):
+    feature_group: str
+    auc: Optional[float]
+    f1: Optional[float]
+
+
+class FeatureImportanceModel(BaseModel):
+    feature_name: str
+    importance: float
+
+
+class ModelEvaluationResponse(BaseModel):
+    owner: str
+    name: str
+    threshold: int
+    evaluation_time: datetime
+    model_comparisons: List[ModelCompModel] = []
+    ablation_studies: List[AblationStudyModel] = []
+    feature_importances: List[FeatureImportanceModel] = []
+
+
