@@ -258,7 +258,9 @@ class RepoFetcher(object):
                     additional_props["comment"] = event["body"]
                     additional_props["commenter"] = event["user"]["login"]
                 elif event["event"] == "cross-referenced":
-                    additional_props["source"] = event["source"]["issue"]["number"]
+                    source_issue = event.get("source", {}).get("issue")
+                    if source_issue and "number" in source_issue:
+                        additional_props["source"] = source_issue["number"]
                 elif event["event"] == "referenced":
                     additional_props["commit"] = event["commit_id"]
                 if "created_at" in event and event["created_at"] is not None:
