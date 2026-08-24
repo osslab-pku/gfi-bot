@@ -628,6 +628,29 @@ def test_get_background_data(mock_mongodb):
     assert n_closed == 1 and n_open == 1
 
 
+def test_get_background_data_closed_without_closed_at(mock_mongodb):
+    RepoIssue(
+        owner="owner",
+        name="name",
+        number=5,
+        user="a1",
+        state="closed",
+        created_at=datetime(2022, 1, 1, tzinfo=timezone.utc),
+        closed_at=None,
+        title="issue 5",
+        body="issue 5",
+        labels=[],
+        is_pull=False,
+        merged_at=None,
+    ).save()
+    contribs, n_closed, n_open, cls_time = d._get_background_data(
+        "owner", "name", datetime.now(timezone.utc)
+    )
+    assert n_closed == 2
+    assert n_open == 2
+    assert cls_time == [86400.0, 86400.0]
+
+
 def test_get_dynamics_data(mock_mongodb):
     issue = ResolvedIssue.objects(name="name", owner="owner", number=2).first()
     print(issue.to_json(indent=2, json_options=DEFAULT_JSON_OPTIONS))
