@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+  
+  database:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
