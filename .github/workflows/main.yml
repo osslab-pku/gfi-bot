@@ -16,6 +16,5 @@ jobs:
 
     - name: Run Docker Compose Stack
       run: |
-        cd my-compose-app
         docker compose up -d
         docker compose ps
